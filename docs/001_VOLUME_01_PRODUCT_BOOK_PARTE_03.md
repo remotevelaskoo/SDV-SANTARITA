@@ -2,8 +2,8 @@
 ## Volume 01 — MVP, Roadmap, Backlog e Homologação
 
 **Documento:** SDV-PBK-003  
-**Versão:** 1.0.0  
-**Status:** Proposto para aprovação  
+**Versão:** 1.0.1  
+**Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Empresa proprietária:** Soluções do Vale  
 **Responsável pelo produto:** Vinicius Velasco de Azevedo  
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Definição do MVP, prioridades, roadmap, backlog, riscos, homologação e encerramento do Volume 01 |
+| 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da Parte 03 e encerramento do Volume 01 |
 
 ---
 
@@ -639,9 +640,9 @@ A aprovação deste volume:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | — |
-| Soluções do Vale | Representante designado | Pendente | — | — |
-| Santa Rita | Representante designado | Pendente | — | — |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 28/07/2026 | Parte 03 aprovada e conteúdo do Volume 01 encerrado |
+| Soluções do Vale | Representante designado | Ciente | 28/07/2026 | Aprovação registrada no repositório oficial |
+| Santa Rita | Representante designado | Homologação futura | — | A aprovação documental não substitui a homologação operacional do MVP |
 
 Após aprovação, os três documentos do Volume 01 deverão ter seu status atualizado de forma rastreável. Alterações posteriores deverão preservar os identificadores existentes, atualizar o controle de versões e indicar requisitos, riscos, testes e documentos afetados.
 
@@ -649,4 +650,4 @@ Após aprovação, os três documentos do Volume 01 deverão ter seu status atua
 
 ## Situação desta parte
 
-Esta parte conclui o conteúdo planejado para o Volume 01 do Product Book. O volume permanece **proposto para aprovação** até o preenchimento do registro acima e a resolução ou aceitação formal das pendências bloqueadoras aplicáveis ao próximo marco.
+Esta parte conclui o conteúdo planejado para o Volume 01 do Product Book e encontra-se **aprovada**. As pendências abertas permanecem rastreadas e deverão ser resolvidas ou formalmente aceitas conforme o marco afetado, sem invalidar a aprovação documental deste volume.
