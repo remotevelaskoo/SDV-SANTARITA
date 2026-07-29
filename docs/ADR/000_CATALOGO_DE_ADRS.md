@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.1
+**Versão:** 1.0.2
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Criação do catálogo e unificação dos ADRs propostos |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal do catálogo e da governança de ADRs |
+| 1.0.2 | 28/07/2026 | Product Owner | Registro da aprovação do ADR-001 |
 
 ---
 
@@ -227,7 +228,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 
 | ADR | Título | Prioridade | Estado | Documento de origem | Bloqueia |
 |---|---|---:|---|---|---|
-| [ADR-001](ADR-001_MONOLITO_MODULAR_LARAVEL.md) | Monólito modular Laravel | P0 | Proposto | 011 | estrutura do código |
+| [ADR-001](ADR-001_MONOLITO_MODULAR_LARAVEL.md) | Monólito modular Laravel | P0 | Aprovado | 011 | estrutura do código |
 | ADR-002 | Multi-implantação e isolamento | P0 | Proposto | 010, 011 | banco, autenticação e cache |
 | ADR-003 | Identificadores internos e públicos | P0 | Proposto | 010, 011 | migrations e APIs |
 | ADR-004 | Auditoria, eventos e outbox | P0 | Proposto | 010, 011 | fluxos críticos e filas |

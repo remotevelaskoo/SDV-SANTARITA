@@ -1,8 +1,8 @@
 # ADR-001 — MONÓLITO MODULAR LARAVEL
 
 **Identificador:** ADR-001
-**Versão:** 1.0.0
-**Status:** Proposto
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Prioridade:** P0 — Bloqueador
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Proposta do monólito modular Laravel para o MVP |
+| 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal do monólito modular Laravel |
 
 ---
 
@@ -783,18 +784,15 @@ Este ADR orienta os demais, mas não aprova suas escolhas específicas.
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando decisão |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 28/07/2026 | Monólito modular Laravel aprovado para o MVP |
 | Responsável técnico | Soluções do Vale Tecnologia | Recomendado | Julho/2026 | Alternativa B recomendada para o MVP |
 
 ---
 
 # 32. Decisão resultante
 
-Enquanto este ADR estiver **Proposto**, o monólito modular permanece arquitetura recomendada, mas a estrutura inicial do código continua bloqueada.
+Com este ADR **Aprovado**:
 
-Se aprovado:
-
-- o estado mudará para **Aprovado**;
 - o catálogo será atualizado no mesmo commit;
 - o Manual do Desenvolvedor deverá detalhar convenções;
 - novos módulos deverão respeitar esta decisão;
@@ -804,4 +802,4 @@ Se aprovado:
 
 ## Situação do ADR
 
-**Proposto.** Aguardando aprovação formal do Product Owner.
+**Aprovado.** O monólito modular Laravel é a arquitetura vigente para o MVP.
