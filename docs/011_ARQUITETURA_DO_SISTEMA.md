@@ -2,8 +2,8 @@
 ## Arquitetura lógica, modular, operacional e de implantação
 
 **Documento:** SDV-ARQ-011
-**Versão:** 1.0.0
-**Status:** Em revisão
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Definição inicial da arquitetura do sistema |
+| 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da arquitetura do sistema |
 
 ---
 
@@ -1097,8 +1098,8 @@ Ficam propostas para aprovação:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando revisão da arquitetura proposta |
-| Soluções do Vale | Representante designado | Pendente | — | Aguardando aprovação formal |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 28/07/2026 | Arquitetura aprovada como referência para ADRs, contratos e planejamento técnico |
+| Soluções do Vale | Representante designado | Ciente | 28/07/2026 | Aprovação registrada no repositório oficial |
 
 ---
 
@@ -1118,4 +1119,4 @@ A implementação deverá começar somente após o fechamento dos documentos e p
 
 ## Situação do documento
 
-Este documento encontra-se **em revisão**. A arquitetura proposta preserva as decisões aprovadas e estabelece a base para ADRs, contratos e planejamento técnico, sem autorizar silenciosamente escolhas ainda pendentes.
+Este documento encontra-se **aprovado**. A arquitetura preserva as decisões técnicas vigentes e estabelece a base para ADRs, contratos e planejamento técnico, sem autorizar silenciosamente escolhas ainda pendentes.
