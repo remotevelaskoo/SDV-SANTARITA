@@ -1,8 +1,8 @@
 # ADR-005 — FILAS, CACHE, LOCKS E IDEMPOTÊNCIA
 
 **Identificador:** ADR-005
-**Versão:** 1.0.0
-**Status:** Proposto
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Prioridade:** P0 — Bloqueador
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Proposta da estratégia de filas, cache, locks e idempotência |
+| 1.0.1 | 30/07/2026 | Product Owner | Aprovação formal da estratégia de filas, cache, locks e idempotência |
 
 ---
 
@@ -1207,16 +1208,14 @@ A decisão será validada quando:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando decisão |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 30/07/2026 | Serviço compatível com Redis e PostgreSQL para registros duráveis aprovados |
 | Responsável técnico | Soluções do Vale Tecnologia | Recomendado | Julho/2026 | Serviço compatível com Redis e PostgreSQL para registros duráveis |
 
 ---
 
 # 53. Decisão resultante
 
-Enquanto este ADR estiver **Proposto**, a alternativa compatível com Redis permanece recomendada, mas a infraestrutura assíncrona continua bloqueada.
-
-Se aprovado:
+Com este ADR **Aprovado**:
 
 - o catálogo será atualizado no mesmo commit;
 - filas, cache e locks usarão a abstração aprovada;
@@ -1229,4 +1228,4 @@ Se aprovado:
 
 ## Situação do ADR
 
-**Proposto.** Aguardando aprovação formal do Product Owner.
+**Aprovado.** Serviço compatível com Redis para filas, cache e locks, com PostgreSQL para registros duráveis, constitui a estratégia vigente.
