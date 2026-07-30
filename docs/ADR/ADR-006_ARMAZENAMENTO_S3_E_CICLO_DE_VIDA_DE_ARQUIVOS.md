@@ -1,8 +1,8 @@
 # ADR-006 — ARMAZENAMENTO S3 E CICLO DE VIDA DE ARQUIVOS
 
 **Identificador:** ADR-006
-**Versão:** 1.0.0
-**Status:** Proposto
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Prioridade:** P1 — Obrigatório do MVP
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Proposta de armazenamento S3 e ciclo de vida dos arquivos |
+| 1.0.1 | 30/07/2026 | Product Owner | Aprovação formal do armazenamento S3 e ciclo de vida dos arquivos |
 
 ---
 
@@ -1246,16 +1247,14 @@ A decisão será validada quando:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando decisão |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 30/07/2026 | S3 privado, versionado, criptografado e controlado pelo catálogo PostgreSQL aprovado |
 | Responsável técnico | Soluções do Vale Tecnologia | Recomendado | Julho/2026 | S3 privado, versionado, criptografado e controlado pelo catálogo PostgreSQL |
 
 ---
 
 # 55. Decisão resultante
 
-Enquanto este ADR estiver **Proposto**, S3 privado e versionado permanece recomendado, mas uploads de produção continuam bloqueados.
-
-Se aprovado:
+Com este ADR **Aprovado**:
 
 - o catálogo será atualizado no mesmo commit;
 - arquivos usarão armazenamento compatível com S3;
@@ -1269,4 +1268,4 @@ Se aprovado:
 
 ## Situação do ADR
 
-**Proposto.** Aguardando aprovação formal do Product Owner.
+**Aprovado.** S3 privado, versionado, criptografado e controlado pelo catálogo PostgreSQL constitui a estratégia vigente.
