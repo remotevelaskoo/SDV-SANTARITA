@@ -1,8 +1,8 @@
 # ADR-003 — IDENTIFICADORES INTERNOS E PÚBLICOS
 
 **Identificador:** ADR-003
-**Versão:** 1.0.0
-**Status:** Proposto
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Prioridade:** P0 — Bloqueador
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Proposta da estratégia de identificadores internos, públicos e externos |
+| 1.0.1 | 30/07/2026 | Product Owner | Aprovação formal da estratégia de identificadores internos, públicos e externos |
 
 ---
 
@@ -918,16 +919,14 @@ A decisão será validada quando:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando decisão |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 30/07/2026 | UUIDv7 interno, tokens seguros e referências externas secundárias aprovados |
 | Responsável técnico | Soluções do Vale Tecnologia | Recomendado | Julho/2026 | UUIDv7 interno, tokens seguros e referências externas secundárias |
 
 ---
 
 # 41. Decisão resultante
 
-Enquanto este ADR estiver **Proposto**, UUIDv7 permanece recomendado, mas migrations definitivas continuam bloqueadas.
-
-Se aprovado:
+Com este ADR **Aprovado**:
 
 - o catálogo será atualizado no mesmo commit;
 - novas entidades usarão UUIDv7;
@@ -940,4 +939,4 @@ Se aprovado:
 
 ## Situação do ADR
 
-**Proposto.** Aguardando aprovação formal do Product Owner.
+**Aprovado.** UUIDv7, tokens seguros, protocolos opacos e referências externas secundárias constituem a estratégia vigente.

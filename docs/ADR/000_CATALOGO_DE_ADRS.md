@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.5
+**Versão:** 1.0.6
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -21,6 +21,7 @@
 | 1.0.3 | 28/07/2026 | Soluções do Vale | Vinculação da proposta do ADR-002 ao catálogo |
 | 1.0.4 | 28/07/2026 | Product Owner | Registro da aprovação do ADR-002 |
 | 1.0.5 | 29/07/2026 | Soluções do Vale | Vinculação da proposta do ADR-003 ao catálogo |
+| 1.0.6 | 30/07/2026 | Product Owner | Registro da aprovação do ADR-003 |
 
 ---
 
@@ -233,7 +234,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 |---|---|---:|---|---|---|
 | [ADR-001](ADR-001_MONOLITO_MODULAR_LARAVEL.md) | Monólito modular Laravel | P0 | Aprovado | 011 | estrutura do código |
 | [ADR-002](ADR-002_MULTI_IMPLANTACAO_E_ISOLAMENTO.md) | Multi-implantação e isolamento | P0 | Aprovado | 010, 011 | banco, autenticação e cache |
-| [ADR-003](ADR-003_IDENTIFICADORES_INTERNOS_E_PUBLICOS.md) | Identificadores internos e públicos | P0 | Proposto | 010, 011 | migrations e APIs |
+| [ADR-003](ADR-003_IDENTIFICADORES_INTERNOS_E_PUBLICOS.md) | Identificadores internos e públicos | P0 | Aprovado | 010, 011 | migrations e APIs |
 | ADR-004 | Auditoria, eventos e outbox | P0 | Proposto | 010, 011 | fluxos críticos e filas |
 | ADR-005 | Filas, cache, locks e idempotência | P0 | Proposto | 010, 011 | processamento assíncrono |
 | ADR-006 | Armazenamento S3 e ciclo de vida de arquivos | P1 | Proposto | 010, 011 | uploads e evidências |
