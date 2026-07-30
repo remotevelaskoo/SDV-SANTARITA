@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.18
+**Versão:** 1.0.19
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -34,6 +34,7 @@
 | 1.0.16 | 30/07/2026 | Product Owner | Criação e aprovação do ADR-010 |
 | 1.0.17 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-011 |
 | 1.0.18 | 30/07/2026 | Product Owner | Criação e aprovação do ADR-012 |
+| 1.0.19 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-013 |
 
 ---
 
@@ -256,7 +257,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-010](ADR-010_OBSERVABILIDADE.md) | Observabilidade | P1 | Aprovado | 011 | homologação integrada |
 | [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Adiado | 010, 011 | somente capacidade de OCR/IA |
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
-| ADR-013 | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
+| [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | ADR-014 | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
