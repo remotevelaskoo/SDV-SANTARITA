@@ -1,8 +1,8 @@
 # ADR-004 — AUDITORIA, EVENTOS E OUTBOX
 
 **Identificador:** ADR-004
-**Versão:** 1.0.0
-**Status:** Proposto
+**Versão:** 1.0.1
+**Status:** Aprovado
 **Prioridade:** P0 — Bloqueador
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Proposta da estratégia de auditoria, eventos e outbox |
+| 1.0.1 | 30/07/2026 | Product Owner | Aprovação formal da estratégia de auditoria, eventos e outbox |
 
 ---
 
@@ -1089,16 +1090,14 @@ A decisão será validada quando:
 
 | Papel | Nome | Decisão | Data | Observações |
 |---|---|---|---|---|
-| Product Owner | Vinicius Velasco de Azevedo | Pendente | — | Aguardando decisão |
+| Product Owner | Vinicius Velasco de Azevedo | Aprovado | 30/07/2026 | Auditoria transacional e outbox com entrega at-least-once aprovadas |
 | Responsável técnico | Soluções do Vale Tecnologia | Recomendado | Julho/2026 | Auditoria transacional e outbox com entrega at-least-once |
 
 ---
 
 # 48. Decisão resultante
 
-Enquanto este ADR estiver **Proposto**, auditoria transacional e outbox permanecem recomendadas, mas casos de uso críticos continuam bloqueados.
-
-Se aprovado:
+Com este ADR **Aprovado**:
 
 - o catálogo será atualizado no mesmo commit;
 - operações obrigatórias gravarão auditoria atomicamente;
@@ -1111,4 +1110,4 @@ Se aprovado:
 
 ## Situação do ADR
 
-**Proposto.** Aguardando aprovação formal do Product Owner.
+**Aprovado.** Auditoria transacional, eventos explícitos e outbox com entrega at-least-once constituem a estratégia vigente.
