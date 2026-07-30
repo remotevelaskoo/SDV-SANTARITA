@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.13
+**Versão:** 1.0.14
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -29,6 +29,7 @@
 | 1.0.11 | 30/07/2026 | Soluções do Vale | Vinculação da proposta do ADR-006 ao catálogo |
 | 1.0.12 | 30/07/2026 | Product Owner | Registro da aprovação do ADR-006 |
 | 1.0.13 | 30/07/2026 | Product Owner | Criação e aprovação do ADR-007 |
+| 1.0.14 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-008 |
 
 ---
 
@@ -246,7 +247,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-005](ADR-005_FILAS_CACHE_LOCKS_E_IDEMPOTENCIA.md) | Filas, cache, locks e idempotência | P0 | Aprovado | 010, 011 | processamento assíncrono |
 | [ADR-006](ADR-006_ARMAZENAMENTO_S3_E_CICLO_DE_VIDA_DE_ARQUIVOS.md) | Armazenamento S3 e ciclo de vida de arquivos | P1 | Aprovado | 010, 011 | uploads e evidências |
 | [ADR-007](ADR-007_PORTAS_E_ADAPTADORES_DE_EQUIPAMENTOS.md) | Portas e adaptadores de equipamentos | P0 | Aprovado | 010, 011 | integração Santa Rita |
-| ADR-008 | Contingência e cache operacional | P1 | Adiado | 011 | homologação e go-live |
+| [ADR-008](ADR-008_CONTINGENCIA_E_CACHE_OPERACIONAL.md) | Contingência e cache operacional | P1 | Adiado | 011 | homologação e go-live |
 | ADR-009 | Gestão e rotação de segredos | P0 | Proposto | 010, 011 | integrações e produção |
 | ADR-010 | Observabilidade | P1 | Proposto | 011 | homologação integrada |
 | ADR-011 | Python/FastAPI para OCR ou IA | P2 | Adiado | 010, 011 | somente capacidade de OCR/IA |
