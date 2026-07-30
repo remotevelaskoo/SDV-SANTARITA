@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.20
+**Versão:** 1.0.21
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -36,6 +36,7 @@
 | 1.0.18 | 30/07/2026 | Product Owner | Criação e aprovação do ADR-012 |
 | 1.0.19 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-013 |
 | 1.0.20 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-014 |
+| 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
 
 ---
 
@@ -510,16 +511,23 @@ Ficam propostas para aprovação:
 
 ---
 
-# 24. Próximo ADR
+# 24. Situação do conjunto e próxima etapa
 
-Após a aprovação deste catálogo, deverá ser produzido:
+O conjunto inicial está completo:
 
-**`docs/ADR/ADR-001_MONOLITO_MODULAR_LARAVEL.md`**
+- `ADR-001` a `ADR-007`: aprovados;
+- `ADR-008`: adiado com aprovação formal;
+- `ADR-009` e `ADR-010`: aprovados;
+- `ADR-011`: adiado com aprovação formal;
+- `ADR-012`: aprovado;
+- `ADR-013` e `ADR-014`: adiados com aprovação formal.
 
-O ADR-001 deverá confirmar ou rejeitar formalmente o monólito modular proposto no documento de arquitetura antes da estrutura inicial do código.
+Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas.
+
+A próxima etapa documental é a especificação de APIs. Devido à divergência de numeração registrada em `PEN-ADR-CAT-001`, o arquivo deverá usar o próximo número principal disponível, sem renomear silenciosamente a arquitetura aprovada.
 
 ---
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado**. Os ADRs listados mantêm seus estados Proposto ou Adiado e não são considerados aprovados apenas por constarem neste documento.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada.
