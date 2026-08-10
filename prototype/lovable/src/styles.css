@@ -1,0 +1,255 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * SDV Access — Design System (SDV-DS-003)
+ * Tokens derivados de 002_BRAND_BOOK e 003_DESIGN_SYSTEM.
+ * Camada 1: primitivos de marca. Camada 2: semânticos de produto.
+ * Nunca usar cor literal em componente — sempre token.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
+
+  /* primitivos de marca */
+  --color-brand-navy-900: var(--brand-navy-900);
+  --color-brand-navy-800: var(--brand-navy-800);
+  --color-brand-blue-700: var(--brand-blue-700);
+  --color-brand-blue-600: var(--brand-blue-600);
+  --color-brand-blue-500: var(--brand-blue-500);
+  --color-brand-cyan-400: var(--brand-cyan-400);
+
+  /* neutros */
+  --color-neutral-950: var(--neutral-950);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-050: var(--neutral-050);
+
+  /* semânticos */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-surface: var(--danger-surface);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+  --color-special: var(--special-purple);
+
+  /* app shell */
+  --color-shell: var(--shell);
+  --color-shell-elevated: var(--shell-elevated);
+  --color-shell-foreground: var(--shell-foreground);
+  --color-shell-muted: var(--shell-muted);
+  --color-shell-active: var(--shell-active);
+  --color-shell-border: var(--shell-border);
+
+  /* séries de dado */
+  --color-serie-entrada: var(--serie-entrada);
+  --color-serie-saida: var(--serie-saida);
+
+  --color-sidebar: var(--shell);
+  --color-sidebar-foreground: var(--shell-foreground);
+  --color-sidebar-primary: var(--shell-active);
+  --color-sidebar-primary-foreground: var(--shell-foreground);
+  --color-sidebar-accent: var(--shell-elevated);
+  --color-sidebar-accent-foreground: var(--shell-foreground);
+  --color-sidebar-border: var(--shell-border);
+  --color-sidebar-ring: var(--brand-blue-500);
+
+  --color-chart-1: var(--serie-entrada);
+  --color-chart-2: var(--serie-saida);
+  --color-chart-3: var(--brand-cyan-400);
+  --color-chart-4: var(--warning);
+  --color-chart-5: var(--special-purple);
+
+  /* elevação (DS 9.3) */
+  --shadow-nivel-1: 0 1px 2px 0 oklch(0.203 0.0497 260.91 / 6%);
+  --shadow-nivel-2:
+    0 1px 3px 0 oklch(0.203 0.0497 260.91 / 8%), 0 4px 12px -4px oklch(0.203 0.0497 260.91 / 8%);
+  --shadow-nivel-3: 0 12px 32px -8px oklch(0.203 0.0497 260.91 / 18%);
+
+  /* movimento (DS 9.4) */
+  --ease-padrao: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-saida: cubic-bezier(0.4, 0, 1, 1);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  --font-family-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-family-mono: ui-monospace, "Cascadia Mono", monospace;
+
+  /* Camada 1 — primitivos de marca */
+  --brand-navy-900: oklch(0.2281 0.0724 253.91);
+  --brand-navy-800: oklch(0.2887 0.0941 254.69);
+  --brand-blue-700: oklch(0.4789 0.166 257.11);
+  --brand-blue-600: oklch(0.5287 0.1815 256.76);
+  --brand-blue-500: oklch(0.6188 0.1716 250.96);
+  --brand-cyan-400: oklch(0.6885 0.1433 237.44);
+
+  --neutral-950: oklch(0.203 0.0497 260.91);
+  --neutral-800: oklch(0.3341 0.0498 257.89);
+  --neutral-600: oklch(0.5555 0.0382 259.38);
+  --neutral-400: oklch(0.7661 0.0247 256.12);
+  --neutral-300: oklch(0.8947 0.0174 256.29);
+  --neutral-200: oklch(0.9353 0.0109 256.7);
+  --neutral-100: oklch(0.969 0.0062 255.47);
+  --neutral-050: oklch(0.9842 0.0034 247.86);
+
+  /* Camada 2 — semânticos */
+  --background: oklch(0.9842 0.0034 247.86);
+  --foreground: oklch(0.203 0.0497 260.91);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.203 0.0497 260.91);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.203 0.0497 260.91);
+  --primary: oklch(0.5287 0.1815 256.76);
+  --primary-foreground: oklch(1 0 0);
+  --primary-strong: oklch(0.4789 0.166 257.11);
+  --secondary: oklch(0.969 0.0062 255.47);
+  --secondary-foreground: oklch(0.3341 0.0498 257.89);
+  --muted: oklch(0.969 0.0062 255.47);
+  --muted-foreground: oklch(0.5555 0.0382 259.38);
+  --accent: oklch(0.9609 0.0188 255.53);
+  --accent-foreground: oklch(0.4789 0.166 257.11);
+  --destructive: oklch(0.6065 0.2055 27.39);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9353 0.0109 256.7);
+  --border-strong: oklch(0.8947 0.0174 256.29);
+  --input: oklch(0.8947 0.0174 256.29);
+  --ring: oklch(0.6188 0.1716 250.96);
+
+  --success: oklch(0.6308 0.1717 147.92);
+  --success-foreground: oklch(0.5556 0.1508 148.51);
+  --success-surface: oklch(0.962 0.0215 154.13);
+  --warning: oklch(0.7684 0.164 72.66);
+  --warning-foreground: oklch(0.598 0.1352 64.09);
+  --warning-surface: oklch(0.9688 0.0372 88.46);
+  --danger: oklch(0.6065 0.2055 27.39);
+  --danger-foreground: oklch(0.543 0.1896 26.26);
+  --danger-surface: oklch(0.9495 0.0221 24.44);
+  --info: oklch(0.4789 0.166 257.11);
+  --info-foreground: oklch(0.4789 0.166 257.11);
+  --info-surface: oklch(0.9609 0.0188 255.53);
+  --special-purple: oklch(0.55 0.247 291.34);
+
+  --shell: oklch(0.2281 0.0724 253.91);
+  --shell-elevated: oklch(0.2887 0.0941 254.69);
+  --shell-foreground: oklch(1 0 0);
+  --shell-muted: oklch(0.7661 0.0247 256.12);
+  --shell-active: oklch(0.5287 0.1815 256.76);
+  --shell-border: oklch(1 0 0 / 12%);
+
+  --serie-entrada: oklch(0.5287 0.1815 256.76);
+  --serie-saida: oklch(0.6885 0.1433 237.44);
+}
+
+.dark {
+  --background: oklch(0.203 0.0497 260.91);
+  --foreground: oklch(0.9842 0.0034 247.86);
+  --card: oklch(0.2281 0.0724 253.91);
+  --card-foreground: oklch(0.9842 0.0034 247.86);
+  --popover: oklch(0.2281 0.0724 253.91);
+  --popover-foreground: oklch(0.9842 0.0034 247.86);
+  --primary: oklch(0.6188 0.1716 250.96);
+  --primary-foreground: oklch(0.203 0.0497 260.91);
+  --primary-strong: oklch(0.5287 0.1815 256.76);
+  --secondary: oklch(0.2887 0.0941 254.69);
+  --secondary-foreground: oklch(0.9842 0.0034 247.86);
+  --muted: oklch(0.2887 0.0941 254.69);
+  --muted-foreground: oklch(0.7661 0.0247 256.12);
+  --accent: oklch(0.2887 0.0941 254.69);
+  --accent-foreground: oklch(0.9842 0.0034 247.86);
+  --border: oklch(1 0 0 / 12%);
+  --border-strong: oklch(1 0 0 / 20%);
+  --input: oklch(1 0 0 / 18%);
+
+  --success-surface: oklch(0.3 0.06 150);
+  --success-foreground: oklch(0.7 0.15 148);
+  --warning-surface: oklch(0.32 0.06 70);
+  --warning-foreground: oklch(0.8 0.14 74);
+  --danger-surface: oklch(0.3 0.08 27);
+  --danger-foreground: oklch(0.72 0.17 25);
+  --info-surface: oklch(0.29 0.07 255);
+  --info-foreground: oklch(0.72 0.13 252);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* DS 6.5 — conteúdo numérico com algarismos tabulares */
+@utility numerico {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* DS 6.4 — estilos semânticos de tipografia */
+@utility texto-metrica {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+@utility texto-rotulo {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
