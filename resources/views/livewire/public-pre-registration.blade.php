@@ -103,8 +103,15 @@
                             <x-ui.alert variant="info" title="Endereço informado">
                                 Este é o seu endereço para esta solicitação. Ele não é o destino da visita e não altera o cadastro do imóvel.
                             </x-ui.alert>
+                            <p class="pre-registration-zip-hint">
+                                <span wire:loading wire:target="lookupZipCode" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Buscando endereço pelo CEP…</span>
+                                <span wire:loading.remove wire:target="lookupZipCode">Ao sair do campo CEP, preenchemos o restante do endereço automaticamente.</span>
+                            </p>
+                            @if ($zipCodeLookupFailed)
+                                <x-ui.alert variant="warning" title="CEP não encontrado">Não localizamos este CEP automaticamente. Preencha o endereço manualmente.</x-ui.alert>
+                            @endif
                             <div class="pre-registration-fields pre-registration-fields--address">
-                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required />
+                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required />
                                 <x-ui.field id="pre-address" label="Endereço" wire:model="address" :error="$errors->first('address')" required />
                                 <x-ui.field id="pre-address-number" label="Número" wire:model="addressNumber" :error="$errors->first('addressNumber')" required />
                                 <x-ui.field id="pre-address-complement" label="Complemento" wire:model="addressComplement" />

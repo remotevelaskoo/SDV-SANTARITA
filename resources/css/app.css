@@ -1168,6 +1168,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .pre-registration-steps-desktop { display: none; padding: 1.25rem; border-right: 1px solid var(--neutral-200); background: var(--neutral-050); }
 .pre-registration-step-content { display: grid; align-content: start; gap: 1rem; padding: 1rem; }
 .pre-registration-fields { display: grid; gap: 0.8rem; }
+.pre-registration-zip-hint { margin: -0.3rem 0 0; color: var(--neutral-600); font-size: 0.65rem; }
 .pre-registration-destination { display: grid; gap: 0.15rem; padding: 0.8rem; border-left: 3px solid var(--blue-600); border-radius: var(--radius-md); background: #eef6ff; }
 .pre-registration-destination span { color: var(--neutral-600); font-size: 0.6rem; text-transform: uppercase; }
 .pre-registration-destination strong { font-size: 0.74rem; }

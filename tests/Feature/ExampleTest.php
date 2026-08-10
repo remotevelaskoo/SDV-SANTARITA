@@ -792,4 +792,40 @@ class ExampleTest extends TestCase
             ->assertSet('zipCodeLookupFailed', true)
             ->assertSee('CEP não encontrado');
     }
+
+    public function test_the_public_pre_registration_zip_code_lookup_fills_the_address(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response([
+                'logradouro' => 'Rua das Palmeiras',
+                'bairro' => 'Centro',
+                'localidade' => 'Taubaté',
+                'uf' => 'SP',
+            ]),
+        ]);
+
+        Livewire::test(PublicPreRegistration::class)
+            ->set('zipCode', '12010-000')
+            ->call('lookupZipCode')
+            ->assertSet('address', 'Rua das Palmeiras')
+            ->assertSet('district', 'Centro')
+            ->assertSet('city', 'Taubaté')
+            ->assertSet('state', 'SP')
+            ->assertSet('zipCodeLookupFailed', false);
+    }
+
+    public function test_the_public_pre_registration_zip_code_lookup_warns_when_not_found(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response(['erro' => true]),
+        ]);
+
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->set('step', 2)
+            ->set('zipCode', '00000-000')
+            ->call('lookupZipCode')
+            ->assertSet('zipCodeLookupFailed', true)
+            ->assertSee('CEP não encontrado');
+    }
 }
