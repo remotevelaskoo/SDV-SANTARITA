@@ -1338,6 +1338,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .property-form-card fieldset { display: grid; gap: 0.8rem; padding: 1rem; margin: 0; border: 0; border-bottom: 1px solid var(--neutral-200); }
 .property-form-card fieldset legend { padding: 0; color: var(--navy-900); font-size: 0.74rem; font-weight: 850; }
 .property-form-fields { display: grid; gap: 0.75rem; }
+.property-zip-hint { padding: 0 1rem; margin: 0 0 0.8rem; color: var(--neutral-600); font-size: 0.65rem; }
 .property-notes-field { display: grid; gap: 0.4rem; }
 .property-notes-field > span { color: var(--neutral-800); font-size: 0.68rem; font-weight: 750; }
 .property-notes-field textarea { width: 100%; padding: 0.7rem; resize: vertical; border: 1px solid var(--neutral-300); border-radius: var(--radius-md); color: var(--neutral-950); font: inherit; font-size: 0.7rem; }

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -43,6 +44,8 @@ class PropertyManagement extends Component
     public string $propertyStatus = 'implantacao';
 
     public string $notes = '';
+
+    public bool $zipCodeLookupFailed = false;
 
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
@@ -143,6 +146,35 @@ class PropertyManagement extends Component
         $this->notes = '';
         $this->mode = 'form';
         $this->feedback = null;
+    }
+
+    public function lookupZipCode(): void
+    {
+        $this->zipCodeLookupFailed = false;
+        $digits = preg_replace('/\D/', '', $this->zipCode);
+
+        if (strlen((string) $digits) !== 8) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(5)->get("https://viacep.com.br/ws/{$digits}/json/");
+        } catch (\Throwable) {
+            $this->zipCodeLookupFailed = true;
+
+            return;
+        }
+
+        if (! $response->successful() || $response->json('erro')) {
+            $this->zipCodeLookupFailed = true;
+
+            return;
+        }
+
+        $this->street = $response->json('logradouro') ?: $this->street;
+        $this->district = $response->json('bairro') ?: $this->district;
+        $this->city = $response->json('localidade') ?: $this->city;
+        $this->state = $response->json('uf') ?: $this->state;
     }
 
     public function saveDraft(): void
@@ -266,6 +298,7 @@ class PropertyManagement extends Component
         $this->state = 'SP';
         $this->propertyStatus = 'implantacao';
         $this->notes = '';
+        $this->zipCodeLookupFailed = false;
         $this->feedback = null;
         $this->resetErrorBag();
     }

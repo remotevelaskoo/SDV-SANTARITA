@@ -167,7 +167,26 @@
 
                 <fieldset><legend>Identificação</legend><div class="property-form-fields"><x-ui.field id="property-organization" label="Condomínio ou organização" wire:model="organization" :error="$errors->first('organization')" required /><x-ui.field id="property-block" label="Bloco" wire:model="block" help="Opcional quando a implantação não utiliza blocos." /><x-ui.field id="property-unit" label="Unidade" wire:model="unit" :error="$errors->first('unit')" required /><x-ui.field id="property-code" label="Código único" wire:model="code" placeholder="SRA-A-102" :error="$errors->first('code')" required /><x-ui.select id="property-form-status" label="Situação do imóvel" wire:model.live="propertyStatus" :error="$errors->first('propertyStatus')" required><option value="implantacao">Em implantação</option><option value="ativo">Ativo</option><option value="inativo">Inativo</option><option value="bloqueado">Bloqueado</option></x-ui.select></div></fieldset>
 
-                <fieldset><legend>Endereço estrutural</legend><x-ui.alert variant="info" title="Endereço compartilhado">Este endereço pertence ao imóvel e será apresentado aos vínculos residenciais. Ele não será copiado para cada pessoa.</x-ui.alert><div class="property-form-fields property-form-fields--address"><x-ui.field id="property-zip" label="CEP" wire:model="zipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required /><x-ui.field id="property-street" label="Logradouro" wire:model="street" :error="$errors->first('street')" required /><x-ui.field id="property-number" label="Número" wire:model="number" :error="$errors->first('number')" required /><x-ui.field id="property-complement" label="Complemento" wire:model="complement" /><x-ui.field id="property-district" label="Bairro" wire:model="district" :error="$errors->first('district')" required /><x-ui.field id="property-city" label="Cidade" wire:model="city" :error="$errors->first('city')" required /><x-ui.field id="property-state" label="Estado" wire:model="state" :error="$errors->first('state')" required /></div></fieldset>
+                <fieldset>
+                    <legend>Endereço estrutural</legend>
+                    <x-ui.alert variant="info" title="Endereço compartilhado">Este endereço pertence ao imóvel e será apresentado aos vínculos residenciais. Ele não será copiado para cada pessoa.</x-ui.alert>
+                    <p class="property-zip-hint">
+                        <span wire:loading wire:target="lookupZipCode" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Buscando endereço pelo CEP…</span>
+                        <span wire:loading.remove wire:target="lookupZipCode">Ao sair do campo CEP, preenchemos logradouro, bairro, cidade e estado automaticamente.</span>
+                    </p>
+                    @if ($zipCodeLookupFailed)
+                        <x-ui.alert variant="warning" title="CEP não encontrado">Não localizamos este CEP automaticamente. Preencha o endereço manualmente.</x-ui.alert>
+                    @endif
+                    <div class="property-form-fields property-form-fields--address">
+                        <x-ui.field id="property-zip" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required />
+                        <x-ui.field id="property-street" label="Logradouro" wire:model="street" :error="$errors->first('street')" required />
+                        <x-ui.field id="property-number" label="Número" wire:model="number" :error="$errors->first('number')" required />
+                        <x-ui.field id="property-complement" label="Complemento" wire:model="complement" />
+                        <x-ui.field id="property-district" label="Bairro" wire:model="district" :error="$errors->first('district')" required />
+                        <x-ui.field id="property-city" label="Cidade" wire:model="city" :error="$errors->first('city')" required />
+                        <x-ui.field id="property-state" label="Estado" wire:model="state" :error="$errors->first('state')" required />
+                    </div>
+                </fieldset>
 
                 <fieldset><legend>Observações estruturais</legend><label class="property-notes-field" for="property-notes"><span>Observações</span><textarea id="property-notes" wire:model="notes" maxlength="300" rows="4" placeholder="Registre somente informações estruturais do imóvel…"></textarea><small>{{ mb_strlen($notes) }}/300 caracteres</small></label></fieldset>
 
