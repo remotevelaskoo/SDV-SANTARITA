@@ -19,7 +19,7 @@
             ['label' => 'Encomendas', 'icon' => 'package'],
             ['label' => 'Logs e auditoria', 'icon' => 'scroll'],
             ['label' => 'Manutenção', 'icon' => 'wrench'],
-            ['label' => 'Caixa', 'icon' => 'clipboard'],
+            ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
         ],
     ];
 @endphp
