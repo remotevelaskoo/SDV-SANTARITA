@@ -155,7 +155,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
 | P14 | Caixa | Abertura, movimentações, contribuições, conferência e fechamento | P04 e regras financeiras | ✅ Concluída (protótipo — regras completas da contribuição ainda pendentes, `PEN-RNG-011`) | Vinicius | `vinicius/p14-caixa` |
-| P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | 🟢 Disponível | A definir | A definir |
+| P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p15-encomendas` |
 | P16 | Relatórios | Consultas, filtros e exportações autorizadas | Dados reais dos módulos | 🔴 Bloqueada | A definir | A definir |
 | P17 | Administração | Usuários, perfis, permissões, configurações, equipamentos e auditoria | Login real e banco de dados | 🔴 Bloqueada | A definir | A definir |
 
