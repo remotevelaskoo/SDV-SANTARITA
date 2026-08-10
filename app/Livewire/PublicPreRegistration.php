@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -27,6 +28,8 @@ class PublicPreRegistration extends Component
     public string $accessType = 'turista';
 
     public string $zipCode = '';
+
+    public bool $zipCodeLookupFailed = false;
 
     public string $address = '';
 
@@ -98,6 +101,35 @@ class PublicPreRegistration extends Component
     public function saveDraft(): void
     {
         $this->draftSaved = true;
+    }
+
+    public function lookupZipCode(): void
+    {
+        $this->zipCodeLookupFailed = false;
+        $digits = preg_replace('/\D/', '', $this->zipCode);
+
+        if (strlen((string) $digits) !== 8) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(5)->get("https://viacep.com.br/ws/{$digits}/json/");
+        } catch (\Throwable) {
+            $this->zipCodeLookupFailed = true;
+
+            return;
+        }
+
+        if (! $response->successful() || $response->json('erro')) {
+            $this->zipCodeLookupFailed = true;
+
+            return;
+        }
+
+        $this->address = $response->json('logradouro') ?: $this->address;
+        $this->district = $response->json('bairro') ?: $this->district;
+        $this->city = $response->json('localidade') ?: $this->city;
+        $this->state = $response->json('uf') ?: $this->state;
     }
 
     public function markDocumentReady(): void
