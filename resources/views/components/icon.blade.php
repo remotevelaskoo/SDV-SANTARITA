@@ -59,6 +59,12 @@
         @case('chevron-down')
             <path d="m6 9 6 6 6-6" />
             @break
+        @case('chevron-left')
+            <path d="m15 18-6-6 6-6" />
+            @break
+        @case('chevron-right')
+            <path d="m9 18 6-6-6-6" />
+            @break
         @case('logout')
             <path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
             @break
@@ -94,6 +100,9 @@
             @break
         @case('check-circle')
             <circle cx="12" cy="12" r="9" /><path d="m8 12 2.5 2.5L16 9" />
+            @break
+        @case('check')
+            <path d="m5 12 4 4L19 6" />
             @break
         @case('x')
             <path d="M6 6l12 12M18 6 6 18" />

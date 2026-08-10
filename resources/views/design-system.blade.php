@@ -110,6 +110,60 @@
                 </x-ui.card>
             </section>
 
+            <section class="component-section" aria-labelledby="navigation-title">
+                <header>
+                    <span>DS-CMP-020 a 023</span>
+                    <h2 id="navigation-title">Navegação e etapas</h2>
+                    <p>O usuário entende onde está, o que já concluiu e o que ainda falta.</p>
+                </header>
+
+                <div class="component-navigation-grid">
+                    <x-ui.card title="Caminho da página" description="Localização dentro do sistema">
+                        <x-ui.breadcrumb>
+                            <x-ui.breadcrumb-item :href="route('dashboard')">Dashboard</x-ui.breadcrumb-item>
+                            <x-ui.breadcrumb-item href="#">Cadastros</x-ui.breadcrumb-item>
+                            <x-ui.breadcrumb-item current>Pessoas</x-ui.breadcrumb-item>
+                        </x-ui.breadcrumb>
+                    </x-ui.card>
+
+                    <x-ui.card title="Etapas do cadastro" description="Progresso sem esconder erros">
+                        <x-ui.stepper
+                            :current="3"
+                            :steps="[
+                                ['label' => 'Tipo de acesso', 'description' => 'Concluído'],
+                                ['label' => 'Dados pessoais', 'description' => 'Concluído'],
+                                ['label' => 'Vínculo', 'description' => 'Etapa atual'],
+                                ['label' => 'Credenciais', 'description' => 'Ainda não iniciado'],
+                            ]"
+                        />
+                    </x-ui.card>
+                </div>
+
+                <x-ui.card title="Abas do cadastro" description="Visões equivalentes da mesma pessoa" class="component-tabs-card">
+                    <x-ui.tabs default="summary">
+                        <div class="ui-tab-list" role="tablist" aria-label="Dados da pessoa">
+                            <x-ui.tab id="summary" label="Resumo" />
+                            <x-ui.tab id="vehicles" label="Veículos" />
+                            <x-ui.tab id="history" label="Histórico" />
+                        </div>
+                        <x-ui.tab-panel id="summary">
+                            <strong>Marcos Vinicius da Silva</strong>
+                            <p>Morador · Bloco A — Apto 102 · Cadastro ativo</p>
+                        </x-ui.tab-panel>
+                        <x-ui.tab-panel id="vehicles">
+                            <strong>1 veículo vinculado</strong>
+                            <p>ABC1D23 · Toyota Corolla · Prata</p>
+                        </x-ui.tab-panel>
+                        <x-ui.tab-panel id="history">
+                            <strong>Último acesso às 08:42</strong>
+                            <p>Entrada liberada pela Portaria Principal.</p>
+                        </x-ui.tab-panel>
+                    </x-ui.tabs>
+                </x-ui.card>
+
+                <x-ui.pagination :current="2" :total="5" :from="21" :to="40" :total-items="96" />
+            </section>
+
             <section class="component-section" aria-labelledby="status-title">
                 <header>
                     <span>DS-CMP-011 e 012</span>
@@ -260,6 +314,57 @@
                         </x-ui.responsive-table>
                     </x-ui.card>
                 </div>
+            </section>
+
+            <section class="component-section" aria-labelledby="overlays-title">
+                <header>
+                    <span>DS-CMP-024 e 025</span>
+                    <h2 id="overlays-title">Janela e painel lateral</h2>
+                    <p>Informações curtas abrem sem abandonar a tela atual.</p>
+                </header>
+
+                <x-ui.card>
+                    <x-ui.action-group align="start">
+                        <x-ui.modal
+                            id="confirmModal"
+                            title="Negar esta entrada?"
+                            description="A tentativa será registrada e nenhum comando será enviado ao portão."
+                            trigger-label="Abrir confirmação"
+                            confirm-label="Confirmar negativa"
+                            confirm-variant="danger"
+                        >
+                            <x-ui.alert variant="warning" title="Motivo obrigatório">
+                                Na tela real, o operador deverá selecionar e justificar o motivo da negativa.
+                            </x-ui.alert>
+                        </x-ui.modal>
+
+                        <x-ui.drawer
+                            id="personDrawer"
+                            title="Resumo da pessoa"
+                            description="Consulta rápida sem perder a validação"
+                            trigger-label="Abrir painel lateral"
+                        >
+                            <div class="component-person-summary">
+                                <span class="avatar" aria-hidden="true">MV</span>
+                                <div>
+                                    <strong>Marcos Vinicius da Silva</strong>
+                                    <small>Morador · Cadastro ativo</small>
+                                </div>
+                            </div>
+                            <dl class="component-summary">
+                                <div><dt>Documento</dt><dd>•••.•••.321-00</dd></div>
+                                <div><dt>Imóvel</dt><dd>Bloco A — Apto 102</dd></div>
+                                <div><dt>Validade</dt><dd>Acesso permanente</dd></div>
+                            </dl>
+                            <x-slot:footer>
+                                <form method="dialog">
+                                    <x-ui.button type="submit" variant="secondary">Fechar</x-ui.button>
+                                </form>
+                                <x-ui.button>Ver cadastro completo</x-ui.button>
+                            </x-slot:footer>
+                        </x-ui.drawer>
+                    </x-ui.action-group>
+                </x-ui.card>
             </section>
         </main>
     </div>
