@@ -9,7 +9,7 @@
         ],
         'Cadastros' => [
             ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
-            ['label' => 'Pessoas', 'icon' => 'users'],
+            ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people.create'],
             ['label' => 'Empresas e prestadores', 'icon' => 'users-round'],
             ['label' => 'Veículos', 'icon' => 'car'],
         ],
