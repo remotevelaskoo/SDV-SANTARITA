@@ -10,7 +10,7 @@
         'Cadastros' => [
             ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
             ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people.create'],
-            ['label' => 'Empresas e prestadores', 'icon' => 'users-round'],
+            ['label' => 'Empresas e prestadores', 'icon' => 'users-round', 'route' => 'companies'],
             ['label' => 'Veículos', 'icon' => 'car', 'route' => 'vehicles'],
         ],
         'Gestão' => [

@@ -78,7 +78,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
 | P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p12-cadastro-veiculos` |
-| P13 | Prestadores e empresas | Empresas, funcionários, serviços, documentos e autorizações | P04 | 🟢 Disponível para protótipo | A definir | A definir |
+| P13 | Prestadores e empresas | Empresas, funcionários, serviços, documentos e autorizações | P04 | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p13-prestadores-empresas` |
 
 #### Acompanhamento detalhado da P06
 
