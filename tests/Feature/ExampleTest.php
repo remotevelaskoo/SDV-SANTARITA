@@ -741,7 +741,7 @@ class ExampleTest extends TestCase
             ->assertSee('O morador ainda não foi avisado.');
     }
 
-    public function test_the_public_pre_registration_welcome_reflects_a_tourist_stay(): void
+    public function test_the_public_pre_registration_welcome_reflects_a_tourist_beach_visit(): void
     {
         $this->withoutVite();
 
@@ -750,7 +750,7 @@ class ExampleTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Turista')
-            ->assertSee('estadia')
+            ->assertSee('acesso turístico')
             ->assertSee('praia');
 
         Livewire::test(PublicPreRegistration::class)

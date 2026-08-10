@@ -150,11 +150,11 @@ Os dados, protocolos, endereços, imagens, contagens e datas presentes na refer�
 
 ## 3.1 Visitante
 
-Deseja informar seus dados antecipadamente e reduzir o tempo de atendimento.
+Deseja visitar uma casa por tempo determinado. O pré-cadastro exige imóvel de destino, responsável e período de validade.
 
 ## 3.2 Turista
 
-Deseja registrar uma ocupação temporária vinculada a imóvel, responsável e período.
+Deseja visitar a Praia do Santa Rita por período determinado, sem vínculo com casa ou imóvel.
 
 ## 3.3 Prestador
 
@@ -1782,7 +1782,7 @@ OCR, autorização, vínculo e decisão não residirão no navegador.
 | PEN-UXP-002 | Definir base legal e política para selfie e biometria | Etapa 4 e reconhecimento facial | `PEN-005` |
 | PEN-UXP-003 | Definir política de retenção de documentos e imagens | Arquivos e descarte | `PEN-006` |
 | PEN-UXP-004 | Definir campos obrigatórios por tipo | Formulários e validação | Regras de negócio |
-| PEN-UXP-005 | Definir regras específicas de turista | Período, destino e documentação | `PEN-007` |
+| PEN-UXP-005 | Definir regras específicas de turista | Resolvida em 10/08/2026: praia, período determinado e sem imóvel | `PEN-007` |
 | PEN-UXP-006 | Definir documentos exigidos para prestador | Etapa 3 e análise | Regras de negócio |
 | PEN-UXP-007 | Definir se OCR entra no MVP | Processamento e prazo | `PEN-019` |
 | PEN-UXP-008 | Definir tipos, formatos e limites de arquivo | Upload e segurança | Arquitetura |

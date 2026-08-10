@@ -167,8 +167,8 @@ As telas aprovadas apresentam os seguintes tipos principais:
 | Morador | Proprietário, dependente ou ocupante residente | Imóvel | Permanente ou definida |
 | Inquilino | Locatário de um imóvel | Imóvel e contrato | Obrigatoriamente temporária |
 | Prestador | Funcionário ou prestador de serviço | Empresa, imóvel, área ou autorização | Temporária ou parametrizada |
-| Visitante | Pessoa convidada por morador ou responsável | Responsável e imóvel de destino | Temporária |
-| Turista | Ocupação temporária, hospedagem ou locação curta | Imóvel e responsável | Obrigatoriamente temporária |
+| Visitante | Pessoa convidada para visitar uma casa | Responsável e imóvel de destino | Obrigatoriamente temporária |
+| Turista | Pessoa que visita a Praia do Santa Rita | Destino Praia do Santa Rita, sem vínculo com imóvel | Obrigatoriamente temporária |
 
 A classificação da pessoa não deverá substituir o vínculo. A mesma pessoa poderá permanecer como cadastro único e possuir vínculos diferentes ao longo do tempo.
 
@@ -370,19 +370,24 @@ O vínculo de inquilino deverá conter obrigatoriamente:
 
 Após a data de término, o vínculo e as permissões derivadas deverão ser encerrados automaticamente.
 
-## 6.5 Turista ou ocupação temporária
+## 6.5 Turista
 
-A modalidade turista deverá ser tratada como ocupação temporária vinculada a um imóvel.
+A modalidade turista deverá representar a pessoa que visita a Praia do Santa Rita, sem vínculo com casa ou imóvel. O destino válido da autorização será a praia.
 
 Deverá possuir:
 
-- responsável;
 - período de permanência;
-- imóvel;
+- destino Praia do Santa Rita;
 - identificação;
 - credenciais temporárias;
 - situação de aprovação;
 - regras de acesso definidas.
+
+O cadastro ou pré-cadastro não autoriza nem libera o acesso automaticamente. A autorização e a validação de entrada permanecem obrigatórias.
+
+## 6.6 Visitante de imóvel
+
+O visitante deverá estar vinculado ao imóvel visitado, ao respectivo responsável e a um período determinado. Esse vínculo temporário não caracteriza moradia, locação ou hospedagem.
 
 ---
 
@@ -1203,7 +1208,7 @@ Os seguintes pontos deverão ser aprofundados nos documentos específicos, sem b
 - critérios de contingência sem internet;
 - valor e regras da contribuição de acesso;
 - formas de pagamento permitidas;
-- regras específicas para turistas;
+- detalhamento documental e operacional dos turistas (destino e vínculo já definidos);
 - política de reconhecimento facial e base legal;
 - quantidade e localização dos pontos de acesso;
 - regras de estacionamento;

@@ -23,11 +23,11 @@
                 <x-ui.badge variant="success">Convite válido</x-ui.badge>
                 <span class="pre-registration-welcome__icon"><x-icon name="key" /></span>
                 <h2 id="pre-registration-welcome-title">Bem-vindo ao Santa Rita</h2>
-                <p>Mariana Souza preparou sua estadia no <strong>Bloco B · Apto 304</strong>. Adiante seus dados para chegar direto à praia.</p>
+                <p>Seu acesso turístico à <strong>Praia do Santa Rita</strong> foi pré-convidado. Adiante seus dados para análise da portaria.</p>
 
                 <dl>
                     <div><dt>Tipo</dt><dd>Turista</dd></div>
-                    <div><dt>Período da estadia</dt><dd>10/08/2026 até 17/08/2026</dd></div>
+                    <div><dt>Período da visita</dt><dd>10/08/2026 até 17/08/2026</dd></div>
                     <div><dt>Convite válido até</dt><dd>10/08/2026 · 17:30</dd></div>
                 </dl>
 
@@ -120,7 +120,7 @@
                                 <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" required />
                             </div>
                             @if ($accessType === 'turista')
-                                <article class="pre-registration-destination"><span>Destino da estadia</span><strong>Praia do Santa Rita</strong><small>Área comum — sem vínculo com um imóvel específico</small></article>
+                                <article class="pre-registration-destination"><span>Destino turístico</span><strong>Praia do Santa Rita</strong><small>Sem vínculo com imóvel — sujeito à autorização e validação da portaria</small></article>
                             @else
                                 <article class="pre-registration-destination pre-registration-destination--property">
                                     <span>Destino da visita</span>

@@ -69,7 +69,7 @@
                             <option value="outro">Outro</option>
                         </x-ui.select>
                         <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante ou prestador." :error="$errors->first('quickResponsible')" />
-                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório para visitante ou morador." :error="$errors->first('quickPropertyCode')" />
+                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório para visitante ou morador; turista não possui vínculo com imóvel." :error="$errors->first('quickPropertyCode')" />
                     </div>
 
                     @if ($quickDuplicateFound)

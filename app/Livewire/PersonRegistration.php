@@ -200,14 +200,14 @@ class PersonRegistration extends Component
                 'phone' => ['required', 'string', 'min:8'],
             ],
             3 => [
-                'property' => ['required', 'string'],
+                'property' => $this->accessType === 'tourist' ? ['nullable'] : ['required', 'string'],
             ],
             4 => [
                 'nature' => ['required', Rule::in(['proprietario', 'morador', 'inquilino', 'outro'])],
                 'role' => ['required', Rule::in(['titular', 'conjuge', 'filho', 'dependente', 'outro'])],
                 'startDate' => ['required', 'date'],
                 'endDate' => $this->indefiniteTerm ? ['nullable'] : ['required', 'date', 'after:startDate'],
-                'responsible' => in_array($this->accessType, ['visitor', 'tourist'], true) ? ['required', 'string'] : ['nullable'],
+                'responsible' => $this->accessType === 'visitor' ? ['required', 'string'] : ['nullable'],
                 'company' => $this->accessType === 'provider' ? ['required', 'string'] : ['nullable'],
             ],
             default => [],
