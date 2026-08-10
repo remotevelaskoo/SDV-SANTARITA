@@ -6,7 +6,7 @@
                 <span><strong>SDV Access</strong><small>Santa Rita</small></span>
             </a>
             <div>
-                <x-ui.badge variant="info">P04 · Em desenvolvimento</x-ui.badge>
+                <x-ui.badge variant="success">P04 · Concluído</x-ui.badge>
                 <h1>Componentes compartilhados</h1>
                 <p>Catálogo local para testar as peças visuais antes de usá-las nas telas do sistema.</p>
             </div>
@@ -365,6 +365,159 @@
                         </x-ui.drawer>
                     </x-ui.action-group>
                 </x-ui.card>
+            </section>
+
+            <section class="component-section" aria-labelledby="advanced-fields-title">
+                <header>
+                    <span>DS-CMP-007, 008, 010 e 026 · Entrega 04</span>
+                    <h2 id="advanced-fields-title">Formulários avançados</h2>
+                    <p>Busca, período, arquivo e ajuda complementar com orientação clara.</p>
+                </header>
+
+                <div class="component-cards-grid component-cards-grid--two">
+                    <x-ui.card title="Busca inteligente" description="Digite nome, documento ou imóvel">
+                        <x-ui.autocomplete
+                            id="demo-person-search"
+                            label="Pessoa ou responsável"
+                            placeholder="Comece a digitar um nome"
+                            help="Use as setas do teclado e Enter para selecionar."
+                            :options="[
+                                ['value' => 1, 'label' => 'Marcos Vinicius da Silva', 'description' => 'CPF final 2100 · Bloco A — Apto 102'],
+                                ['value' => 2, 'label' => 'Mariana da Silva', 'description' => 'CPF final 8842 · Bloco C — Apto 301'],
+                                ['value' => 3, 'label' => 'Marcelo Souza', 'description' => 'Prestador · Vale Manutenção'],
+                            ]"
+                        />
+                    </x-ui.card>
+
+                    <x-ui.card title="Data e período" description="Valor interno sem ambiguidade">
+                        <x-ui.date-range id="demo-validity" label="Vigência da autorização" start="2026-08-10" end="2026-08-15" allow-indefinite />
+                    </x-ui.card>
+
+                    <x-ui.card title="Upload e captura" description="Arquivo ainda não é enviado neste catálogo">
+                        <x-ui.upload id="demo-document-upload" label="Selecionar documento" limit="Até 10 MB" />
+                    </x-ui.card>
+
+                    <x-ui.card title="Ajuda complementar" description="Funciona com mouse, teclado e toque">
+                        <div class="component-row">
+                            <span>Confiança da leitura</span>
+                            <x-ui.tooltip text="Percentual informado pelo equipamento; não substitui a conferência do operador.">
+                                <x-ui.button variant="secondary" size="sm" :icon-only="true" aria-label="Entender confiança da leitura"><x-slot:icon><x-icon name="info" /></x-slot:icon><span class="sr-only">Ajuda</span></x-ui.button>
+                            </x-ui.tooltip>
+                        </div>
+                    </x-ui.card>
+                </div>
+            </section>
+
+            <section class="component-section" aria-labelledby="operational-info-title">
+                <header>
+                    <span>DS-CMP-013, 018 e 019 · Entrega 04</span>
+                    <h2 id="operational-info-title">Informações operacionais</h2>
+                    <p>Confirmações, números e histórico sempre apresentam origem e contexto.</p>
+                </header>
+
+                <div class="component-toast-examples">
+                    <x-ui.toast title="Cadastro salvo">As informações foram registradas. Nenhum comando foi enviado ao portão.</x-ui.toast>
+                    <x-ui.toast variant="danger" title="Falha de comunicação">A autorização foi registrada, mas o equipamento não confirmou a abertura.</x-ui.toast>
+                </div>
+
+                <div class="component-metrics-grid">
+                    <x-ui.metric label="Acessos hoje" value="184" period="10 de agosto" comparison="+12%" trend="up" icon="door" />
+                    <x-ui.metric label="Contribuições" value="R$ 735,00" period="Caixa atual" comparison="23 registros" icon="wallet" />
+                    <x-ui.metric label="Pendências" value="7" period="Agora" comparison="2 críticas" trend="down" icon="alert" state="Requer atenção" />
+                </div>
+
+                <x-ui.card title="Atividade recente" description="Eventos demonstrativos e rastreáveis">
+                    <x-ui.activity-list>
+                        <x-ui.activity-item title="Entrada liberada" description="Marcos Vinicius da Silva · Morador" datetime="10/08/2026 às 16:42" actor="João da Silva" location="Portaria Principal" status="Liberado" tone="success" icon="door" />
+                        <x-ui.activity-item title="Cadastro atualizado" description="Telefone e veículo revisados" datetime="10/08/2026 às 16:30" actor="Ana Ferreira" status="Concluído" tone="info" icon="clipboard" />
+                        <x-ui.activity-item title="Comando sem confirmação" description="Portão de serviço não respondeu" datetime="10/08/2026 às 16:18" actor="Controladora 02" location="Acesso de Serviço" status="Falha" tone="danger" icon="alert" />
+                    </x-ui.activity-list>
+                </x-ui.card>
+            </section>
+
+            <section class="component-section" aria-labelledby="domain-identification-title">
+                <header>
+                    <span>DS-CMP-027 a 032 · Entrega 05</span>
+                    <h2 id="domain-identification-title">Identificação, vínculos e equipamentos</h2>
+                    <p>Peças próprias da rotina da portaria, sem confundir cadastro com autorização.</p>
+                </header>
+
+                <x-ui.card>
+                    <x-ui.access-type-selector selected="resident" />
+                </x-ui.card>
+
+                <div class="component-domain-grid">
+                    <x-ui.person-summary
+                        name="Marcos Vinicius da Silva"
+                        initials="MV"
+                        document="•••.•••.321-00"
+                        type="Morador"
+                        property="Bloco A — Apto 102"
+                        responsible="Titular do imóvel"
+                        status="Cadastro ativo"
+                        validity="Acesso permanente"
+                    >
+                        <x-slot:actions><x-ui.button size="sm" variant="secondary">Ver cadastro completo</x-ui.button></x-slot:actions>
+                    </x-ui.person-summary>
+
+                    <x-ui.link-panel
+                        property="Bloco A — Apto 102"
+                        nature="Moradia"
+                        responsibility="Titular"
+                        period="Desde 15/05/2022"
+                        :permissions="['Entrada 24 horas', 'Autorizar visitantes', 'Cadastrar veículos']"
+                    >
+                        <x-slot:actions><x-ui.button size="sm" variant="secondary">Consultar vínculo</x-ui.button></x-slot:actions>
+                    </x-ui.link-panel>
+
+                    <x-ui.vehicle-card plate="ABC1D23" model="Toyota Corolla 2022" color="Prata" owner="Marcos Vinicius da Silva" link="Titular" status="Cadastrado">
+                        <x-slot:actions><x-ui.button size="sm" variant="secondary">Consultar veículo</x-ui.button></x-slot:actions>
+                    </x-ui.vehicle-card>
+                </div>
+
+                <x-ui.lpr-comparison recognized="ABC1D23" registered="ABC1D23" :confidence="98" vehicle="Toyota Corolla · Prata" captured-at="10/08/2026 às 16:42:10">
+                    <x-slot:actions><x-ui.button size="sm" variant="secondary">Alterar placa ou veículo</x-ui.button></x-slot:actions>
+                </x-ui.lpr-comparison>
+
+                <div class="component-sync-grid">
+                    <x-ui.sync-status status="Sincronizado" equipment="Controladora 01" last-attempt="16:40:02" description="Credencial disponível no acesso principal." />
+                    <x-ui.sync-status status="Atualização pendente" equipment="Controladora 02" last-attempt="16:41:18" description="Nova tentativa programada." tone="warning">
+                        <x-slot:action><x-ui.button size="sm" variant="secondary">Tentar novamente</x-ui.button></x-slot:action>
+                    </x-ui.sync-status>
+                    <x-ui.sync-status status="Falha" equipment="Leitor Garagem" last-attempt="16:41:46" description="Equipamento sem comunicação." tone="danger">
+                        <x-slot:action><x-ui.button size="sm" variant="danger">Ver ocorrência</x-ui.button></x-slot:action>
+                    </x-ui.sync-status>
+                </div>
+            </section>
+
+            <section class="component-section" aria-labelledby="domain-operation-title">
+                <header>
+                    <span>DS-CMP-033 a 036 · Entrega 05</span>
+                    <h2 id="domain-operation-title">Decisão, contribuição, caixa e protocolo</h2>
+                    <p>As ações críticas permanecem separadas e explicam seus efeitos.</p>
+                </header>
+
+                <x-ui.contribution amount="15,00" cashbox="Caixa Portaria Principal" />
+                <x-ui.access-decision />
+
+                <div class="component-domain-grid component-domain-grid--closing">
+                    <x-ui.cash-summary
+                        operator="João da Silva"
+                        terminal="Portaria Principal"
+                        opened-at="07:00"
+                        opening-balance="R$ 100,00"
+                        income="R$ 735,00"
+                        expenses="R$ 35,00"
+                        cancellations="R$ 15,00"
+                        expected="R$ 785,00"
+                        informed="R$ 785,00"
+                        difference="R$ 0,00"
+                    >
+                        <x-slot:actions><x-ui.button size="sm" variant="secondary">Ver movimentações</x-ui.button></x-slot:actions>
+                    </x-ui.cash-summary>
+
+                    <x-ui.protocol number="SRA-20260810-004182" status="Acesso registrado" datetime="10/08/2026 às 16:42:15" />
+                </div>
             </section>
         </main>
     </div>
