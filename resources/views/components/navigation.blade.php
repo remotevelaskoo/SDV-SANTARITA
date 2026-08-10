@@ -8,7 +8,7 @@
             ['label' => 'Entradas e saídas', 'icon' => 'door'],
         ],
         'Cadastros' => [
-            ['label' => 'Imóveis', 'icon' => 'building'],
+            ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
             ['label' => 'Pessoas', 'icon' => 'users'],
             ['label' => 'Empresas e prestadores', 'icon' => 'users-round'],
             ['label' => 'Veículos', 'icon' => 'car'],
