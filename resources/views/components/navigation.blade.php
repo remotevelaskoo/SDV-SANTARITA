@@ -1,0 +1,52 @@
+@php
+    $groups = [
+        'Operação' => [
+            ['label' => 'Dashboard', 'icon' => 'grid', 'active' => true],
+            ['label' => 'Validação de entrada', 'icon' => 'shield'],
+            ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3],
+            ['label' => 'Entradas e saídas', 'icon' => 'door'],
+        ],
+        'Cadastros' => [
+            ['label' => 'Imóveis', 'icon' => 'building'],
+            ['label' => 'Pessoas', 'icon' => 'users'],
+            ['label' => 'Empresas e prestadores', 'icon' => 'users-round'],
+            ['label' => 'Veículos', 'icon' => 'car'],
+        ],
+        'Gestão' => [
+            ['label' => 'Administração', 'icon' => 'settings'],
+            ['label' => 'Relatórios', 'icon' => 'chart'],
+            ['label' => 'Encomendas', 'icon' => 'package'],
+            ['label' => 'Logs e auditoria', 'icon' => 'scroll'],
+            ['label' => 'Manutenção', 'icon' => 'wrench'],
+            ['label' => 'Caixa', 'icon' => 'clipboard'],
+        ],
+    ];
+@endphp
+
+<nav class="navigation" aria-label="Módulos do sistema">
+    @foreach ($groups as $group => $items)
+        <section class="navigation__group" aria-labelledby="nav-{{ Str::slug($group) }}">
+            <h2 id="nav-{{ Str::slug($group) }}">{{ $group }}</h2>
+            <ul>
+                @foreach ($items as $item)
+                    <li>
+                        @if ($item['active'] ?? false)
+                            <a class="navigation__item navigation__item--active" href="{{ route('dashboard') }}" aria-current="page">
+                                <x-icon :name="$item['icon']" />
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        @else
+                            <span class="navigation__item navigation__item--disabled" aria-disabled="true" title="Módulo será portado em uma próxima etapa">
+                                <x-icon :name="$item['icon']" />
+                                <span>{{ $item['label'] }}</span>
+                                @if (isset($item['counter']))
+                                    <small class="navigation__counter">{{ $item['counter'] }}</small>
+                                @endif
+                            </span>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endforeach
+</nav>
