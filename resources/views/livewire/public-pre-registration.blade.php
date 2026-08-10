@@ -119,7 +119,19 @@
                                 <x-ui.field id="pre-city" label="Cidade" wire:model="city" :error="$errors->first('city')" required />
                                 <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" required />
                             </div>
-                            <article class="pre-registration-destination"><span>Destino da visita</span><strong>Bloco B · Apto 304</strong><small>Responsável: Mariana Souza</small></article>
+                            @if ($accessType === 'turista')
+                                <article class="pre-registration-destination"><span>Destino da estadia</span><strong>Praia do Santa Rita</strong><small>Área comum — sem vínculo com um imóvel específico</small></article>
+                            @else
+                                <article class="pre-registration-destination pre-registration-destination--property">
+                                    <span>Destino da visita</span>
+                                    <x-ui.select id="pre-destination-property" label="Imóvel de destino" wire:model.live="destinationProperty" :error="$errors->first('destinationProperty')" required>
+                                        @foreach ($this->destinationOptions() as $option)
+                                            <option value="{{ $option }}">{{ $option }}</option>
+                                        @endforeach
+                                    </x-ui.select>
+                                    <small>Responsável: {{ $this->destinationResponsible() }}</small>
+                                </article>
+                            @endif
                         @elseif ($step === 3)
                             <div class="pre-registration-capture">
                                 <span class="pre-registration-capture__icon"><x-icon name="file" /></span>

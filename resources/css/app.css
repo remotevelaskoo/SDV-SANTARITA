@@ -1173,6 +1173,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .pre-registration-destination span { color: var(--neutral-600); font-size: 0.6rem; text-transform: uppercase; }
 .pre-registration-destination strong { font-size: 0.74rem; }
 .pre-registration-destination small { color: var(--neutral-600); font-size: 0.62rem; }
+.pre-registration-destination--property { gap: 0.5rem; }
 .pre-registration-capture { display: grid; min-height: 22rem; place-items: center; align-content: center; gap: 0.7rem; padding: 1.25rem; border: 1px dashed var(--neutral-300); border-radius: var(--radius-lg); background: var(--neutral-050); text-align: center; }
 .pre-registration-capture__icon { display: grid; width: 4rem; height: 4rem; place-items: center; border-radius: 999px; background: #e9f4ff; color: var(--blue-700); }
 .pre-registration-capture--selfie .pre-registration-capture__icon { border: 3px solid var(--white); box-shadow: 0 0 0 1px var(--neutral-300); }

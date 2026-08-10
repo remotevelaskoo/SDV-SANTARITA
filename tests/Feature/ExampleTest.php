@@ -828,4 +828,27 @@ class ExampleTest extends TestCase
             ->assertSet('zipCodeLookupFailed', true)
             ->assertSee('CEP não encontrado');
     }
+
+    public function test_the_public_pre_registration_destination_defaults_to_the_beach_for_tourists(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->assertSet('accessType', 'turista')
+            ->set('step', 2)
+            ->assertSee('Praia do Santa Rita')
+            ->assertDontSee('Imóvel de destino');
+    }
+
+    public function test_the_public_pre_registration_asks_for_the_property_when_visitor(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->set('accessType', 'visitante')
+            ->set('step', 2)
+            ->assertDontSee('Praia do Santa Rita')
+            ->assertSee('Imóvel de destino')
+            ->assertSee('Responsável: Mariana Souza')
+            ->set('destinationProperty', 'Bloco A — Apto 208')
+            ->assertSee('Responsável: Bianca Moretti');
+    }
 }
