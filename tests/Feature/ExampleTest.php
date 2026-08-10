@@ -8,6 +8,7 @@ use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
+use App\Livewire\PackageManagement;
 use App\Livewire\PersonRegistration;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
@@ -686,5 +687,56 @@ class ExampleTest extends TestCase
             ->call('registerMovement')
             ->assertHasErrors(['movementAmount'])
             ->assertSee('O valor deve ser maior que zero.');
+    }
+
+    public function test_the_package_management_renders_the_p15_list(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/encomendas');
+
+        $response
+            ->assertOk()
+            ->assertSee('Encomendas')
+            ->assertSee('Bianca Moretti')
+            ->assertSee('SRE-20260810-0042')
+            ->assertSee('Aguardando retirada')
+            ->assertSee('Registrar encomenda');
+    }
+
+    public function test_the_package_detail_notifies_and_delivers(): void
+    {
+        Livewire::test(PackageManagement::class)
+            ->call('openPackage', 3)
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedPackageId', 3)
+            ->assertSee('Rafael Domingues')
+            ->call('notifyRecipient')
+            ->assertSet('packages.2.status', 'avisado')
+            ->assertSee('Morador avisado')
+            ->set('deliveredTo', 'Rafael Domingues')
+            ->call('deliverPackage')
+            ->assertSet('packages.2.status', 'entregue')
+            ->assertSet('packages.2.deliveredTo', 'Rafael Domingues')
+            ->assertSee('Entrega registrada');
+    }
+
+    public function test_the_package_form_creates_a_demo_package_awaiting_notification(): void
+    {
+        Livewire::test(PackageManagement::class)
+            ->call('createPackage')
+            ->assertSet('mode', 'form')
+            ->set('recipientName', 'Camila Andrade')
+            ->set('property', 'Bloco B — Apto 304')
+            ->set('carrier', 'Shopee')
+            ->set('type', 'caixa')
+            ->set('storageLocation', 'Prateleira A1')
+            ->call('savePackage')
+            ->assertHasNoErrors()
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedPackageId', 6)
+            ->assertSet('packages.5.status', 'aguardando')
+            ->assertSet('packages.5.notifiedAt', null)
+            ->assertSee('O morador ainda não foi avisado.');
     }
 }
