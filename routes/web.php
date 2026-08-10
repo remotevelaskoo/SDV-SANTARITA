@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
@@ -18,6 +19,7 @@ Route::get('/entrar', Login::class)->name('login');
 Route::get('/dashboard', Dashboard::class)->name('dashboard');
 Route::get('/portaria', Portaria::class)->name('portaria');
 Route::get('/validacao', AccessValidation::class)->name('validation');
+Route::get('/entradas-saidas', AccessHistory::class)->name('access-history');
 Route::get('/pre-cadastros', PreRegistrationQueue::class)->name('pre-registrations');
 Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->name('pre-registration.public');
 Route::get('/imoveis', PropertyManagement::class)->name('properties');

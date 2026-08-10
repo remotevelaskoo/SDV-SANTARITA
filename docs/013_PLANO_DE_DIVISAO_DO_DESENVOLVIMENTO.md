@@ -85,7 +85,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p07-cadastro-rapido` |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
-| P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | 🟢 Disponível | A definir | A definir |
+| P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p09-entradas-saidas` |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
 | P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p12-cadastro-veiculos` |

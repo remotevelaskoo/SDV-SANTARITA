@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
@@ -570,5 +571,52 @@ class ExampleTest extends TestCase
             ->assertSet('companies.4.tradeName', 'Entrega Rápida')
             ->assertSet('companies.4.providers', [])
             ->assertSee('Prestadores, documentos e autorizações permanecem separados.');
+    }
+
+    public function test_the_access_history_renders_the_p09_list(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/entradas-saidas');
+
+        $response
+            ->assertOk()
+            ->assertSee('Entradas e saídas')
+            ->assertSee('Luciana Ferraz')
+            ->assertSee('SRA-20260810-004181')
+            ->assertSee('Registros no filtro');
+    }
+
+    public function test_the_access_history_filters_by_type_and_result(): void
+    {
+        Livewire::test(AccessHistory::class)
+            ->assertSee('Eduardo Nogueira')
+            ->assertSee('Sérgio Aparecido Luz')
+            ->set('typeFilter', 'saida')
+            ->assertSee('Eduardo Nogueira')
+            ->assertDontSee('Sérgio Aparecido Luz')
+            ->set('typeFilter', 'todos')
+            ->set('resultFilter', 'negado')
+            ->assertSee('Bianca Moretti')
+            ->assertDontSee('Eduardo Nogueira')
+            ->set('resultFilter', 'todos')
+            ->set('search', 'Bianca')
+            ->assertSee('Bianca Moretti')
+            ->assertDontSee('Eduardo Nogueira');
+    }
+
+    public function test_the_access_history_detail_explains_denied_and_pending_results(): void
+    {
+        Livewire::test(AccessHistory::class)
+            ->call('openEntry', 3)
+            ->assertSet('mode', 'detail')
+            ->assertSee('Bianca Moretti')
+            ->assertSee('Motivo da negação')
+            ->assertSee('Responsável não localizado para confirmar a visita.')
+            ->assertSee('não pode ser editado')
+            ->call('backToList')
+            ->assertSet('mode', 'list')
+            ->call('openEntry', 1)
+            ->assertSee('Aguardando conferência');
     }
 }
