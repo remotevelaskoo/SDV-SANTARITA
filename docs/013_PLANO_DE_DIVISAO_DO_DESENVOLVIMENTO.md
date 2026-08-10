@@ -70,7 +70,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | 🟡 Em andamento (protótipo, atalhos ainda não confirmados) | Vinicius | `vinicius/p05-modo-portaria` |
+| P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | 🟢 Disponível para protótipo | A definir | A definir |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | 🔴 Bloqueada | A definir | A definir |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | 🟢 Disponível | A definir | A definir |
