@@ -752,6 +752,25 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .access-cards p { margin: 0; color: var(--neutral-800); font-size: 0.68rem; }
 .access-cards .result-badge { align-self: start; justify-self: end; }
 
+.portaria-home { display: grid; gap: 1.25rem; }
+.operation-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+.cash-card__status-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.cash-card__amount { display: block; margin: 0.6rem 0 0; font-size: 1.72rem; font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
+.cash-card__meta { display: grid; gap: 0.4rem; margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--neutral-200); color: var(--neutral-600); font-size: 0.7rem; }
+.cash-card__meta li { display: flex; align-items: center; gap: 0.4rem; }
+.cash-card__meta .app-icon { width: 0.8rem; height: 0.8rem; }
+.shortcuts-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+.shortcut-card { display: grid; gap: 0.5rem; padding: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); text-align: left; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.shortcut-card:not(.shortcut-card--disabled):hover { border-color: var(--blue-500); box-shadow: var(--shadow-2); cursor: pointer; }
+.shortcut-card--disabled { color: var(--neutral-400); cursor: default; }
+.shortcut-card__icon { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: var(--radius-md); background: var(--neutral-100); color: var(--blue-700); }
+.shortcut-card--disabled .shortcut-card__icon { color: var(--neutral-400); }
+.shortcut-card__icon .app-icon { width: 1.1rem; height: 1.1rem; }
+.shortcut-card strong { font-size: 0.8rem; color: var(--neutral-950); }
+.shortcut-card--disabled strong { color: var(--neutral-400); }
+.shortcut-card p { margin: 0; color: var(--neutral-600); font-size: 0.68rem; }
+.shortcut-card__status { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--neutral-400); }
+
 .live-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: var(--success-surface); color: var(--success); font-size: 0.62rem; font-weight: 800; }
 .live-badge i, .camera__record i { width: 0.38rem; height: 0.38rem; border-radius: 999px; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
 .cameras-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; padding: 1rem; }
@@ -1084,6 +1103,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .dashboard-panels { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
     .cameras-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .operation-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
 }
 
 @media (min-width: 80rem) {
