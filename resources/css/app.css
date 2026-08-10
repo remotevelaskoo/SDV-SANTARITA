@@ -1065,6 +1065,8 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .validation-section__header h2, .validation-decision h2 { margin: 0; color: var(--navy-900); font-size: 0.86rem; }
 .validation-section__header p { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.64rem; }
 .validation-section__header > time, .validation-section__header > .ui-badge { grid-column: 1 / -1; justify-self: start; margin-left: 2.45rem; color: var(--neutral-600); font-size: 0.61rem; }
+.validation-person-actions { display: grid; grid-column: 1 / -1; justify-items: start; gap: 0.45rem; margin-left: 2.45rem; }
+.validation-person-actions time { color: var(--neutral-600); font-size: 0.61rem; }
 .validation-person-grid { display: grid; gap: 0.8rem; padding: 0.9rem; }
 .validation-status-panel { overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); }
 .validation-status-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.65rem; padding: 0.8rem; border-bottom: 1px solid var(--neutral-200); }
@@ -1075,10 +1077,26 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .validation-status-panel li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.55rem; padding: 0.45rem 0; border-bottom: 1px solid var(--neutral-200); }
 .validation-status-panel li:last-child { border-bottom: 0; }
 .validation-status-panel li > .app-icon { width: 0.85rem; height: 0.85rem; color: var(--success); }
+.validation-status-panel li.is-pending > .app-icon { color: var(--warning); }
 .validation-status-panel li strong, .validation-status-panel li small { display: block; }
 .validation-status-panel li strong { font-size: 0.67rem; }
 .validation-status-panel li small { color: var(--neutral-600); font-size: 0.59rem; }
 .validation-section > .ui-alert { margin: 0 0.9rem 0.9rem; }
+.quick-registration { margin: 0.9rem 0.9rem 0; overflow: hidden; border: 1px solid #e8b74d; border-radius: var(--radius-lg); background: #fffdf7; box-shadow: 0 8px 24px rgb(130 89 0 / 0.08); }
+.quick-registration > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 0.9rem; border-bottom: 1px solid #f0ddb2; background: #fff8e8; }
+.quick-registration > header > div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.6rem; }
+.quick-registration > header > div > span { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: var(--radius-md); background: #ffedbd; color: #8a5a00; }
+.quick-registration > header .app-icon { width: 0.95rem; height: 0.95rem; }
+.quick-registration h3 { margin: 0; color: var(--navy-900); font-size: 0.78rem; }
+.quick-registration header p { margin: 0.12rem 0 0; color: var(--neutral-600); font-size: 0.62rem; }
+.quick-registration > .ui-alert { margin: 0.85rem 0.9rem 0; }
+.quick-registration form { display: grid; gap: 0.85rem; padding: 0.9rem; }
+.quick-registration__fields { display: grid; gap: 0.75rem; }
+.quick-registration__notes { display: grid; gap: 0.4rem; }
+.quick-registration__notes > span { color: var(--neutral-800); font-size: 0.68rem; font-weight: 750; }
+.quick-registration__notes textarea { width: 100%; padding: 0.7rem; resize: vertical; border: 1px solid var(--neutral-300); border-radius: var(--radius-md); background: var(--white); color: var(--neutral-950); font: inherit; font-size: 0.7rem; }
+.quick-registration__notes small { justify-self: end; color: var(--neutral-600); font-size: 0.59rem; }
+.quick-registration footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.55rem; padding-top: 0.8rem; border-top: 1px solid #f0ddb2; }
 .validation-section > .ui-lpr { margin: 0.9rem; }
 .validation-contribution-options { display: grid; gap: 0.65rem; padding: 0.9rem; margin: 0; border: 0; }
 .validation-contribution-options .ui-choice { min-height: 100%; padding: 0.75rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); }
@@ -1472,6 +1490,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .validation-contribution-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .validation-contribution-fields .ui-field:last-child { grid-column: 1 / -1; }
     .validation-decision__actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .quick-registration__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pre-registration-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pre-registration-fields--address .ui-field:nth-child(2) { grid-column: span 2; }
     .pre-registration-queue__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1497,6 +1516,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .access-cards { display: none; }
     .validation-section__header { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
     .validation-section__header > time, .validation-section__header > .ui-badge { grid-column: auto; justify-self: end; margin-left: 0; }
+    .validation-person-actions { grid-column: auto; justify-items: end; margin-left: 0; }
     .validation-person-grid { grid-template-columns: minmax(0, 3fr) minmax(15rem, 2fr); align-items: stretch; }
     .validation-notes-grid { grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr); }
     .pre-registration-flow__content { display: grid; grid-template-columns: 13rem minmax(0, 1fr); }

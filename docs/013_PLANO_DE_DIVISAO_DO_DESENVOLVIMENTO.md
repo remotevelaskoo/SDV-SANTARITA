@@ -72,7 +72,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 |---|---|---|---|---|---|---|
 | P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
-| P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | 🔴 Bloqueada | A definir | A definir |
+| P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p07-cadastro-rapido` |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
@@ -90,6 +90,18 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Decisão | Negar com motivo, salvar sem liberar e validar em modo demonstrativo | ✅ Concluída |
 | Segurança do protótipo | Mensagens deixam claro que nenhum equipamento físico é acionado | ✅ Concluída |
 | Qualidade | Navegação, computador, celular, testes automáticos e compilação visual | ✅ Aprovada |
+
+#### Acompanhamento detalhado da P07
+
+| Entrega da P07 | Conteúdo | Situação |
+|---|---|---|
+| Acesso pelo atendimento | Ação “Pessoa não encontrada?” dentro da Validação de Entrada | ✅ Concluída |
+| Cadastro mínimo | Nome, documento, telefone, tipo de acesso, responsável, imóvel e observação | ✅ Concluída |
+| Prevenção de duplicidade | Documento existente bloqueia a criação de uma segunda pessoa | ✅ Concluída |
+| Continuidade | Contribuição, observações e demais dados da validação são preservados ao abrir, cancelar ou salvar | ✅ Concluída |
+| Retorno à validação | Pessoa provisória é anexada ao atendimento com pendências claramente apresentadas | ✅ Concluída |
+| Segurança do protótipo | Cadastro rápido não concede autorização nem libera entrada ou equipamento | ✅ Concluída |
+| Qualidade | Computador, celular, interações, testes automáticos e compilação visual | ✅ Aprovada |
 
 #### Acompanhamento detalhado da P08
 

@@ -171,6 +171,81 @@ class ExampleTest extends TestCase
             ->assertSee('Nenhum comando de abertura foi enviado.');
     }
 
+    public function test_the_quick_registration_preserves_the_validation_in_progress(): void
+    {
+        Livewire::test(AccessValidation::class)
+            ->set('contribution', 'no')
+            ->set('notes', 'Atendimento iniciado antes do cadastro rápido.')
+            ->call('openQuickRegistration')
+            ->assertSet('quickRegistrationOpen', true)
+            ->set('quickName', 'Carlos Eduardo Lima')
+            ->set('quickDocument', '987.654.321-00')
+            ->set('quickPhone', '(12) 99999-1234')
+            ->set('quickAccessType', 'visitante')
+            ->set('quickResponsible', 'Marcos Vinicius da Silva')
+            ->set('quickPropertyCode', 'SRA-A-102')
+            ->set('quickNotes', 'Documento será complementado depois.')
+            ->call('saveQuickRegistration')
+            ->assertHasNoErrors()
+            ->assertSet('quickRegistrationOpen', false)
+            ->assertSet('quickPersonRegistered', true)
+            ->assertSet('currentPerson.name', 'Carlos Eduardo Lima')
+            ->assertSet('currentPerson.status', 'Cadastro mínimo')
+            ->assertSet('contribution', 'no')
+            ->assertSet('notes', 'Atendimento iniciado antes do cadastro rápido.')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSee('O cadastro ainda não autoriza a entrada');
+    }
+
+    public function test_the_quick_registration_prevents_duplicate_people(): void
+    {
+        Livewire::test(AccessValidation::class)
+            ->call('openQuickRegistration')
+            ->set('quickName', 'Pessoa já cadastrada')
+            ->set('quickDocument', '111.111.111-11')
+            ->set('quickPhone', '(12) 98888-0000')
+            ->set('quickResponsible', 'Administração')
+            ->set('quickPropertyCode', 'SRA-A-102')
+            ->call('saveQuickRegistration')
+            ->assertSet('quickDuplicateFound', true)
+            ->assertSet('quickPersonRegistered', false)
+            ->assertSet('quickRegistrationOpen', true)
+            ->assertHasErrors(['quickDocument'])
+            ->assertSee('Não criaremos outro registro com este documento.');
+    }
+
+    public function test_the_quick_registration_can_be_cancelled_without_losing_the_validation(): void
+    {
+        Livewire::test(AccessValidation::class)
+            ->set('paymentMethod', 'pix')
+            ->set('notes', 'Observação que deve continuar no atendimento.')
+            ->call('openQuickRegistration')
+            ->set('quickName', 'Cadastro cancelado')
+            ->call('cancelQuickRegistration')
+            ->assertSet('quickRegistrationOpen', false)
+            ->assertSet('quickName', '')
+            ->assertSet('paymentMethod', 'pix')
+            ->assertSet('notes', 'Observação que deve continuar no atendimento.');
+    }
+
+    public function test_a_quick_registration_does_not_release_an_entry(): void
+    {
+        Livewire::test(AccessValidation::class)
+            ->call('openQuickRegistration')
+            ->set('quickName', 'Ana Paula Ribeiro')
+            ->set('quickDocument', '456.789.123-00')
+            ->set('quickPhone', '(12) 97777-1122')
+            ->set('quickAccessType', 'visitante')
+            ->set('quickResponsible', 'Marcos Vinicius da Silva')
+            ->set('quickPropertyCode', 'SRA-A-102')
+            ->call('saveQuickRegistration')
+            ->call('release')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSet('feedback.title', 'Liberação não realizada')
+            ->assertSet('protocol', 'SRA-20260810-004186')
+            ->assertSee('O cadastro rápido não possui autorização válida.');
+    }
+
     public function test_the_public_pre_registration_renders_the_secure_invitation(): void
     {
         $this->withoutVite();

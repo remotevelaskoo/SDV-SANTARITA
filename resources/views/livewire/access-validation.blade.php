@@ -35,19 +35,74 @@
                 <h2 id="validation-person-title">Identificação da pessoa</h2>
                 <p>Confira o cadastro, o vínculo e a autorização antes da decisão.</p>
             </div>
-            <time datetime="2026-08-10T14:32:15-03:00">10/08/2026 · 14:32:15</time>
+            <div class="validation-person-actions">
+                <time datetime="2026-08-10T14:32:15-03:00">10/08/2026 · 14:32:15</time>
+                <x-ui.button variant="warning" size="sm" wire:click="openQuickRegistration">
+                    Pessoa não encontrada? Cadastro rápido
+                </x-ui.button>
+            </div>
         </header>
+
+        @if ($quickRegistrationOpen)
+            <section class="quick-registration" aria-labelledby="quick-registration-title">
+                <header>
+                    <div>
+                        <span><x-icon name="users" /></span>
+                        <div><h3 id="quick-registration-title">Cadastro rápido no atendimento</h3><p>Registre somente os dados mínimos sem perder a validação em andamento.</p></div>
+                    </div>
+                    <x-ui.badge variant="warning">Cadastro provisório</x-ui.badge>
+                </header>
+
+                <x-ui.alert variant="warning" title="Cadastro não significa entrada liberada">
+                    Depois de salvar, o porteiro retorna a este atendimento. A autorização continua pendente e deve ser conferida separadamente.
+                </x-ui.alert>
+
+                <form wire:submit="saveQuickRegistration">
+                    <div class="quick-registration__fields">
+                        <x-ui.field id="quick-name" label="Nome completo" wire:model="quickName" :error="$errors->first('quickName')" required />
+                        <x-ui.field id="quick-document" label="CPF ou documento" wire:model="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />
+                        <x-ui.field id="quick-phone" label="Telefone" wire:model="quickPhone" :error="$errors->first('quickPhone')" required />
+                        <x-ui.select id="quick-access-type" label="Tipo de acesso" wire:model.live="quickAccessType" :error="$errors->first('quickAccessType')" required>
+                            <option value="visitante">Visitante</option>
+                            <option value="prestador">Prestador</option>
+                            <option value="morador">Morador</option>
+                            <option value="outro">Outro</option>
+                        </x-ui.select>
+                        <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante ou prestador." :error="$errors->first('quickResponsible')" />
+                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório para visitante ou morador." :error="$errors->first('quickPropertyCode')" />
+                    </div>
+
+                    @if ($quickDuplicateFound)
+                        <x-ui.alert variant="danger" title="Pessoa já cadastrada">
+                            Não criaremos outro registro com este documento. Localize a pessoa existente e vincule-a ao atendimento.
+                        </x-ui.alert>
+                    @endif
+
+                    <label class="quick-registration__notes" for="quick-notes">
+                        <span>Observação do cadastro rápido</span>
+                        <textarea id="quick-notes" wire:model="quickNotes" maxlength="200" rows="3" placeholder="Exemplo: documento será complementado pela administração…"></textarea>
+                        <small>{{ mb_strlen($quickNotes) }}/200 caracteres</small>
+                    </label>
+
+                    <footer>
+                        <x-ui.button type="button" variant="secondary" wire:click="cancelQuickRegistration">Cancelar e voltar</x-ui.button>
+                        <x-ui.button type="submit" variant="success">Salvar e voltar à validação</x-ui.button>
+                    </footer>
+                </form>
+            </section>
+        @endif
 
         <div class="validation-person-grid">
             <x-ui.person-summary
-                name="Marcos Vinicius da Silva"
-                initials="MV"
-                document="***.654.321-**"
-                type="Morador"
-                property="Bloco A · Apto 102"
-                responsible="Próprio morador"
-                status="Cadastro ativo"
-                validity="Acesso permanente"
+                :name="$currentPerson['name']"
+                :initials="$currentPerson['initials']"
+                :document="$currentPerson['document']"
+                :type="$currentPerson['type']"
+                :property="$currentPerson['property']"
+                :responsible="$currentPerson['responsible']"
+                :status="$currentPerson['status']"
+                :validity="$currentPerson['validity']"
+                :tone="$quickPersonRegistered ? 'warning' : 'success'"
             >
                 <x-slot:actions>
                     <x-ui.button variant="secondary" size="sm" disabled title="Consulta completa será conectada ao cadastro em uma próxima etapa">
@@ -58,22 +113,36 @@
 
             <article class="validation-status-panel">
                 <header>
-                    <div><span>Status para decisão</span><strong>Condições verificadas</strong></div>
-                    <x-ui.badge variant="success">Pronto</x-ui.badge>
+                    <div><span>Status para decisão</span><strong>{{ $quickPersonRegistered ? 'Revisão obrigatória' : 'Condições verificadas' }}</strong></div>
+                    <x-ui.badge :variant="$quickPersonRegistered ? 'warning' : 'success'">{{ $quickPersonRegistered ? 'Pendente' : 'Pronto' }}</x-ui.badge>
                 </header>
                 <ul>
-                    <li><x-icon name="check-circle" /><span><strong>Cadastro</strong><small>Ativo</small></span></li>
-                    <li><x-icon name="check-circle" /><span><strong>Vínculo</strong><small>Morador vigente</small></span></li>
-                    <li><x-icon name="check-circle" /><span><strong>Autorização</strong><small>Entrada permitida</small></span></li>
-                    <li><x-icon name="check-circle" /><span><strong>Documento</strong><small>Validado</small></span></li>
-                    <li><x-icon name="check-circle" /><span><strong>Face</strong><small>Sincronizada</small></span></li>
+                    @if ($quickPersonRegistered)
+                        <li class="is-pending"><x-icon name="clock" /><span><strong>Cadastro</strong><small>Mínimo e provisório</small></span></li>
+                        <li class="is-pending"><x-icon name="clock" /><span><strong>Vínculo</strong><small>Aguardando conferência</small></span></li>
+                        <li class="is-pending"><x-icon name="clock" /><span><strong>Autorização</strong><small>Não concedida</small></span></li>
+                        <li class="is-pending"><x-icon name="clock" /><span><strong>Documento</strong><small>Não validado</small></span></li>
+                        <li class="is-pending"><x-icon name="clock" /><span><strong>Face</strong><small>Não sincronizada</small></span></li>
+                    @else
+                        <li><x-icon name="check-circle" /><span><strong>Cadastro</strong><small>Ativo</small></span></li>
+                        <li><x-icon name="check-circle" /><span><strong>Vínculo</strong><small>Morador vigente</small></span></li>
+                        <li><x-icon name="check-circle" /><span><strong>Autorização</strong><small>Entrada permitida</small></span></li>
+                        <li><x-icon name="check-circle" /><span><strong>Documento</strong><small>Validado</small></span></li>
+                        <li><x-icon name="check-circle" /><span><strong>Face</strong><small>Sincronizada</small></span></li>
+                    @endif
                 </ul>
             </article>
         </div>
 
-        <x-ui.alert variant="info" title="Dados demonstrativos">
-            Esta pessoa e estes documentos são exemplos usados para validar o funcionamento e o visual da P06.
-        </x-ui.alert>
+        @if ($quickPersonRegistered)
+            <x-ui.alert variant="warning" title="Atendimento preservado">
+                A pessoa foi anexada com cadastro mínimo. Contribuição, observações e demais dados deste atendimento não foram apagados.
+            </x-ui.alert>
+        @else
+            <x-ui.alert variant="info" title="Dados demonstrativos">
+                Esta pessoa e estes documentos são exemplos usados para validar o funcionamento e o visual da P06.
+            </x-ui.alert>
+        @endif
     </section>
 
     <section class="validation-section" aria-labelledby="validation-vehicle-title">
@@ -185,7 +254,7 @@
                 <span>Decisão final</span>
                 <h2 id="validation-decision-title">O que deseja fazer com este atendimento?</h2>
             </div>
-            <x-ui.badge variant="info">Protótipo P06</x-ui.badge>
+            <x-ui.badge variant="info">Protótipo P06 + P07</x-ui.badge>
         </header>
 
         <div class="validation-decision__actions">
@@ -237,6 +306,6 @@
             </div>
         </div>
 
-        <p><x-icon name="info" /> P06 em demonstração: nenhuma das ações desta página envia comandos para equipamentos físicos.</p>
+        <p><x-icon name="info" /> P06 + P07 em demonstração: cadastro rápido não autoriza entrada e nenhuma das ações desta página envia comandos para equipamentos físicos.</p>
     </section>
 </div>
