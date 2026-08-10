@@ -43,6 +43,17 @@ class PublicPreRegistration extends Component
 
     public string $state = '';
 
+    public string $destinationProperty = 'Bloco B — Apto 304';
+
+    /** @var array<string, string> Imóvel de destino → responsável, usado quando o tipo de acesso exige um imóvel específico. */
+    private const DESTINATION_RESPONSIBLES = [
+        'Bloco A — Apto 102' => 'Marcos Vinicius da Silva',
+        'Bloco A — Apto 112' => 'Eduardo Nogueira',
+        'Bloco A — Apto 208' => 'Bianca Moretti',
+        'Bloco B — Apto 304' => 'Mariana Souza',
+        'Bloco C — Apto 501' => 'Rafael Domingues',
+    ];
+
     public bool $documentReady = false;
 
     public bool $selfieReady = false;
@@ -132,6 +143,17 @@ class PublicPreRegistration extends Component
         $this->state = $response->json('uf') ?: $this->state;
     }
 
+    public function destinationResponsible(): string
+    {
+        return self::DESTINATION_RESPONSIBLES[$this->destinationProperty] ?? 'Não definido';
+    }
+
+    /** @return list<string> */
+    public function destinationOptions(): array
+    {
+        return array_keys(self::DESTINATION_RESPONSIBLES);
+    }
+
     public function markDocumentReady(): void
     {
         $this->documentReady = true;
@@ -175,6 +197,9 @@ class PublicPreRegistration extends Component
                 'district' => ['required', 'string', 'max:80'],
                 'city' => ['required', 'string', 'max:80'],
                 'state' => ['required', 'string', 'size:2'],
+                'destinationProperty' => $this->accessType === 'turista'
+                    ? []
+                    : ['required', Rule::in($this->destinationOptions())],
             ],
             3 => ['documentReady' => ['accepted']],
             4 => ['selfieReady' => ['accepted']],
