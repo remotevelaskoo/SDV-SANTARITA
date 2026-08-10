@@ -66,6 +66,23 @@ class ExampleTest extends TestCase
             ->assertSee('Monitoramento de Câmeras');
     }
 
+    public function test_the_local_component_catalog_renders_the_shared_patterns(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/componentes');
+
+        $response
+            ->assertOk()
+            ->assertSee('Componentes compartilhados')
+            ->assertSee('Botões e grupos de ações')
+            ->assertSee('Campos de formulário')
+            ->assertSee('Situações e avisos')
+            ->assertSee('Cartões e ausência de dados')
+            ->assertSee('ui-button--primary', false)
+            ->assertSee('aria-invalid="true"', false);
+    }
+
     public function test_the_dashboard_period_and_camera_controls_are_interactive(): void
     {
         Livewire::test(Dashboard::class)

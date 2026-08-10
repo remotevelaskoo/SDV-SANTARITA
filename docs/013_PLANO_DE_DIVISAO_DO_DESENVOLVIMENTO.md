@@ -50,7 +50,7 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | P01 | Estrutura principal | Menu lateral, cabeçalho, navegação, identidade visual e adaptação para celular | Nenhuma | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
 | P02 | Dashboard operacional | Indicadores, alertas, gráfico, acessos recentes e câmeras demonstrativas | P01 | ✅ Concluída visualmente | Lucas + Codex | `codex/fundacao-frontend` |
 | P03 | Login visual | Entrada no sistema, aviso de erro, mostrar senha e acesso demonstrativo | P01 | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
-| P04 | Componentes compartilhados | Padrões reutilizáveis de campos, botões, tabelas, avisos, cartões e janelas | P01 | 🟢 Disponível | A definir | A definir |
+| P04 | Componentes compartilhados | Padrões reutilizáveis de campos, botões, tabelas, avisos, cartões e janelas | P01 | 🟡 Em andamento | Lucas + Codex | `codex/fundacao-frontend` |
 
 ### 4.2 Operação da portaria
 

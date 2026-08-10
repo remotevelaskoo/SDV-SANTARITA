@@ -86,6 +86,18 @@
         @case('alert')
             <path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0ZM12 9v4M12 17h.01" />
             @break
+        @case('info')
+            <circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" />
+            @break
+        @case('check-circle')
+            <circle cx="12" cy="12" r="9" /><path d="m8 12 2.5 2.5L16 9" />
+            @break
+        @case('x')
+            <path d="M6 6l12 12M18 6 6 18" />
+            @break
+        @case('inbox')
+            <path d="M4 4h16l2 11v5H2v-5L4 4Z" /><path d="M2 15h5l2 3h6l2-3h5" />
+            @break
         @case('video')
             <path d="M15 10 21 7v10l-6-3v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3Z" />
             @break
