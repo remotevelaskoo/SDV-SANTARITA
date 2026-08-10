@@ -61,8 +61,8 @@
                         </button>
 
                         <div class="operational-header__title">
-                            <h1>Dashboard operacional</h1>
-                            <p>Operador de portaria · Portaria Principal</p>
+                            <h1>{{ $heading ?? $title ?? config('app.name') }}</h1>
+                            <p>{{ $headingDescription ?? 'Operador de portaria · Portaria Principal' }}</p>
                         </div>
 
                         <div class="operational-header__actions">

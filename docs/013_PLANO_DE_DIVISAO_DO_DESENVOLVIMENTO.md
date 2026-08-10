@@ -70,7 +70,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | 🟢 Disponível para protótipo | A definir | A definir |
+| P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | 🟢 Disponível para protótipo | A definir | A definir |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | 🔴 Bloqueada | A definir | A definir |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | 🟢 Disponível | A definir | A definir |
@@ -168,8 +168,8 @@ Uma parte somente estará pronta quando:
 
 | Decisão | Responsáveis | Situação |
 |---|---|---|
-| Escolher a primeira parte que Vinicius desenvolverá | Lucas e Vinicius | Pendente |
-| Definir os atalhos exatos do Modo Portaria | Lucas e Vinicius | Pendente |
+| Escolher a primeira parte que Vinicius desenvolverá | Lucas e Vinicius | Resolvida — P05 (Modo Portaria) |
+| Definir os atalhos exatos do Modo Portaria | Lucas e Vinicius | Pendente — protótipo do P05 usa atalhos provisórios até confirmação |
 | Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Pendente |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |

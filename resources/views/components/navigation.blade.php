@@ -1,7 +1,8 @@
 @php
     $groups = [
         'Operação' => [
-            ['label' => 'Dashboard', 'icon' => 'grid', 'active' => true],
+            ['label' => 'Modo Portaria', 'icon' => 'door', 'route' => 'portaria'],
+            ['label' => 'Dashboard', 'icon' => 'grid', 'route' => 'dashboard'],
             ['label' => 'Validação de entrada', 'icon' => 'shield'],
             ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3],
             ['label' => 'Entradas e saídas', 'icon' => 'door'],
@@ -30,8 +31,12 @@
             <ul>
                 @foreach ($items as $item)
                     <li>
-                        @if ($item['active'] ?? false)
-                            <a class="navigation__item navigation__item--active" href="{{ route('dashboard') }}" aria-current="page">
+                        @if (isset($item['route']))
+                            <a
+                                @class(['navigation__item', 'navigation__item--active' => request()->routeIs($item['route'])])
+                                href="{{ route($item['route']) }}"
+                                @if (request()->routeIs($item['route'])) aria-current="page" @endif
+                            >
                                 <x-icon :name="$item['icon']" />
                                 <span>{{ $item['label'] }}</span>
                             </a>
