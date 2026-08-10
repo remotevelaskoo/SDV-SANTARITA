@@ -73,7 +73,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | 🔴 Bloqueada | A definir | A definir |
-| P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | 🟢 Disponível | A definir | A definir |
+| P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | 🟢 Disponível | A definir | A definir |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | 🟢 Disponível | A definir | A definir |
@@ -90,6 +90,18 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Decisão | Negar com motivo, salvar sem liberar e validar em modo demonstrativo | ✅ Concluída |
 | Segurança do protótipo | Mensagens deixam claro que nenhum equipamento físico é acionado | ✅ Concluída |
 | Qualidade | Navegação, computador, celular, testes automáticos e compilação visual | ✅ Aprovada |
+
+#### Acompanhamento detalhado da P08
+
+| Entrega da P08 | Conteúdo | Situação |
+|---|---|---|
+| Convite público | Boas-vindas, destino protegido, período, validade e aviso de segurança | ✅ Concluída |
+| Fluxo em seis etapas | Dados pessoais, endereço informado, documento, selfie, veículo opcional e confirmação | ✅ Concluída |
+| Protocolo | Resultado demonstrativo, cópia e mensagem de que o protocolo não autoriza entrada | ✅ Concluída |
+| Fila da portaria | Resumo, busca, filtros, tabela responsiva e cartões no celular | ✅ Concluída |
+| Análise | Detalhes, checklist, histórico, aprovação, rejeição e solicitação de correção | ✅ Concluída |
+| Segurança do protótipo | Aprovação separada da Validação de Entrada e ausência de comando físico | ✅ Concluída |
+| Qualidade | Computador, celular, validações, testes automáticos e compilação visual | ✅ Aprovada |
 
 ### 4.3 Módulos operacionais e administrativos
 

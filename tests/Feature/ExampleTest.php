@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Livewire\AccessValidation;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
+use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PublicPreRegistration;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -164,5 +166,86 @@ class ExampleTest extends TestCase
             ->assertSet('feedback.variant', 'danger')
             ->assertSet('protocol', 'SRA-20260810-004183')
             ->assertSee('Nenhum comando de abertura foi enviado.');
+    }
+
+    public function test_the_public_pre_registration_renders_the_secure_invitation(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/pre-cadastro/convite-demonstracao');
+
+        $response
+            ->assertOk()
+            ->assertSee('Bem-vindo ao Santa Rita')
+            ->assertSee('Convite válido')
+            ->assertSee('Bloco B · Apto 304')
+            ->assertSee('Iniciar pré-cadastro')
+            ->assertSee('O envio não garante entrada');
+    }
+
+    public function test_the_public_pre_registration_preserves_the_six_step_journey(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->assertSet('step', 1)
+            ->set('name', 'Camila Andrade')
+            ->set('cpf', '987.654.321-00')
+            ->set('birthDate', '1992-05-15')
+            ->set('phone', '(12) 99999-9999')
+            ->set('email', 'camila@example.com')
+            ->call('nextStep')
+            ->assertSet('step', 2)
+            ->set('zipCode', '12000-000')
+            ->set('address', 'Rua das Flores')
+            ->set('addressNumber', '120')
+            ->set('district', 'Centro')
+            ->set('city', 'Taubaté')
+            ->set('state', 'SP')
+            ->call('nextStep')
+            ->assertSet('step', 3)
+            ->call('markDocumentReady')
+            ->call('nextStep')
+            ->assertSet('step', 4)
+            ->call('markSelfieReady')
+            ->call('nextStep')
+            ->assertSet('step', 5)
+            ->call('nextStep')
+            ->assertSet('step', 6)
+            ->set('privacyAccepted', true)
+            ->call('submit')
+            ->assertSet('submitted', true)
+            ->assertSet('protocol', 'PRE-SRA-2026-X7K9M2')
+            ->assertSee('O protocolo não é uma autorização');
+    }
+
+    public function test_the_pre_registration_queue_renders_filters_and_analysis(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/pre-cadastros');
+
+        $response
+            ->assertOk()
+            ->assertSee('Solicitações')
+            ->assertSee('Aguardando análise')
+            ->assertSee('Camila Andrade')
+            ->assertSee('PRE-SRA-X7K9M2')
+            ->assertSee('Aprovar pré-cadastro')
+            ->assertSee('Aprovação não garante entrada');
+    }
+
+    public function test_the_pre_registration_queue_records_each_demo_decision(): void
+    {
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('approve', 1)
+            ->assertSet('records.0.status', 'aprovado')
+            ->assertSet('feedback.variant', 'success')
+            ->call('requestCorrection', 2)
+            ->assertSet('records.1.status', 'correcao')
+            ->assertSet('feedback.variant', 'warning')
+            ->call('reject', 2)
+            ->assertSet('records.1.status', 'rejeitado')
+            ->assertSet('feedback.variant', 'danger')
+            ->assertSee('A observação interna não será enviada ao solicitante.');
     }
 }
