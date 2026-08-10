@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\AccessValidation;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
+use App\Livewire\PersonRegistration;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
@@ -302,5 +303,74 @@ class ExampleTest extends TestCase
             ->assertSet('properties.5.occupants', 0)
             ->assertSet('properties.5.vehicles', 0)
             ->assertSee('Pessoas, vínculos e autorizações permanecem separados.');
+    }
+
+    public function test_the_person_registration_renders_the_first_step(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/pessoas/nova');
+
+        $response
+            ->assertOk()
+            ->assertSee('Cadastro de pessoa')
+            ->assertSee('Protótipo demonstrativo')
+            ->assertSee('Tipo de acesso')
+            ->assertSee('Dados pessoais')
+            ->assertSee('Nome completo')
+            ->assertSee('Endereço e contato')
+            ->assertSee('Informações de acesso')
+            ->assertSee('Observações');
+    }
+
+    public function test_the_person_registration_blocks_advancing_without_required_fields(): void
+    {
+        Livewire::test(PersonRegistration::class)
+            ->call('nextStep')
+            ->assertHasErrors(['fullName', 'document', 'birthDate', 'phone'])
+            ->assertSet('currentStep', 1);
+    }
+
+    public function test_the_person_registration_recalculates_fields_by_access_type(): void
+    {
+        Livewire::test(PersonRegistration::class)
+            ->assertSet('nature', 'morador')
+            ->assertSet('indefiniteTerm', true)
+            ->set('accessType', 'provider')
+            ->assertSet('nature', 'outro')
+            ->assertSee('Empresa')
+            ->set('accessType', 'tourist')
+            ->assertSet('indefiniteTerm', false);
+    }
+
+    public function test_the_person_registration_detects_a_duplicate_document(): void
+    {
+        Livewire::test(PersonRegistration::class)
+            ->set('document', '111.111.111-11')
+            ->call('checkDocument')
+            ->assertSet('duplicateFound', true)
+            ->assertSee('Já existe uma pessoa com este documento.');
+    }
+
+    public function test_the_person_registration_completes_the_five_step_journey(): void
+    {
+        Livewire::test(PersonRegistration::class)
+            ->set('fullName', 'Marcos Andrade Ferreira')
+            ->set('document', '222.333.444-55')
+            ->set('birthDate', '1990-05-14')
+            ->set('phone', '(24) 99988-7766')
+            ->call('nextStep')
+            ->assertSet('currentStep', 2)
+            ->call('nextStep')
+            ->assertSet('currentStep', 3)
+            ->call('nextStep')
+            ->assertSet('currentStep', 4)
+            ->set('startDate', '2026-08-10')
+            ->call('nextStep')
+            ->assertSet('currentStep', 5)
+            ->call('activate')
+            ->assertSet('feedback.variant', 'success')
+            ->assertSee('A sincronização facial está pendente.')
+            ->assertSet('protocol', fn (?string $protocol) => $protocol !== null && str_starts_with($protocol, 'SRP-'));
     }
 }
