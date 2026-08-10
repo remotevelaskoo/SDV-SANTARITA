@@ -24,7 +24,7 @@ class PublicPreRegistration extends Component
 
     public string $email = '';
 
-    public string $accessType = 'visitante';
+    public string $accessType = 'turista';
 
     public string $zipCode = '';
 

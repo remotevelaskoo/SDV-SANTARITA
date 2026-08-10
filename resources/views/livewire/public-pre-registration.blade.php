@@ -21,13 +21,13 @@
         @if (! $started)
             <section class="pre-registration-welcome" aria-labelledby="pre-registration-welcome-title">
                 <x-ui.badge variant="success">Convite válido</x-ui.badge>
-                <span class="pre-registration-welcome__icon"><x-icon name="users-round" /></span>
+                <span class="pre-registration-welcome__icon"><x-icon name="key" /></span>
                 <h2 id="pre-registration-welcome-title">Bem-vindo ao Santa Rita</h2>
-                <p>Mariana Souza convidou você para uma visita ao <strong>Bloco B · Apto 304</strong>.</p>
+                <p>Mariana Souza preparou sua estadia no <strong>Bloco B · Apto 304</strong>. Adiante seus dados para chegar direto à praia.</p>
 
                 <dl>
-                    <div><dt>Tipo</dt><dd>Visitante</dd></div>
-                    <div><dt>Período previsto</dt><dd>10/08/2026 · 18:00 às 22:00</dd></div>
+                    <div><dt>Tipo</dt><dd>Turista</dd></div>
+                    <div><dt>Período da estadia</dt><dd>10/08/2026 até 17/08/2026</dd></div>
                     <div><dt>Convite válido até</dt><dd>10/08/2026 · 17:30</dd></div>
                 </dl>
 

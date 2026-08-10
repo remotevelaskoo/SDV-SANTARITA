@@ -14,6 +14,7 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -738,5 +739,57 @@ class ExampleTest extends TestCase
             ->assertSet('packages.5.status', 'aguardando')
             ->assertSet('packages.5.notifiedAt', null)
             ->assertSee('O morador ainda não foi avisado.');
+    }
+
+    public function test_the_public_pre_registration_welcome_reflects_a_tourist_stay(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/pre-cadastro/convite-demonstracao');
+
+        $response
+            ->assertOk()
+            ->assertSee('Turista')
+            ->assertSee('estadia')
+            ->assertSee('praia');
+
+        Livewire::test(PublicPreRegistration::class)
+            ->assertSet('accessType', 'turista');
+    }
+
+    public function test_the_property_zip_code_lookup_fills_the_address(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response([
+                'logradouro' => 'Rua das Acácias',
+                'bairro' => 'Jardim das Flores',
+                'localidade' => 'Taubaté',
+                'uf' => 'SP',
+            ]),
+        ]);
+
+        Livewire::test(PropertyManagement::class)
+            ->call('createProperty')
+            ->set('zipCode', '12000-000')
+            ->call('lookupZipCode')
+            ->assertSet('street', 'Rua das Acácias')
+            ->assertSet('district', 'Jardim das Flores')
+            ->assertSet('city', 'Taubaté')
+            ->assertSet('state', 'SP')
+            ->assertSet('zipCodeLookupFailed', false);
+    }
+
+    public function test_the_property_zip_code_lookup_warns_when_not_found(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response(['erro' => true]),
+        ]);
+
+        Livewire::test(PropertyManagement::class)
+            ->call('createProperty')
+            ->set('zipCode', '00000-000')
+            ->call('lookupZipCode')
+            ->assertSet('zipCodeLookupFailed', true)
+            ->assertSee('CEP não encontrado');
     }
 }
