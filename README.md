@@ -32,3 +32,9 @@ O modelo de negócio do SDV Access é centrado no **imóvel**, ao qual são vinc
 ## Status
 
 Documentação em elaboração.
+
+## Coordenação da equipe
+
+O desenvolvimento foi dividido em partes para que Lucas e Vinicius possam trabalhar em paralelo. O quadro com situação, responsável, dependências e orientação de trabalho está em:
+
+- [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md)
