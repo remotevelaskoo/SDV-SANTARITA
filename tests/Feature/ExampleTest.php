@@ -3,16 +3,51 @@
 namespace Tests\Feature;
 
 use App\Livewire\Dashboard;
+use App\Livewire\Login;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    public function test_the_home_page_redirects_to_the_dashboard(): void
+    public function test_the_home_page_redirects_to_the_login(): void
     {
         $response = $this->get('/');
 
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/entrar');
+    }
+
+    public function test_the_login_renders_the_demo_access(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/entrar');
+
+        $response
+            ->assertOk()
+            ->assertSee('Entrar no sistema')
+            ->assertSee('Ambiente de demonstração')
+            ->assertSee('portaria')
+            ->assertSee('sdv2026');
+    }
+
+    public function test_the_demo_login_rejects_invalid_credentials(): void
+    {
+        Livewire::test(Login::class)
+            ->set('identification', 'pessoa-desconhecida')
+            ->set('password', 'senha-errada')
+            ->call('login')
+            ->assertHasErrors(['credentials'])
+            ->assertSee('Identificação ou senha inválida.');
+    }
+
+    public function test_the_demo_login_opens_the_dashboard(): void
+    {
+        Livewire::test(Login::class)
+            ->call('useDemoAccount')
+            ->assertSet('identification', 'portaria')
+            ->assertSet('password', 'sdv2026')
+            ->call('login')
+            ->assertRedirect(route('dashboard'));
     }
 
     public function test_the_dashboard_renders_the_approved_visual_structure(): void
