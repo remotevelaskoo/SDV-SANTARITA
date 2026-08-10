@@ -77,7 +77,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
-| P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | 🟢 Disponível | A definir | A definir |
+| P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p12-cadastro-veiculos` |
 | P13 | Prestadores e empresas | Empresas, funcionários, serviços, documentos e autorizações | P04 | 🟢 Disponível para protótipo | A definir | A definir |
 
 #### Acompanhamento detalhado da P06
@@ -113,6 +113,18 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Veículos e histórico | Vínculos de veículos, ocupação e eventos estruturais preservados | ✅ Concluída |
 | Cadastro e edição | Formulário estrutural, prevenção de duplicidade, rascunho e situação independente | ✅ Concluída |
 | Segurança do protótipo | Criar ou bloquear imóvel não cria, exclui ou ativa pessoas e acessos automaticamente | ✅ Concluída |
+| Qualidade | Computador, celular, interações, testes automáticos e compilação visual | ✅ Aprovada |
+
+#### Acompanhamento detalhado da P12
+
+| Entrega da P12 | Conteúdo | Situação |
+|---|---|---|
+| Lista de veículos | Resumo, busca, filtros por situação e tipo, tabela e cartões responsivos | ✅ Concluída |
+| Detalhe do veículo | Placa, características, documento protegido, proprietário e situação | ✅ Concluída |
+| Vínculos independentes | Pessoa, imóvel, empresa, finalidade de uso e situação apresentados separadamente | ✅ Concluída |
+| Leitura de placa (LPR) | Estado da sincronização, última leitura e aviso de que não há liberação automática | ✅ Concluída |
+| Cadastro e edição | Formulário, normalização e prevenção de placa duplicada, rascunho e bloqueio | ✅ Concluída |
+| Segurança do protótipo | Nenhuma câmera, portão, pessoa ou imóvel é alterado automaticamente | ✅ Concluída |
 | Qualidade | Computador, celular, interações, testes automáticos e compilação visual | ✅ Aprovada |
 
 ### 4.3 Módulos operacionais e administrativos
