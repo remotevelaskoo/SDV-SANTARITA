@@ -77,10 +77,16 @@ class ExampleTest extends TestCase
             ->assertSee('Componentes compartilhados')
             ->assertSee('Botões e grupos de ações')
             ->assertSee('Campos de formulário')
+            ->assertSee('Seleções e escolhas')
             ->assertSee('Situações e avisos')
             ->assertSee('Cartões e ausência de dados')
+            ->assertSee('Tabela responsiva')
+            ->assertSee('Carregamento, progresso e erro')
             ->assertSee('ui-button--primary', false)
-            ->assertSee('aria-invalid="true"', false);
+            ->assertSee('aria-invalid="true"', false)
+            ->assertSee('role="switch"', false)
+            ->assertSee('ui-responsive-table__desktop', false)
+            ->assertSee('aria-valuenow="68"', false);
     }
 
     public function test_the_dashboard_period_and_camera_controls_are_interactive(): void

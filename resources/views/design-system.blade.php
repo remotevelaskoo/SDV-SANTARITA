@@ -73,6 +73,43 @@
                 </x-ui.card>
             </section>
 
+            <section class="component-section" aria-labelledby="choices-title">
+                <header>
+                    <span>DS-CMP-006 e 009</span>
+                    <h2 id="choices-title">Seleções e escolhas</h2>
+                    <p>Cada tipo de controle representa uma decisão diferente.</p>
+                </header>
+
+                <x-ui.card>
+                    <div class="component-fields-grid">
+                        <x-ui.select id="demo-access-type" label="Tipo de acesso" help="Escolha uma opção da lista." required>
+                            <option value="">Selecione</option>
+                            <option value="resident">Morador</option>
+                            <option value="tenant">Inquilino</option>
+                            <option value="visitor">Visitante</option>
+                            <option value="provider">Prestador</option>
+                        </x-ui.select>
+
+                        <fieldset class="ui-choice-group">
+                            <legend>Documentos apresentados</legend>
+                            <x-ui.checkbox id="demo-cpf" label="CPF" description="Documento principal conferido." checked />
+                            <x-ui.checkbox id="demo-photo" label="Foto" description="Imagem facial ainda pendente." />
+                        </fieldset>
+
+                        <fieldset class="ui-choice-group">
+                            <legend>Decisão sobre a contribuição</legend>
+                            <x-ui.radio id="demo-contribution-yes" name="demo-contribution" value="yes" label="Contribui" description="Registrar pagamento neste acesso." checked />
+                            <x-ui.radio id="demo-contribution-no" name="demo-contribution" value="no" label="Não contribui" description="Nenhum pagamento será registrado." />
+                        </fieldset>
+
+                        <div class="ui-switch-group">
+                            <x-ui.switch id="demo-notification" label="Enviar notificação" description="Avisa o responsável quando a pessoa chegar." checked />
+                            <x-ui.switch id="demo-auto-release" label="Liberação automática" description="Desabilitada porque exige regra e permissão." disabled />
+                        </div>
+                    </div>
+                </x-ui.card>
+            </section>
+
             <section class="component-section" aria-labelledby="status-title">
                 <header>
                     <span>DS-CMP-011 e 012</span>
@@ -133,6 +170,94 @@
                                 <x-ui.button size="sm">Novo pré-cadastro</x-ui.button>
                             </x-slot:action>
                         </x-ui.empty-state>
+                    </x-ui.card>
+                </div>
+            </section>
+
+            <section class="component-section" aria-labelledby="table-title">
+                <header>
+                    <span>DS-CMP-017</span>
+                    <h2 id="table-title">Tabela responsiva</h2>
+                    <p>No computador aparece como tabela; no celular, os mesmos dados viram cartões legíveis.</p>
+                </header>
+
+                @php
+                    $demoAccesses = [
+                        ['time' => '16:01', 'name' => 'Camila Andrade', 'type' => 'Visitante', 'destination' => 'Bloco B — Apto 304', 'status' => 'Liberado', 'tone' => 'success'],
+                        ['time' => '15:54', 'name' => 'Luciana Ferraz', 'type' => 'Prestador', 'destination' => 'Área comum — Manutenção', 'status' => 'Pendente', 'tone' => 'warning'],
+                        ['time' => '15:41', 'name' => 'Bianca Moretti', 'type' => 'Visitante', 'destination' => 'Bloco A — Apto 208', 'status' => 'Negado', 'tone' => 'danger'],
+                    ];
+                @endphp
+
+                <x-ui.responsive-table label="Acessos recentes de demonstração">
+                    <x-slot:table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Horário</th>
+                                <th scope="col">Pessoa</th>
+                                <th scope="col">Tipo</th>
+                                <th scope="col">Destino</th>
+                                <th scope="col">Resultado</th>
+                                <th scope="col"><span class="sr-only">Ações</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($demoAccesses as $access)
+                                <tr>
+                                    <td class="numeric">{{ $access['time'] }}</td>
+                                    <td><strong>{{ $access['name'] }}</strong></td>
+                                    <td>{{ $access['type'] }}</td>
+                                    <td>{{ $access['destination'] }}</td>
+                                    <td><x-ui.badge :variant="$access['tone']">{{ $access['status'] }}</x-ui.badge></td>
+                                    <td><x-ui.button variant="ghost" size="sm">Detalhes</x-ui.button></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </x-slot:table>
+
+                    <x-slot:cards>
+                        <ul class="ui-mobile-records">
+                            @foreach ($demoAccesses as $access)
+                                <li>
+                                    <div>
+                                        <strong>{{ $access['name'] }}</strong>
+                                        <small>{{ $access['type'] }} · {{ $access['destination'] }}</small>
+                                    </div>
+                                    <time>{{ $access['time'] }}</time>
+                                    <x-ui.badge :variant="$access['tone']">{{ $access['status'] }}</x-ui.badge>
+                                    <x-ui.button variant="ghost" size="sm">Detalhes</x-ui.button>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </x-slot:cards>
+                </x-ui.responsive-table>
+            </section>
+
+            <section class="component-section" aria-labelledby="loading-title">
+                <header>
+                    <span>DS-CMP-014 e 015</span>
+                    <h2 id="loading-title">Carregamento, progresso e erro</h2>
+                    <p>O sistema sempre explica o que está acontecendo e qual ação está disponível.</p>
+                </header>
+
+                <div class="component-cards-grid">
+                    <x-ui.card title="Processo em andamento" description="Estados para operações rápidas e mensuráveis">
+                        <div class="component-loading-examples">
+                            <x-ui.progress label="Consultando cadastro…" />
+                            <x-ui.progress type="bar" label="Envio dos documentos" :value="68" />
+                        </div>
+                    </x-ui.card>
+
+                    <x-ui.card title="Lista carregando" description="A estrutura permanece estável">
+                        <x-ui.responsive-table label="Pessoas" state="loading" />
+                    </x-ui.card>
+
+                    <x-ui.card title="Falha recuperável" description="O erro não é apresentado como lista vazia">
+                        <x-ui.responsive-table label="Veículos" state="error">
+                            <x-slot:retry>
+                                <x-ui.button variant="danger" size="sm">Tentar novamente</x-ui.button>
+                            </x-slot:retry>
+                        </x-ui.responsive-table>
                     </x-ui.card>
                 </div>
             </section>
