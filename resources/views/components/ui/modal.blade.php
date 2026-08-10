@@ -3,12 +3,13 @@
     'title',
     'description' => null,
     'triggerLabel' => 'Abrir confirmação',
+    'triggerVariant' => 'secondary',
     'confirmLabel' => 'Confirmar',
     'confirmVariant' => 'primary',
 ])
 
 <div x-data class="ui-overlay-trigger">
-    <x-ui.button variant="secondary" x-on:click="$refs['{{ $id }}'].showModal()">{{ $triggerLabel }}</x-ui.button>
+    <x-ui.button :variant="$triggerVariant" x-on:click="$refs['{{ $id }}'].showModal()">{{ $triggerLabel }}</x-ui.button>
 
     <dialog x-ref="{{ $id }}" class="ui-dialog" aria-labelledby="{{ $id }}-title" @click.self="$el.close()">
         <div class="ui-dialog__surface">

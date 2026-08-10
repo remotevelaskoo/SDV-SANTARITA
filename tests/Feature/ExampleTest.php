@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\AccessValidation;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use Livewire\Livewire;
@@ -123,5 +124,45 @@ class ExampleTest extends TestCase
             ->call('toggleCamera', 'cam-01')
             ->assertSet('cameraStatus.cam-01', false)
             ->assertSee('SEM SINAL');
+    }
+
+    public function test_the_access_validation_renders_the_complete_p06_journey(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/validacao');
+
+        $response
+            ->assertOk()
+            ->assertSee('Validação de entrada')
+            ->assertSee('Identificação da pessoa')
+            ->assertSee('Marcos Vinicius da Silva')
+            ->assertSee('Veículo e leitura da placa')
+            ->assertSee('ABC1D23')
+            ->assertSee('Contribuição / taxa de acesso')
+            ->assertSee('Observações')
+            ->assertSee('Negar entrada')
+            ->assertSee('Salvar sem liberar')
+            ->assertSee('Validar e liberar')
+            ->assertSee('nenhuma das ações desta página envia comandos para equipamentos físicos');
+    }
+
+    public function test_the_access_validation_decisions_produce_safe_demo_feedback(): void
+    {
+        Livewire::test(AccessValidation::class)
+            ->assertSet('contribution', 'yes')
+            ->set('notes', 'Visitante conferido pela portaria.')
+            ->call('savePending')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSet('protocol', 'SRA-20260810-004184')
+            ->call('release')
+            ->assertSet('feedback.variant', 'success')
+            ->assertSee('Nenhum portão ou equipamento real foi acionado.')
+            ->set('denialReason', 'documento_invalido')
+            ->set('denialDetails', 'Documento apresentado não confere.')
+            ->call('deny')
+            ->assertSet('feedback.variant', 'danger')
+            ->assertSet('protocol', 'SRA-20260810-004183')
+            ->assertSee('Nenhum comando de abertura foi enviado.');
     }
 }
