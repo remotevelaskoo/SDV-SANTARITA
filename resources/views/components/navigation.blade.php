@@ -3,7 +3,7 @@
         'Operação' => [
             ['label' => 'Modo Portaria', 'icon' => 'door', 'route' => 'portaria'],
             ['label' => 'Dashboard', 'icon' => 'grid', 'route' => 'dashboard'],
-            ['label' => 'Validação de entrada', 'icon' => 'shield'],
+            ['label' => 'Validação de entrada', 'icon' => 'shield', 'route' => 'validation'],
             ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3],
             ['label' => 'Entradas e saídas', 'icon' => 'door'],
         ],

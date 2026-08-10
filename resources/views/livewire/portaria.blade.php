@@ -43,14 +43,18 @@
         <x-ui.card title="Atalhos" description="Ações mais usadas pela portaria — provisório, aguardando confirmação da equipe">
             <div class="shortcuts-grid">
                 @foreach ($shortcuts as $shortcut)
-                    <div class="shortcut-card @if (! $shortcut['route']) shortcut-card--disabled @endif" title="@if (! $shortcut['route']) Módulo será portado em uma próxima etapa @endif">
+                    <a
+                        class="shortcut-card @if (! $shortcut['route']) shortcut-card--disabled @endif"
+                        href="{{ $shortcut['route'] ? route($shortcut['route']) : '#' }}"
+                        @if (! $shortcut['route']) aria-disabled="true" tabindex="-1" title="Módulo será portado em uma próxima etapa" @endif
+                    >
                         <span class="shortcut-card__icon"><x-icon :name="$shortcut['icon']" /></span>
                         <strong>{{ $shortcut['label'] }}</strong>
                         <p>{{ $shortcut['description'] }}</p>
                         @unless ($shortcut['route'])
                             <span class="shortcut-card__status">Em breve</span>
                         @endunless
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-ui.card>

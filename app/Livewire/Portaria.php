@@ -29,7 +29,7 @@ class Portaria extends Component
      * @var list<array{label: string, description: string, icon: string, route: string|null}>
      */
     public array $shortcuts = [
-        ['label' => 'Validar entrada', 'description' => 'Identificar pessoa ou veículo e liberar acesso', 'icon' => 'shield', 'route' => null],
+        ['label' => 'Validar entrada', 'description' => 'Identificar pessoa ou veículo e liberar acesso', 'icon' => 'shield', 'route' => 'validation'],
         ['label' => 'Pré-cadastros pendentes', 'description' => 'Analisar solicitações antecipadas de visitantes', 'icon' => 'badge-check', 'route' => null],
         ['label' => 'Cadastro rápido', 'description' => 'Criar cadastro mínimo durante o atendimento', 'icon' => 'users', 'route' => null],
         ['label' => 'Consultar caixa', 'description' => 'Ver movimentações e conferir o turno atual', 'icon' => 'wallet', 'route' => null],

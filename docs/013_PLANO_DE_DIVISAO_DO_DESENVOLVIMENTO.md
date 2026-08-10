@@ -71,7 +71,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
 | P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
-| P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | 🟢 Disponível para protótipo | A definir | A definir |
+| P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | 🔴 Bloqueada | A definir | A definir |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | 🟢 Disponível | A definir | A definir |
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
@@ -79,6 +79,17 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | 🟢 Disponível | A definir | A definir |
 | P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | 🟢 Disponível | A definir | A definir |
 | P13 | Prestadores e empresas | Empresas, funcionários, serviços, documentos e autorizações | P04 | 🟢 Disponível para protótipo | A definir | A definir |
+
+#### Acompanhamento detalhado da P06
+
+| Entrega da P06 | Conteúdo | Situação |
+|---|---|---|
+| Identificação | Pessoa, documento protegido, imóvel, vínculo, autorização e estados independentes | ✅ Concluída |
+| Veículo | Placa reconhecida e cadastrada, veículo vinculado e confiança da leitura LPR | ✅ Concluída |
+| Contribuição | Opções contribui, não contribui e isento, forma de pagamento e resumo | ✅ Concluída |
+| Decisão | Negar com motivo, salvar sem liberar e validar em modo demonstrativo | ✅ Concluída |
+| Segurança do protótipo | Mensagens deixam claro que nenhum equipamento físico é acionado | ✅ Concluída |
+| Qualidade | Navegação, computador, celular, testes automáticos e compilação visual | ✅ Aprovada |
 
 ### 4.3 Módulos operacionais e administrativos
 
