@@ -76,7 +76,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | 🟢 Disponível | A definir | A definir |
-| P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | 🟢 Disponível | A definir | A definir |
+| P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
 | P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | 🟢 Disponível | A definir | A definir |
 | P13 | Prestadores e empresas | Empresas, funcionários, serviços, documentos e autorizações | P04 | 🟢 Disponível para protótipo | A definir | A definir |
 
@@ -102,6 +102,18 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Análise | Detalhes, checklist, histórico, aprovação, rejeição e solicitação de correção | ✅ Concluída |
 | Segurança do protótipo | Aprovação separada da Validação de Entrada e ausência de comando físico | ✅ Concluída |
 | Qualidade | Computador, celular, validações, testes automáticos e compilação visual | ✅ Aprovada |
+
+#### Acompanhamento detalhado da P11
+
+| Entrega da P11 | Conteúdo | Situação |
+|---|---|---|
+| Lista de imóveis | Resumo, busca, filtro por situação, tabela e cartões responsivos | ✅ Concluída |
+| Detalhe estrutural | Código, bloco, unidade, endereço, situação e atualização | ✅ Concluída |
+| Pessoas e vínculos | Natureza, papel, responsabilidade, vigência e situação apresentados separadamente | ✅ Concluída |
+| Veículos e histórico | Vínculos de veículos, ocupação e eventos estruturais preservados | ✅ Concluída |
+| Cadastro e edição | Formulário estrutural, prevenção de duplicidade, rascunho e situação independente | ✅ Concluída |
+| Segurança do protótipo | Criar ou bloquear imóvel não cria, exclui ou ativa pessoas e acessos automaticamente | ✅ Concluída |
+| Qualidade | Computador, celular, interações, testes automáticos e compilação visual | ✅ Aprovada |
 
 ### 4.3 Módulos operacionais e administrativos
 

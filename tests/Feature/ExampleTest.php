@@ -6,6 +6,7 @@ use App\Livewire\AccessValidation;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -247,5 +248,59 @@ class ExampleTest extends TestCase
             ->assertSet('records.1.status', 'rejeitado')
             ->assertSet('feedback.variant', 'danger')
             ->assertSee('A observação interna não será enviada ao solicitante.');
+    }
+
+    public function test_the_property_management_renders_the_p11_list(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/imoveis');
+
+        $response
+            ->assertOk()
+            ->assertSee('Cadastro de imóveis')
+            ->assertSee('SRA-A-102')
+            ->assertSee('Responsável')
+            ->assertSee('Ocupantes ativos')
+            ->assertSee('Cadastrar imóvel');
+    }
+
+    public function test_the_property_detail_preserves_people_links_and_vehicles(): void
+    {
+        Livewire::test(PropertyManagement::class)
+            ->call('openProperty', 1)
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedPropertyId', 1)
+            ->assertSee('Pessoas e vínculos')
+            ->assertSee('Responsável principal')
+            ->assertSee('Marcos Vinicius da Silva')
+            ->assertSee('ABC1D23')
+            ->call('togglePropertyBlock')
+            ->assertSet('properties.0.status', 'bloqueado')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSee('Os vínculos individuais continuam preservados');
+    }
+
+    public function test_the_property_form_creates_a_demo_property_without_implicit_links(): void
+    {
+        Livewire::test(PropertyManagement::class)
+            ->call('createProperty')
+            ->assertSet('mode', 'form')
+            ->set('block', 'D')
+            ->set('unit', '801')
+            ->set('code', 'SRA-D-801')
+            ->set('zipCode', '12000-000')
+            ->set('street', 'Rua das Palmeiras')
+            ->set('number', '80')
+            ->set('district', 'Jardim das Flores')
+            ->set('propertyStatus', 'ativo')
+            ->call('saveProperty')
+            ->assertHasNoErrors()
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedPropertyId', 6)
+            ->assertSet('properties.5.code', 'SRA-D-801')
+            ->assertSet('properties.5.occupants', 0)
+            ->assertSet('properties.5.vehicles', 0)
+            ->assertSee('Pessoas, vínculos e autorizações permanecem separados.');
     }
 }
