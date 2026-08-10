@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\AccessValidation;
+use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\PersonRegistration;
@@ -519,5 +520,55 @@ class ExampleTest extends TestCase
             ->assertSet('feedback.variant', 'success')
             ->assertSee('A sincronização facial está pendente.')
             ->assertSet('protocol', fn (?string $protocol) => $protocol !== null && str_starts_with($protocol, 'SRP-'));
+    }
+
+    public function test_the_company_management_renders_the_p13_list(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/empresas');
+
+        $response
+            ->assertOk()
+            ->assertSee('Empresas e prestadores')
+            ->assertSee('ValeManutenção')
+            ->assertSee('12.345.678/0001-90')
+            ->assertSee('Prestadores vinculados')
+            ->assertSee('Cadastrar empresa');
+    }
+
+    public function test_the_company_detail_preserves_providers_documents_and_services(): void
+    {
+        Livewire::test(CompanyManagement::class)
+            ->call('openCompany', 1)
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedCompanyId', 1)
+            ->assertSee('Prestadores vinculados')
+            ->assertSee('Sérgio Aparecido Luz')
+            ->assertSee('Manutenção elétrica')
+            ->call('toggleCompanyStatus')
+            ->assertSet('companies.0.status', 'inativo')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSee('impede novas autorizações');
+    }
+
+    public function test_the_company_form_creates_a_demo_company_without_implicit_providers(): void
+    {
+        Livewire::test(CompanyManagement::class)
+            ->call('createCompany')
+            ->assertSet('mode', 'form')
+            ->set('cnpj', '56.789.012/0001-44')
+            ->set('name', 'Entrega Rápida Logística Ltda')
+            ->set('tradeName', 'Entrega Rápida')
+            ->set('category', 'entregas')
+            ->set('phone', '(24) 3388-2211')
+            ->set('email', 'contato@entregarapida.com.br')
+            ->call('saveCompany')
+            ->assertHasNoErrors()
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedCompanyId', 5)
+            ->assertSet('companies.4.tradeName', 'Entrega Rápida')
+            ->assertSet('companies.4.providers', [])
+            ->assertSee('Prestadores, documentos e autorizações permanecem separados.');
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\AccessValidation;
+use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\PersonRegistration;
@@ -22,6 +23,7 @@ Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->
 Route::get('/imoveis', PropertyManagement::class)->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->name('vehicles');
 Route::get('/pessoas/nova', PersonRegistration::class)->name('people.create');
+Route::get('/empresas', CompanyManagement::class)->name('companies');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');
