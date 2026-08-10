@@ -2,6 +2,7 @@
 
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
+use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
@@ -26,6 +27,7 @@ Route::get('/imoveis', PropertyManagement::class)->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->name('vehicles');
 Route::get('/pessoas/nova', PersonRegistration::class)->name('people.create');
 Route::get('/empresas', CompanyManagement::class)->name('companies');
+Route::get('/caixa', CashRegister::class)->name('cash-register');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');

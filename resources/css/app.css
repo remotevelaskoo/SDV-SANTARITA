@@ -1576,6 +1576,26 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .access-history-notes { padding: 0.9rem; margin: 0; color: var(--neutral-800); font-size: 0.7rem; line-height: 1.55; }
 .access-history-section-card > .ui-empty-state { margin: 0.85rem; }
 
+/* P14 — Caixa */
+.cash-register { display: grid; gap: 1rem; }
+.cash-register-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: start; }
+.cash-register-summary { min-width: 0; }
+.cash-register-movement-card, .cash-register-movements-card, .cash-register-history-card { overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.cash-register-movement-card > header, .cash-register-movements-card > header, .cash-register-history-card > header { padding: 0.9rem 1rem; border-bottom: 1px solid var(--neutral-200); }
+.cash-register-movement-card > header h3, .cash-register-movements-card > header h2, .cash-register-history-card > header h2 { margin: 0; color: var(--navy-900); font-size: 0.86rem; }
+.cash-register-movement-card > header p, .cash-register-movements-card > header p, .cash-register-history-card > header p { margin: 0.12rem 0 0; color: var(--neutral-600); font-size: 0.64rem; }
+.cash-register-form-fields { display: grid; gap: 0.75rem; padding: 1rem 1rem 0; }
+.cash-register-movement-card .ui-action-group { padding: 1rem; }
+.cash-register-notes-field { display: grid; gap: 0.4rem; margin-top: 0.85rem; }
+.cash-register-notes-field > span { color: var(--neutral-800); font-size: 0.68rem; font-weight: 750; }
+.cash-register-notes-field textarea { width: 100%; padding: 0.7rem; resize: vertical; border: 1px solid var(--neutral-300); border-radius: var(--radius-md); color: var(--neutral-950); font: inherit; font-size: 0.7rem; }
+.cash-register-movements-card .ui-responsive-table { border: 0; border-radius: 0; box-shadow: none; }
+.cash-register-closed-card { display: grid; justify-items: center; gap: 0.6rem; padding: 2.5rem 1.5rem; text-align: center; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.cash-register-closed-card__icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 999px; background: var(--neutral-100); color: var(--neutral-600); }
+.cash-register-closed-card strong { font-size: 0.9rem; color: var(--navy-900); }
+.cash-register-closed-card p { max-width: 26rem; margin: 0 0 0.4rem; color: var(--neutral-600); font-size: 0.72rem; }
+.cash-register-history-card .ui-responsive-table { border: 0; border-radius: 0; box-shadow: none; }
+
 /* P10 — Cadastro de pessoas */
 .person-registration { display: grid; gap: 1rem; }
 .registration-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
@@ -1642,6 +1662,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .company-form-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .access-history-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .access-history-filters { grid-template-columns: minmax(0, 2fr) minmax(9rem, 0.7fr) minmax(9rem, 0.7fr) minmax(9rem, 0.8fr); align-items: end; }
+    .cash-register-form-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 48rem) {
@@ -1724,6 +1745,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .company-form-layout { grid-template-columns: minmax(0, 2.1fr) minmax(16rem, 0.9fr); }
     .access-history-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .access-history-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cash-register-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 }
 
 @media (min-width: 80rem) {

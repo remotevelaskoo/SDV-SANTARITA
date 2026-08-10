@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
+use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
@@ -618,5 +619,72 @@ class ExampleTest extends TestCase
             ->assertSet('mode', 'list')
             ->call('openEntry', 1)
             ->assertSee('Aguardando conferência');
+    }
+
+    public function test_the_cash_register_renders_the_p14_open_state(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/caixa');
+
+        $response
+            ->assertOk()
+            ->assertSee('Caixa')
+            ->assertSee('Caixa aberto')
+            ->assertSee('Registrar movimentação')
+            ->assertSee('Histórico de caixas')
+            ->assertSee('Contribuição — visitante Camila Andrade');
+    }
+
+    public function test_the_cash_register_records_a_manual_movement(): void
+    {
+        Livewire::test(CashRegister::class)
+            ->set('movementType', 'saida')
+            ->set('movementAmount', '25,00')
+            ->set('movementMethod', 'dinheiro')
+            ->set('movementDescription', 'Troco para portão de serviço')
+            ->call('registerMovement')
+            ->assertHasNoErrors()
+            ->assertSee('Movimentação registrada')
+            ->assertSee('Troco para portão de serviço');
+    }
+
+    public function test_the_cash_register_blocks_movement_when_closed_and_reopens(): void
+    {
+        Livewire::test(CashRegister::class)
+            ->set('informedAmount', '50,00')
+            ->call('closeRegister')
+            ->assertSet('status', 'fechado')
+            ->assertSee('Caixa fechado')
+            ->call('registerMovement')
+            ->assertSet('feedback.variant', 'danger')
+            ->assertSee('RN-084')
+            ->set('openingBalanceInput', '200')
+            ->call('openRegister')
+            ->assertSet('status', 'aberto')
+            ->assertSet('movements', []);
+    }
+
+    public function test_the_cash_register_closing_computes_the_difference(): void
+    {
+        Livewire::test(CashRegister::class)
+            ->assertSet('status', 'aberto')
+            ->set('informedAmount', '240,00')
+            ->call('closeRegister')
+            ->assertHasNoErrors()
+            ->assertSet('status', 'fechado')
+            ->assertSee('diferença de R$');
+    }
+
+    public function test_the_cash_register_rejects_a_zero_value_movement(): void
+    {
+        Livewire::test(CashRegister::class)
+            ->set('movementType', 'entrada')
+            ->set('movementAmount', '0,00')
+            ->set('movementMethod', 'dinheiro')
+            ->set('movementDescription', 'Tentativa inválida')
+            ->call('registerMovement')
+            ->assertHasErrors(['movementAmount'])
+            ->assertSee('O valor deve ser maior que zero.');
     }
 }
