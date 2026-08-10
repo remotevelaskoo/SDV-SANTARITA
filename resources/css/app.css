@@ -1426,6 +1426,20 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .vehicle-form-context li strong { font-size: 0.66rem; }
 .vehicle-form-context li small { color: var(--neutral-600); font-size: 0.58rem; }
 
+/* P10 — Cadastro de pessoas */
+.person-registration { display: grid; gap: 1rem; }
+.registration-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+.registration-main, .registration-context { display: grid; gap: 1rem; align-content: start; }
+.registration-fields { display: grid; gap: 0.85rem; padding: 0.9rem; }
+.registration-uploads { display: grid; gap: 0.85rem; padding: 0 0.9rem 0.9rem; }
+.registration-hint { padding: 0 0.9rem 0.9rem; margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
+.registration-duplicate-alert { margin: 0 0.9rem 0.9rem; }
+.registration-document-state { display: flex; align-items: center; gap: 0.6rem; align-self: end; padding-bottom: 0.6rem; }
+.registration-step-nav { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.9rem; }
+.registration-term-switch { padding: 0 0.9rem 0.9rem; }
+.registration-areas { display: grid; gap: 0.6rem; padding: 0 0.9rem 0.9rem; margin: 0; border: 0; }
+.registration-areas legend { padding: 0; margin-bottom: 0.1rem; color: var(--neutral-800); font-size: 0.75rem; font-weight: 750; }
+
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 @media (min-width: 40rem) {
@@ -1516,6 +1530,10 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .dashboard-panels { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
     .cameras-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .operation-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+    .registration-grid { grid-template-columns: minmax(0, 3fr) minmax(15rem, 2fr); align-items: start; }
+    .registration-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .registration-uploads { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .registration-areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .validation-context { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .validation-context > div { border-right: 1px solid var(--neutral-200); border-bottom: 0; }
     .validation-context > div:last-child { border-right: 0; }

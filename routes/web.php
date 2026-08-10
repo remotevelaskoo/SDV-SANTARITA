@@ -3,6 +3,7 @@
 use App\Livewire\AccessValidation;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
+use App\Livewire\PersonRegistration;
 use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
@@ -20,6 +21,7 @@ Route::get('/pre-cadastros', PreRegistrationQueue::class)->name('pre-registratio
 Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->name('pre-registration.public');
 Route::get('/imoveis', PropertyManagement::class)->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->name('vehicles');
+Route::get('/pessoas/nova', PersonRegistration::class)->name('people.create');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');
