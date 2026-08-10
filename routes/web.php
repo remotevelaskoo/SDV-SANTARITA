@@ -7,6 +7,7 @@ use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
+use App\Livewire\VehicleManagement;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/entrar');
@@ -18,6 +19,7 @@ Route::get('/validacao', AccessValidation::class)->name('validation');
 Route::get('/pre-cadastros', PreRegistrationQueue::class)->name('pre-registrations');
 Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->name('pre-registration.public');
 Route::get('/imoveis', PropertyManagement::class)->name('properties');
+Route::get('/veiculos', VehicleManagement::class)->name('vehicles');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');

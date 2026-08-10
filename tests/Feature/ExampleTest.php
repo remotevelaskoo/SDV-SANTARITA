@@ -8,6 +8,7 @@ use App\Livewire\Login;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
+use App\Livewire\VehicleManagement;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -302,5 +303,76 @@ class ExampleTest extends TestCase
             ->assertSet('properties.5.occupants', 0)
             ->assertSet('properties.5.vehicles', 0)
             ->assertSee('Pessoas, vínculos e autorizações permanecem separados.');
+    }
+
+    public function test_the_vehicle_management_renders_the_p12_list(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/veiculos');
+
+        $response
+            ->assertOk()
+            ->assertSee('Cadastro de veículos')
+            ->assertSee('ABC1D23')
+            ->assertSee('Placas sincronizadas')
+            ->assertSee('Cadastrar veículo');
+    }
+
+    public function test_the_vehicle_detail_preserves_links_when_blocked(): void
+    {
+        Livewire::test(VehicleManagement::class)
+            ->call('openVehicle', 1)
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedVehicleId', 1)
+            ->assertSee('Proprietário e vínculo')
+            ->assertSee('Marcos Vinicius da Silva')
+            ->assertSee('SRA-A-102')
+            ->call('toggleVehicleBlock')
+            ->assertSet('vehicles.0.status', 'bloqueado')
+            ->assertSet('vehicles.0.owner', 'Marcos Vinicius da Silva')
+            ->assertSet('feedback.variant', 'warning')
+            ->assertSee('O histórico e os vínculos foram preservados');
+    }
+
+    public function test_the_vehicle_form_creates_a_demo_vehicle_without_releasing_access(): void
+    {
+        Livewire::test(VehicleManagement::class)
+            ->call('createVehicle')
+            ->set('plate', 'QRS-8T90')
+            ->set('type', 'moto')
+            ->set('brand', 'Yamaha')
+            ->set('model', 'Fazer 250')
+            ->set('color', 'Azul')
+            ->set('year', '2025')
+            ->set('renavam', '12345678901')
+            ->set('owner', 'Camila Andrade')
+            ->set('ownerDocument', '987.654.321-00')
+            ->set('propertyCode', 'SRA-B-304')
+            ->set('vehicleStatus', 'pendente')
+            ->call('saveVehicle')
+            ->assertHasNoErrors()
+            ->assertSet('mode', 'detail')
+            ->assertSet('selectedVehicleId', 6)
+            ->assertSet('vehicles.5.plate', 'QRS8T90')
+            ->assertSet('vehicles.5.status', 'pendente')
+            ->assertSet('vehicles.5.lprStatus', 'nao_sincronizado')
+            ->assertSee('Pessoa, imóvel, situação e autorização continuam independentes.');
+    }
+
+    public function test_the_vehicle_form_rejects_a_duplicate_plate(): void
+    {
+        Livewire::test(VehicleManagement::class)
+            ->call('createVehicle')
+            ->set('plate', 'ABC-1D23')
+            ->set('type', 'carro')
+            ->set('brand', 'Toyota')
+            ->set('model', 'Corolla')
+            ->set('color', 'Prata')
+            ->set('year', '2022')
+            ->set('owner', 'Outra pessoa')
+            ->call('saveVehicle')
+            ->assertHasErrors(['plate'])
+            ->assertSee('Esta placa já está cadastrada no sistema.');
     }
 }
