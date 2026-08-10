@@ -31,6 +31,17 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | 🔴 Bloqueada | Depende de uma decisão ou de outra parte ainda não concluída. |
 | ⚪ Planejada | Faz parte do projeto, mas ainda não é o momento recomendado para iniciar. |
 
+### 2.1 Resumo atual
+
+| Situação | Quantidade | Partes |
+|---|---:|---|
+| ✅ Concluídas | 12 | P01 a P08 e P10 a P13 |
+| 🟢 Disponíveis | 4 | P09, P14, P15 e P18 |
+| 🔴 Bloqueadas | 10 | P16, P17, P19 a P25 e P27 |
+| ⚪ Planejada | 1 | P26 |
+
+O avanço por quantidade de partes é de **12 concluídas em 27 (aproximadamente 44%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
+
 ## 3. Termos usados pela equipe
 
 - **Frontend:** telas, botões, menus, formulários e tudo que a pessoa vê e utiliza.
@@ -74,7 +85,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p07-cadastro-rapido` |
 | P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
-| P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ⚪ Planejada | A definir | A definir |
+| P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | 🟢 Disponível | A definir | A definir |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
 | P12 | Cadastro de veículos | Placa, características, proprietário, vínculo e situação | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p12-cadastro-veiculos` |
@@ -143,8 +154,8 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P14 | Caixa | Abertura, movimentações, contribuições, conferência e fechamento | P04 e regras financeiras | ⚪ Planejada | A definir | A definir |
-| P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | ⚪ Planejada | A definir | A definir |
+| P14 | Caixa | Abertura, movimentações, contribuições, conferência e fechamento | P04 e regras financeiras | 🟢 Disponível para protótipo | A definir | A definir |
+| P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | 🟢 Disponível | A definir | A definir |
 | P16 | Relatórios | Consultas, filtros e exportações autorizadas | Dados reais dos módulos | 🔴 Bloqueada | A definir | A definir |
 | P17 | Administração | Usuários, perfis, permissões, configurações, equipamentos e auditoria | Login real e banco de dados | 🔴 Bloqueada | A definir | A definir |
 
@@ -152,7 +163,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | ⚪ Planejada | A definir | A definir |
+| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟢 Disponível | A definir | A definir |
 | P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🔴 Bloqueada | A definir | A definir |
 | P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🔴 Bloqueada | A definir | A definir |
 | P21 | Conexão das telas | Trocar dados demonstrativos por cadastros e operações reais | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
@@ -170,17 +181,16 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-Depois de definir um responsável, as seguintes partes podem ser iniciadas sem aguardar a conclusão do login visual:
+Depois de definir um responsável, as seguintes partes podem ser iniciadas agora:
 
-1. **P05 — Protótipo do Modo Portaria**;
-2. **P06 — Protótipo da Validação de Entrada**;
-3. **P08 — Pré-cadastro**;
-4. **P10 — Cadastro de pessoas**;
-5. **P11 — Cadastro de imóveis**;
-6. **P12 — Cadastro de veículos**;
-7. **P13 — Protótipo de prestadores e empresas**.
+1. **P09 — Entradas e saídas:** frontend do histórico operacional; a dependência P06 está concluída;
+2. **P14 — Caixa:** frontend demonstrativo; o P04 e as regras financeiras estão concluídos e aprovados;
+3. **P15 — Encomendas:** frontend do recebimento e entrega; o P04 e o cadastro de pessoas estão concluídos;
+4. **P18 — Banco de dados inicial:** parte interna; as regras, o modelo de dados e a arquitetura estão aprovados.
 
-Com o **P04 — Componentes compartilhados** concluído, Lucas ou Vinicius poderão assumir uma das partes **P05, P06, P08, P10, P11, P12 ou P13**. A parte escolhida deverá receber responsável e branch neste documento antes do início.
+Como a equipe escolheu desenvolver primeiro o frontend, a sequência recomendada é **P09, P14 e P15**. A **P18** já está liberada tecnicamente e pode ser iniciada depois desses protótipos ou em paralelo por outro responsável, desde que a equipe combine a divisão para evitar alterações conflitantes.
+
+Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
 ## 6. Regra de trabalho para cada parte
 
@@ -229,7 +239,8 @@ Uma parte somente estará pronta quando:
 |---|---|---|
 | Escolher a primeira parte que Vinicius desenvolverá | Lucas e Vinicius | Resolvida — P05 (Modo Portaria) |
 | Definir os atalhos exatos do Modo Portaria | Lucas e Vinicius | Pendente — protótipo do P05 usa atalhos provisórios até confirmação |
-| Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Pendente |
+| Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Resolvida — campos implementados e P07 concluída |
+| Escolher os responsáveis por P09, P14, P15 e P18 | Lucas e Vinicius | Pendente |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 
