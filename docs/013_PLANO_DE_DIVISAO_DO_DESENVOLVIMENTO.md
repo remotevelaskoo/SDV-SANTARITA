@@ -21,8 +21,6 @@ Ele deverá responder, a qualquer momento:
 
 Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma parte, deverá atualizar o quadro abaixo.
 
-**Regra de publicação da equipe:** documentos de acompanhamento deverão ser mantidos atualizados na branch `main`, para que toda a equipe encontre a versão vigente no mesmo lugar. O código ainda em desenvolvimento continuará em branches separadas até ser revisado e aprovado.
-
 ## 2. Significado das situações
 
 | Situação | Significado |
@@ -52,7 +50,7 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | P01 | Estrutura principal | Menu lateral, cabeçalho, navegação, identidade visual e adaptação para celular | Nenhuma | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
 | P02 | Dashboard operacional | Indicadores, alertas, gráfico, acessos recentes e câmeras demonstrativas | P01 | ✅ Concluída visualmente | Lucas + Codex | `codex/fundacao-frontend` |
 | P03 | Login visual | Entrada no sistema, aviso de erro, mostrar senha e acesso demonstrativo | P01 | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
-| P04 | Componentes compartilhados | Padrões reutilizáveis de campos, botões, tabelas, avisos, cartões e janelas | P01 | 🟡 Em andamento | Lucas + Codex | `codex/fundacao-frontend` |
+| P04 | Componentes compartilhados | Padrões reutilizáveis de campos, botões, tabelas, avisos, cartões e janelas | P01 | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
 
 #### Acompanhamento detalhado do P04
 
@@ -63,10 +61,10 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Entrega 1 — Base visual | Botões, grupos de ações, campos de texto, badges, alertas, cartões e estado vazio | ✅ Concluída e testada |
 | Entrega 2 — Formulários e dados | Seleção, checkbox, radio, switch, progresso, carregamento, erro e tabela responsiva | ✅ Concluída e testada |
 | Entrega 3 — Navegação e painéis | Breadcrumb, abas, indicador de etapas, paginação, janela de confirmação e painel lateral | ✅ Concluída e testada |
-| Entrega 4 — Complementos | Autocomplete, data e período, upload, toast, lista de atividade, métrica e tooltip | 🟢 Próxima entrega disponível |
-| Entrega 5 — Componentes da operação | Pessoa, vínculo, veículo, placa, sincronização, decisão de acesso, contribuição, caixa e protocolo | ⚪ Planejada após os complementos |
+| Entrega 4 — Complementos | Autocomplete, data e período, upload, toast, lista de atividade, métrica e tooltip | ✅ Concluída e testada |
+| Entrega 5 — Componentes da operação | Pessoa, vínculo, veículo, placa, sincronização, decisão de acesso, contribuição, caixa e protocolo | ✅ Concluída e testada |
 
-**Verificações da entrega mais recente:** funcionamento no computador e no celular, navegação das abas, abertura e fechamento das janelas, compilação visual e 8 testes automáticos com 49 verificações aprovadas.
+**Verificações do P04:** funcionamento no computador e no celular, interações por mouse e teclado, estados de carregamento e erro, abertura e fechamento das janelas, compilação visual e testes automáticos aprovados.
 
 ### 4.2 Operação da portaria
 
@@ -123,7 +121,7 @@ Depois de definir um responsável, as seguintes partes podem ser iniciadas sem a
 6. **P12 — Cadastro de veículos**;
 7. **P13 — Protótipo de prestadores e empresas**.
 
-Recomendação para evitar conflito: enquanto Lucas e Codex continuam o **P04 — Componentes compartilhados**, Vinicius poderá assumir uma das partes **P05, P06, P08, P10, P11, P12 ou P13**. A parte escolhida deverá receber responsável e branch neste documento antes do início.
+Com o **P04 — Componentes compartilhados** concluído, Lucas ou Vinicius poderão assumir uma das partes **P05, P06, P08, P10, P11, P12 ou P13**. A parte escolhida deverá receber responsável e branch neste documento antes do início.
 
 ## 6. Regra de trabalho para cada parte
 
