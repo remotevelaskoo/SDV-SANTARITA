@@ -1534,6 +1534,48 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .company-form-context li strong { font-size: 0.66rem; }
 .company-form-context li small { color: var(--neutral-600); font-size: 0.58rem; }
 
+/* P09 — Entradas e saídas */
+.access-history { display: grid; gap: 1rem; }
+.access-history-summary-grid { display: grid; gap: 0.75rem; }
+.access-history-summary-grid article { padding: 0.85rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.access-history-summary-grid span, .access-history-summary-grid strong, .access-history-summary-grid small { display: block; }
+.access-history-summary-grid span { color: var(--neutral-600); font-size: 0.61rem; }
+.access-history-summary-grid strong { margin-top: 0.12rem; color: var(--navy-900); font-size: 1.35rem; }
+.access-history-summary-grid small { margin-top: 0.15rem; color: var(--neutral-600); font-size: 0.58rem; }
+.access-history-list-card, .access-history-section-card { overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.access-history-list-card > header, .access-history-section-card > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1rem; border-bottom: 1px solid var(--neutral-200); }
+.access-history-list-card > header h2, .access-history-section-card > header h3 { margin: 0; color: var(--navy-900); font-size: 0.86rem; }
+.access-history-list-card > header p, .access-history-section-card > header p { margin: 0.12rem 0 0; color: var(--neutral-600); font-size: 0.64rem; }
+.access-history-filters { display: grid; gap: 0.7rem; padding: 0.9rem 1rem; background: var(--neutral-050); }
+.access-history-search { position: relative; display: block; }
+.access-history-search .app-icon { position: absolute; top: 50%; left: 0.75rem; width: 0.85rem; height: 0.85rem; color: var(--neutral-600); transform: translateY(-50%); }
+.access-history-search input { width: 100%; height: 2.7rem; padding: 0.6rem 0.75rem 0.6rem 2.2rem; border: 1px solid var(--neutral-300); border-radius: var(--radius-md); background: var(--white); color: var(--neutral-950); font: inherit; font-size: 0.7rem; }
+.access-history-list-card .ui-responsive-table { border: 0; border-radius: 0; box-shadow: none; }
+.access-history-list-card table td:first-child { white-space: nowrap; }
+.access-history-list-card table td strong, .access-history-list-card table td small { display: block; }
+.access-history-list-card table td small { color: var(--neutral-600); font-size: 0.58rem; }
+.access-history-list-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; padding: 0.7rem 1rem; border-top: 1px solid var(--neutral-200); color: var(--neutral-600); font-size: 0.61rem; }
+.access-history-type { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 650; }
+.access-history-type .app-icon { width: 0.75rem; height: 0.75rem; }
+.access-history-type--entrada { color: var(--blue-700); }
+.access-history-type--saida { color: var(--neutral-600); }
+.access-history-breadcrumb { display: flex; align-items: center; gap: 0.4rem; color: var(--neutral-600); font-size: 0.65rem; }
+.access-history-breadcrumb button { padding: 0; border: 0; background: transparent; color: var(--blue-700); font: inherit; font-weight: 750; }
+.access-history-breadcrumb .app-icon { width: 0.7rem; height: 0.7rem; }
+.access-history-detail-hero { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.access-history-detail-hero > div > span { color: var(--blue-700); font-size: 0.6rem; font-weight: 800; text-transform: uppercase; }
+.access-history-detail-hero h2 { margin: 0.1rem 0 0; color: var(--navy-900); font-size: 1.2rem; }
+.access-history-detail-hero p { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.68rem; }
+.access-history-detail-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.access-history-detail-grid { display: grid; gap: 1rem; }
+.access-history-detail-data { padding: 0.8rem 0.9rem; margin: 0; }
+.access-history-detail-data > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--neutral-200); font-size: 0.63rem; }
+.access-history-detail-data > div:last-child { border-bottom: 0; }
+.access-history-detail-data dt { color: var(--neutral-600); }
+.access-history-detail-data dd { margin: 0; font-weight: 700; text-align: right; }
+.access-history-notes { padding: 0.9rem; margin: 0; color: var(--neutral-800); font-size: 0.7rem; line-height: 1.55; }
+.access-history-section-card > .ui-empty-state { margin: 0.85rem; }
+
 /* P10 — Cadastro de pessoas */
 .person-registration { display: grid; gap: 1rem; }
 .registration-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
@@ -1598,6 +1640,8 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .company-summary-grid, .company-detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .company-list-filters { grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr); align-items: end; }
     .company-form-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .access-history-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .access-history-filters { grid-template-columns: minmax(0, 2fr) minmax(9rem, 0.7fr) minmax(9rem, 0.7fr) minmax(9rem, 0.8fr); align-items: end; }
 }
 
 @media (min-width: 48rem) {
@@ -1678,6 +1722,8 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .company-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .company-section-card--wide { grid-column: 1 / -1; }
     .company-form-layout { grid-template-columns: minmax(0, 2.1fr) minmax(16rem, 0.9fr); }
+    .access-history-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .access-history-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 80rem) {

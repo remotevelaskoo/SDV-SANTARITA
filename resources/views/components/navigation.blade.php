@@ -5,7 +5,7 @@
             ['label' => 'Dashboard', 'icon' => 'grid', 'route' => 'dashboard'],
             ['label' => 'Validação de entrada', 'icon' => 'shield', 'route' => 'validation'],
             ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3, 'route' => 'pre-registrations'],
-            ['label' => 'Entradas e saídas', 'icon' => 'door'],
+            ['label' => 'Entradas e saídas', 'icon' => 'door', 'route' => 'access-history'],
         ],
         'Cadastros' => [
             ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
