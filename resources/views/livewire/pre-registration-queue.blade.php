@@ -8,10 +8,10 @@
     <section class="pre-registration-queue__summary" aria-label="Resumo dos pré-cadastros">
         @php
             $statusCounts = [
-                'aguardando' => collect($records)->where('status', 'aguardando')->count(),
-                'aprovado' => collect($records)->where('status', 'aprovado')->count(),
-                'rejeitado' => collect($records)->where('status', 'rejeitado')->count(),
-                'correcao' => collect($records)->where('status', 'correcao')->count(),
+                'aguardando' => $records->where('status', 'aguardando')->count(),
+                'aprovado' => $records->where('status', 'aprovado')->count(),
+                'rejeitado' => $records->where('status', 'rejeitado')->count(),
+                'correcao' => $records->where('status', 'correcao')->count(),
             ];
         @endphp
         <article><span>Aguardando análise</span><strong>{{ $statusCounts['aguardando'] }}</strong><small>Mais antigas primeiro</small></article>
@@ -35,7 +35,7 @@
             <button type="button" wire:click="setStatusFilter('aguardando')" @class(['is-active' => $statusFilter === 'aguardando'])>Aguardando <span>{{ $statusCounts['aguardando'] }}</span></button>
             <button type="button" wire:click="setStatusFilter('aprovado')" @class(['is-active' => $statusFilter === 'aprovado'])>Aprovados <span>{{ $statusCounts['aprovado'] }}</span></button>
             <button type="button" wire:click="setStatusFilter('rejeitado')" @class(['is-active' => $statusFilter === 'rejeitado'])>Rejeitados <span>{{ $statusCounts['rejeitado'] }}</span></button>
-            <button type="button" wire:click="setStatusFilter('todos')" @class(['is-active' => $statusFilter === 'todos'])>Todos <span>{{ count($records) }}</span></button>
+            <button type="button" wire:click="setStatusFilter('todos')" @class(['is-active' => $statusFilter === 'todos'])>Todos <span>{{ $records->count() }}</span></button>
         </div>
 
         <div class="pre-registration-filters">
@@ -54,7 +54,7 @@
 
         <x-ui.responsive-table
             label="Lista de pré-cadastros"
-            :state="count($filteredRecords) ? 'ready' : 'empty'"
+            :state="$filteredRecords->count() ? 'ready' : 'empty'"
             empty-title="Nenhum pré-cadastro encontrado"
             empty-description="Altere a busca ou selecione outro filtro de situação."
         >
@@ -72,39 +72,44 @@
                 </thead>
                 <tbody>
                     @foreach ($filteredRecords as $record)
-                        <tr>
-                            <td><strong>{{ $record['name'] }}</strong><small>{{ $record['document'] }} · {{ $record['destination'] }}</small></td>
-                            <td>{{ $record['type'] }}</td>
-                            <td>{{ $record['submittedAt'] }}</td>
-                            <td>{{ $record['vehicle'] }}</td>
-                            <td class="numeric">{{ $record['protocol'] }}</td>
+                        <tr wire:key="row-{{ $record->id }}">
+                            <td><strong>{{ $record->name }}</strong><small>{{ $record->document }} · {{ $record->destination_label }}</small></td>
+                            <td>{{ ucfirst($record->access_type) }}</td>
+                            <td>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</td>
+                            <td>{{ $record->vehicleLabel() }}</td>
+                            <td class="numeric">{{ $record->protocol }}</td>
                             <td>
-                                <x-ui.badge :variant="match ($record['status']) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
-                                    {{ match ($record['status']) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
+                                <x-ui.badge :variant="match ($record->status) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
+                                    {{ match ($record->status) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
                                 </x-ui.badge>
                             </td>
                             <td>
-                                <x-ui.drawer id="pre-registration-{{ $record['id'] }}" title="Analisar pré-cadastro" description="{{ $record['protocol'] }}" trigger-label="Analisar">
-                                    <x-pre-registration-detail :record="$record" />
+                                <x-ui.drawer id="pre-registration-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id">
+                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" />
 
                                     <x-slot:footer>
-                                        @if ($record['status'] === 'aguardando')
+                                        @if ($record->status === 'aguardando')
                                             <div class="pre-registration-review-actions">
-                                                <x-ui.select id="correction-item-{{ $record['id'] }}" label="Pedir correção de" wire:model="correctionItems">
+                                                @if ($editingId !== $record->id)
+                                                    @can('edit', $record)
+                                                        <x-ui.button variant="secondary" wire:click="beginEdit('{{ $record->id }}')">Editar dados preenchidos</x-ui.button>
+                                                    @endcan
+                                                @endif
+                                                <x-ui.select id="correction-item-{{ $record->id }}" label="Pedir correção de" wire:model="correctionItems">
                                                     <option value="dados_pessoais">Dados pessoais</option>
                                                     <option value="documento">Documento</option>
                                                     <option value="selfie">Selfie</option>
                                                     <option value="veiculo">Veículo</option>
                                                 </x-ui.select>
-                                                <x-ui.button variant="warning" wire:click="requestCorrection({{ $record['id'] }})">Solicitar correção</x-ui.button>
-                                                <x-ui.select id="rejection-reason-{{ $record['id'] }}" label="Motivo da rejeição" wire:model="rejectionReason">
+                                                <x-ui.button variant="warning" wire:click="requestCorrection('{{ $record->id }}')">Solicitar correção</x-ui.button>
+                                                <x-ui.select id="rejection-reason-{{ $record->id }}" label="Motivo da rejeição" wire:model="rejectionReason">
                                                     <option value="documento_incompleto">Documento incompleto</option>
                                                     <option value="dados_divergentes">Dados divergentes</option>
                                                     <option value="periodo_invalido">Período inválido</option>
                                                     <option value="solicitacao_nao_confirmada">Solicitação não confirmada</option>
                                                 </x-ui.select>
-                                                <x-ui.button variant="danger" wire:click="reject({{ $record['id'] }})">Rejeitar</x-ui.button>
-                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})">Aprovar pré-cadastro</x-ui.button>
+                                                <x-ui.button variant="danger" wire:click="reject('{{ $record->id }}')">Rejeitar</x-ui.button>
+                                                <x-ui.button variant="success" wire:click="approve('{{ $record->id }}')" :disabled="$editingId === $record->id">Aprovar pré-cadastro</x-ui.button>
                                             </div>
                                         @else
                                             <x-ui.alert variant="info" title="Decisão já registrada">
@@ -122,33 +127,38 @@
             <x-slot:cards>
                 <ul class="pre-registration-mobile-list">
                     @foreach ($filteredRecords as $record)
-                        <li>
-                            <header><span class="pre-registration-person-avatar">{{ $record['initials'] }}</span><div><strong>{{ $record['name'] }}</strong><small>{{ $record['type'] }} · {{ $record['destination'] }}</small></div></header>
-                            <dl><div><dt>Enviado</dt><dd>{{ $record['submittedAt'] }}</dd></div><div><dt>Protocolo</dt><dd>{{ $record['protocol'] }}</dd></div><div><dt>Veículo</dt><dd>{{ $record['vehicle'] }}</dd></div></dl>
+                        <li wire:key="card-{{ $record->id }}">
+                            <header><span class="pre-registration-person-avatar">{{ $record->initials() }}</span><div><strong>{{ $record->name }}</strong><small>{{ ucfirst($record->access_type) }} · {{ $record->destination_label }}</small></div></header>
+                            <dl><div><dt>Enviado</dt><dd>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</dd></div><div><dt>Protocolo</dt><dd>{{ $record->protocol }}</dd></div><div><dt>Veículo</dt><dd>{{ $record->vehicleLabel() }}</dd></div></dl>
                             <footer>
-                                <x-ui.badge :variant="match ($record['status']) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
-                                    {{ match ($record['status']) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
+                                <x-ui.badge :variant="match ($record->status) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
+                                    {{ match ($record->status) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
                                 </x-ui.badge>
-                                <x-ui.drawer id="pre-registration-mobile-{{ $record['id'] }}" title="Analisar pré-cadastro" description="{{ $record['protocol'] }}" trigger-label="Analisar">
-                                    <x-pre-registration-detail :record="$record" />
+                                <x-ui.drawer id="pre-registration-mobile-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id">
+                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" />
                                     <x-slot:footer>
-                                        @if ($record['status'] === 'aguardando')
+                                        @if ($record->status === 'aguardando')
                                             <div class="pre-registration-review-actions">
-                                                <x-ui.select id="mobile-correction-item-{{ $record['id'] }}" label="Pedir correção de" wire:model="correctionItems">
+                                                @if ($editingId !== $record->id)
+                                                    @can('edit', $record)
+                                                        <x-ui.button variant="secondary" wire:click="beginEdit('{{ $record->id }}')">Editar dados preenchidos</x-ui.button>
+                                                    @endcan
+                                                @endif
+                                                <x-ui.select id="mobile-correction-item-{{ $record->id }}" label="Pedir correção de" wire:model="correctionItems">
                                                     <option value="dados_pessoais">Dados pessoais</option>
                                                     <option value="documento">Documento</option>
                                                     <option value="selfie">Selfie</option>
                                                     <option value="veiculo">Veículo</option>
                                                 </x-ui.select>
-                                                <x-ui.button variant="warning" wire:click="requestCorrection({{ $record['id'] }})">Solicitar correção</x-ui.button>
-                                                <x-ui.select id="mobile-rejection-reason-{{ $record['id'] }}" label="Motivo da rejeição" wire:model="rejectionReason">
+                                                <x-ui.button variant="warning" wire:click="requestCorrection('{{ $record->id }}')">Solicitar correção</x-ui.button>
+                                                <x-ui.select id="mobile-rejection-reason-{{ $record->id }}" label="Motivo da rejeição" wire:model="rejectionReason">
                                                     <option value="documento_incompleto">Documento incompleto</option>
                                                     <option value="dados_divergentes">Dados divergentes</option>
                                                     <option value="periodo_invalido">Período inválido</option>
                                                     <option value="solicitacao_nao_confirmada">Solicitação não confirmada</option>
                                                 </x-ui.select>
-                                                <x-ui.button variant="danger" wire:click="reject({{ $record['id'] }})">Rejeitar</x-ui.button>
-                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})">Aprovar pré-cadastro</x-ui.button>
+                                                <x-ui.button variant="danger" wire:click="reject('{{ $record->id }}')">Rejeitar</x-ui.button>
+                                                <x-ui.button variant="success" wire:click="approve('{{ $record->id }}')" :disabled="$editingId === $record->id">Aprovar pré-cadastro</x-ui.button>
                                             </div>
                                         @endif
                                     </x-slot:footer>
@@ -160,6 +170,6 @@
             </x-slot:cards>
         </x-ui.responsive-table>
 
-        <footer class="pre-registration-queue__footer"><span>Exibindo {{ count($filteredRecords) }} de {{ count($records) }} solicitações</span><small>Ordenação: mais antigas primeiro</small></footer>
+        <footer class="pre-registration-queue__footer"><span>Exibindo {{ $filteredRecords->count() }} de {{ $records->count() }} solicitações</span><small>Ordenação: mais antigas primeiro</small></footer>
     </section>
 </div>

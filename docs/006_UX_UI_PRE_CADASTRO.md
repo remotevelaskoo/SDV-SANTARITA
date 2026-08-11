@@ -1003,6 +1003,25 @@ Conforme a referência:
 - inconsistências;
 - origem do convite.
 
+Todos os dados efetivamente preenchidos pelo solicitante deverão estar disponíveis ao operador autorizado no drawer, respeitando mascaramento, finalidade e menor privilégio. O resumo da fila não substitui a ficha completa de conferência.
+
+## 20.3.1 Edição controlada pela portaria
+
+Antes da aprovação, operador com permissão específica poderá corrigir dados textuais da solicitação quando a divergência puder ser comprovada durante o atendimento.
+
+A edição deverá:
+
+- exigir permissão específica, distinta do acesso geral à fila;
+- ser permitida somente enquanto o pré-cadastro estiver em estado compatível com análise (aguardando);
+- exigir justificativa;
+- preservar a versão submetida pelo solicitante;
+- registrar campo, valor anterior, valor novo, operador, data e hora;
+- revalidar os dados no backend, não confiando apenas na validação do formulário;
+- impedir aprovação enquanto houver alteração não salva;
+- controlar concorrência por versão, recusando salvar sobre uma versão desatualizada;
+- não alterar automaticamente pessoa, imóvel, vínculo, autorização ou credencial;
+- encaminhar ao fluxo "Solicitar correção" documentos, selfies ou informações que dependam de novo envio pelo solicitante — nunca substituí-los diretamente.
+
 ## 20.4 Histórico
 
 Exibir:
@@ -1043,6 +1062,8 @@ O operador deverá conferir:
 - empresa e atividade para prestador;
 - alertas;
 - divergências.
+
+O operador deverá conseguir abrir os valores preenchidos, não apenas indicadores de completude do checklist.
 
 ## 21.2 Resultado da análise
 

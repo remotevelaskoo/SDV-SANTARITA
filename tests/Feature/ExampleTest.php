@@ -14,12 +14,27 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use App\Models\PreRegistration;
+use App\Models\PreRegistrationEdit;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
+    use RefreshDatabase;
+
+    private function portariaOperator(bool $canEdit = true): User
+    {
+        return User::factory()->create([
+            'username' => 'portaria',
+            'password' => 'sdv2026',
+            'can_edit_pre_registrations' => $canEdit,
+        ]);
+    }
+
     public function test_the_home_page_redirects_to_the_login(): void
     {
         $response = $this->get('/');
@@ -53,12 +68,16 @@ class ExampleTest extends TestCase
 
     public function test_the_demo_login_opens_the_dashboard(): void
     {
+        $this->portariaOperator();
+
         Livewire::test(Login::class)
             ->call('useDemoAccount')
             ->assertSet('identification', 'portaria')
             ->assertSet('password', 'sdv2026')
             ->call('login')
             ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticated();
     }
 
     public function test_the_dashboard_renders_the_approved_visual_structure(): void
@@ -305,6 +324,12 @@ class ExampleTest extends TestCase
     {
         $this->withoutVite();
 
+        PreRegistration::factory()->create([
+            'name' => 'Camila Andrade',
+            'protocol' => 'PRE-SRA-X7K9M2',
+            'status' => 'aguardando',
+        ]);
+
         $response = $this->get('/pre-cadastros');
 
         $response
@@ -319,17 +344,228 @@ class ExampleTest extends TestCase
 
     public function test_the_pre_registration_queue_records_each_demo_decision(): void
     {
+        $first = PreRegistration::factory()->create(['status' => 'aguardando']);
+        $second = PreRegistration::factory()->create(['status' => 'aguardando']);
+
         Livewire::test(PreRegistrationQueue::class)
-            ->call('approve', 1)
-            ->assertSet('records.0.status', 'aprovado')
+            ->call('approve', $first->id)
             ->assertSet('feedback.variant', 'success')
-            ->call('requestCorrection', 2)
-            ->assertSet('records.1.status', 'correcao')
+            ->call('requestCorrection', $second->id)
             ->assertSet('feedback.variant', 'warning')
-            ->call('reject', 2)
-            ->assertSet('records.1.status', 'rejeitado')
+            ->call('reject', $second->id)
             ->assertSet('feedback.variant', 'danger')
             ->assertSee('A observação interna não será enviada ao solicitante.');
+
+        $this->assertSame('aprovado', $first->fresh()->status);
+        $this->assertSame('rejeitado', $second->fresh()->status);
+        $this->assertSame(3, $second->fresh()->version, 'requestCorrection e reject cada um deve incrementar a versão.');
+    }
+
+    public function test_the_pre_registration_detail_shows_every_filled_field(): void
+    {
+        $record = PreRegistration::factory()->visitor()->create([
+            'name' => 'Camila Andrade',
+            'document' => '***.***.331-**',
+            'phone' => '(12) 99876-4321',
+            'email' => 'camila.andrade@example.com',
+            'address_informed' => 'Rua das Palmeiras, 125 · Centro · Taubaté/SP',
+            'vehicle_plate' => 'ABC1D23',
+            'document_status' => 'Documento enviado e legível',
+            'selfie_status' => 'Selfie enviada e adequada',
+            'protocol' => 'PRE-SRA-X7K9M2',
+        ]);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->assertSee('Camila Andrade')
+            ->assertSee('***.***.331-**')
+            ->assertSee('(12) 99876-4321')
+            ->assertSee('camila.andrade@example.com')
+            ->assertSee('Rua das Palmeiras, 125 · Centro · Taubaté/SP')
+            ->assertSee('Visitante')
+            ->assertSee($record->destination_property)
+            ->assertSee($record->responsible_name)
+            ->assertSee('ABC1D23')
+            ->assertSee('Documento enviado e legível')
+            ->assertSee('Selfie enviada e adequada')
+            ->assertSee('PRE-SRA-X7K9M2')
+            ->assertSee('Dados preenchidos');
+    }
+
+    public function test_the_gate_operator_can_edit_submitted_data_with_an_audit_reason_before_approval(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create(['phone' => '(12) 99876-4321']);
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->assertSet('editingId', $record->id)
+            ->assertSet('editPhone', '(12) 99876-4321')
+            ->set('editPhone', '(12) 99999-0000')
+            ->set('editReason', 'Telefone confirmado com a visitante.')
+            ->call('saveEdit', $record->id)
+            ->assertHasNoErrors()
+            ->assertSet('editingId', null)
+            ->assertSee('Correção salva com auditoria')
+            ->assertSee('Telefone confirmado com a visitante.');
+
+        $record->refresh();
+        $this->assertSame('(12) 99999-0000', $record->phone);
+        $this->assertSame(2, $record->version);
+    }
+
+    public function test_editing_preserves_the_original_value_in_the_audit_trail(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create(['name' => 'Camila Andrade']);
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->set('editName', 'Camila Andrade Ferreira')
+            ->set('editReason', 'Nome completo corrigido conforme documento apresentado.')
+            ->call('saveEdit', $record->id)
+            ->assertHasNoErrors();
+
+        $edit = PreRegistrationEdit::query()->where('pre_registration_id', $record->id)->where('field', 'Nome completo')->sole();
+
+        $this->assertSame('Camila Andrade', $edit->old_value);
+        $this->assertSame('Camila Andrade Ferreira', $edit->new_value);
+        $this->assertSame('aguardando', $record->fresh()->status, 'a correção não pode aprovar nem alterar a situação sozinha');
+    }
+
+    public function test_editing_records_a_persistent_audit_entry_with_operator_and_timestamp(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create();
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->set('editEmail', 'novo-email@example.com')
+            ->set('editReason', 'E-mail corrigido a pedido da visitante.')
+            ->call('saveEdit', $record->id)
+            ->assertHasNoErrors();
+
+        $edit = PreRegistrationEdit::query()->where('pre_registration_id', $record->id)->where('field', 'E-mail')->sole();
+
+        $this->assertSame($operator->id, $edit->operator_id);
+        $this->assertSame($operator->name, $edit->operator_name);
+        $this->assertSame('E-mail corrigido a pedido da visitante.', $edit->reason);
+        $this->assertSame('sucesso', $edit->result);
+        $this->assertNotNull($edit->occurred_at);
+    }
+
+    public function test_the_gate_operator_cannot_approve_while_an_edit_is_open(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create();
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->call('approve', $record->id)
+            ->assertHasErrors('editReason');
+
+        $this->assertSame('aguardando', $record->fresh()->status);
+    }
+
+    public function test_editing_is_denied_without_the_specific_permission(): void
+    {
+        $operatorWithoutPermission = $this->portariaOperator(canEdit: false);
+        $record = PreRegistration::factory()->visitor()->create();
+
+        $this->actingAs($operatorWithoutPermission);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->assertSet('editingId', null);
+
+        $this->assertFalse($operatorWithoutPermission->fresh()->can_edit_pre_registrations);
+    }
+
+    public function test_editing_is_denied_for_a_guest_operator(): void
+    {
+        $record = PreRegistration::factory()->visitor()->create();
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->assertSet('editingId', null);
+    }
+
+    public function test_editing_is_blocked_once_the_pre_registration_left_the_analysis_state(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->withStatus('aprovado')->create();
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->assertSet('editingId', null)
+            ->assertHasErrors('state');
+    }
+
+    public function test_saving_an_edit_fails_on_a_version_conflict_instead_of_overwriting(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create(['phone' => '(12) 90000-0000']);
+
+        $this->actingAs($operator);
+
+        $component = Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->assertSet('editVersion', 1);
+
+        // Outro operador salva uma correção no mesmo pré-cadastro entre a abertura e o salvamento desta edição.
+        $record->update(['version' => 2]);
+
+        $component
+            ->set('editPhone', '(12) 91111-1111')
+            ->set('editReason', 'Telefone corrigido durante o atendimento.')
+            ->call('saveEdit', $record->id)
+            ->assertHasErrors('editReason')
+            ->assertSet('editingId', null);
+
+        $this->assertSame('(12) 90000-0000', $record->fresh()->phone, 'a edição desatualizada não pode sobrescrever a versão mais recente');
+        $this->assertSame(2, $record->fresh()->version);
+    }
+
+    public function test_a_tourist_pre_registration_does_not_require_a_property_or_a_responsible(): void
+    {
+        $record = PreRegistration::factory()->tourist()->create();
+
+        $this->assertFalse($record->requiresProperty());
+        $this->assertNull($record->destination_property);
+        $this->assertNull($record->responsible_name);
+        $this->assertSame('Praia do Santa Rita', $record->destination_label);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->assertSee('Praia do Santa Rita')
+            ->assertSee('Não exige responsável de imóvel');
+    }
+
+    public function test_a_visitor_pre_registration_requires_a_property_and_a_responsible_when_edited(): void
+    {
+        $operator = $this->portariaOperator();
+        $record = PreRegistration::factory()->visitor()->create();
+
+        $this->assertTrue($record->requiresProperty());
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', $record->id)
+            ->set('editDestinationProperty', '')
+            ->set('editReason', 'Ajuste de imóvel de destino.')
+            ->call('saveEdit', $record->id)
+            ->assertHasErrors('editDestinationProperty');
+
+        $this->assertSame($record->destination_property, $record->fresh()->destination_property, 'sem imóvel válido a alteração não deve ser persistida');
     }
 
     public function test_the_property_management_renders_the_p11_list(): void

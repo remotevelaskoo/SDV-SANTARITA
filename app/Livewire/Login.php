@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Login extends Component
@@ -28,11 +29,13 @@ class Login extends Component
             'password.required' => 'Informe sua senha.',
         ]);
 
-        if ($credentials['identification'] !== 'portaria' || $credentials['password'] !== 'sdv2026') {
+        if (! Auth::attempt(['username' => $credentials['identification'], 'password' => $credentials['password']])) {
             $this->addError('credentials', 'Identificação ou senha inválida.');
 
             return null;
         }
+
+        session()->regenerate();
 
         return $this->redirectRoute('dashboard', navigate: true);
     }
