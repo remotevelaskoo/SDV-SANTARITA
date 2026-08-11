@@ -133,6 +133,16 @@
                 </header>
 
                 <main id="conteudo-principal" class="main-content" tabindex="-1">
+                    @if (session('erro'))
+                        <div class="alert alert--danger" role="alert">
+                            <x-icon name="alert" />
+                            <div>
+                                <h3>Sem permissão</h3>
+                                <p>{{ session('erro') }}</p>
+                            </div>
+                        </div>
+                    @endif
+
                     {{ $slot }}
                 </main>
             </div>

@@ -78,6 +78,21 @@ class ExampleTest extends TestCase
         return $user;
     }
 
+    private function operatorWithPermissions(string ...$chaves): User
+    {
+        $user = User::factory()->create();
+        $perfil = Perfil::factory()->create();
+
+        foreach ($chaves as $chave) {
+            $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'teste', 'descricao' => $chave]);
+            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        }
+
+        UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+
+        return $user;
+    }
+
     public function test_the_home_page_redirects_to_the_login(): void
     {
         $response = $this->get('/');
@@ -148,6 +163,7 @@ class ExampleTest extends TestCase
     public function test_the_dashboard_renders_the_approved_visual_structure(): void
     {
         $this->withoutVite();
+        $this->actingAs(User::factory()->create());
 
         $response = $this->get('/dashboard');
 
@@ -223,6 +239,7 @@ class ExampleTest extends TestCase
     public function test_the_access_validation_renders_the_complete_p06_journey(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
 
         $response = $this->get('/validacao');
 
@@ -388,6 +405,7 @@ class ExampleTest extends TestCase
     public function test_the_pre_registration_queue_renders_filters_and_analysis(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar'));
 
         PreRegistration::factory()->create([
             'name' => 'Camila Andrade',
@@ -916,9 +934,56 @@ class ExampleTest extends TestCase
         $this->assertTrue($administrador->hasPermission('usuarios.administrar'));
     }
 
+    public function test_a_guest_is_redirected_to_the_login_when_visiting_a_protected_route(): void
+    {
+        $response = $this->get('/imoveis');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_an_authenticated_user_without_the_permission_is_redirected_to_the_dashboard(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get('/imoveis');
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertSame('Sem permissão para acessar esta área.', session('erro'));
+    }
+
+    public function test_an_authenticated_user_with_the_permission_can_access_the_route(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('imoveis.consultar'));
+
+        $response = $this->get('/imoveis');
+
+        $response->assertOk();
+    }
+
+    public function test_the_dashboard_is_reachable_by_any_authenticated_user_regardless_of_perfil(): void
+    {
+        $this->withoutVite();
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get('/dashboard');
+
+        $response->assertOk();
+    }
+
+    public function test_the_public_pre_registration_route_does_not_require_authentication(): void
+    {
+        $this->withoutVite();
+
+        $response = $this->get('/pre-cadastro/convite-demonstracao');
+
+        $response->assertOk();
+    }
+
     public function test_the_property_management_renders_the_p11_list(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('imoveis.consultar'));
 
         $response = $this->get('/imoveis');
 
@@ -973,6 +1038,7 @@ class ExampleTest extends TestCase
     public function test_the_vehicle_management_renders_the_p12_list(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('veiculos.consultar'));
 
         $response = $this->get('/veiculos');
 
@@ -1044,6 +1110,7 @@ class ExampleTest extends TestCase
     public function test_the_person_registration_renders_the_first_step(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('pessoas.gerenciar'));
 
         $response = $this->get('/pessoas/nova');
 
@@ -1113,6 +1180,7 @@ class ExampleTest extends TestCase
     public function test_the_company_management_renders_the_p13_list(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('empresas.consultar'));
 
         $response = $this->get('/empresas');
 
@@ -1163,6 +1231,7 @@ class ExampleTest extends TestCase
     public function test_the_access_history_renders_the_p09_list(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
 
         $response = $this->get('/entradas-saidas');
 
@@ -1210,6 +1279,7 @@ class ExampleTest extends TestCase
     public function test_the_cash_register_renders_the_p14_open_state(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'));
 
         $response = $this->get('/caixa');
 
@@ -1277,6 +1347,7 @@ class ExampleTest extends TestCase
     public function test_the_package_management_renders_the_p15_list(): void
     {
         $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('encomendas.registrar'));
 
         $response = $this->get('/encomendas');
 
