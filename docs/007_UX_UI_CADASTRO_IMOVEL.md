@@ -487,7 +487,7 @@ Exemplo:
 - “Inquilino” exige vínculo temporal;
 - “Prestador” pode exigir empresa;
 - “Visitante” exige responsável e destino;
-- “Turista” exige período.
+- “Turista” exige período e destino Praia do Santa Rita, sem vínculo com imóvel.
 
 ## 11.3 Mudança
 
@@ -876,7 +876,7 @@ Após término:
 
 ---
 
-# 21. Turista e ocupação temporária
+# 21. Visitante e vínculo temporário com imóvel
 
 Deverá possuir:
 
@@ -888,7 +888,7 @@ Deverá possuir:
 - autorização;
 - regras específicas.
 
-A composição reutiliza vínculo temporal, sem tratar turista como morador permanente.
+A composição reutiliza vínculo temporal para o visitante, sem tratá-lo como morador permanente. Turistas não aparecem como ocupantes do imóvel, pois seu destino é a Praia do Santa Rita.
 
 ---
 

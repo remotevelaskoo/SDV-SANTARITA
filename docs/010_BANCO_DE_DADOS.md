@@ -958,7 +958,7 @@ Ficam consolidados para o modelo:
 | PEN-BDD-006 | Campos obrigatórios por categoria | nulabilidade e validação |
 | PEN-BDD-007 | Política de documentos, imagens e biometria | proteção e retenção |
 | PEN-BDD-008 | Finalidade do endereço pessoal no pré-cadastro | pessoa e privacidade |
-| PEN-BDD-009 | Regras específicas de turista | vínculo e autorização |
+| PEN-BDD-009 | Modelagem de turista e visitante | Resolvida: turista usa destino praia sem imóvel; visitante exige imóvel, responsável e vigência |
 | PEN-BDD-010 | Documentos por categoria de prestador | prestadores |
 | PEN-BDD-011 | Alvo principal do vínculo de veículo | cardinalidade |
 | PEN-BDD-012 | Limiar e fluxo de automação LPR | configuração e evidências |

@@ -207,7 +207,7 @@ O backlog abaixo organiza o trabalho funcional inicial. Estimativas, responsáve
 | BL-003 | P0 | Implementar cadastro único de pessoa | Busca de duplicidade e estados do cadastro operantes | UX/UI aprovada |
 | BL-004 | P0 | Implementar vínculos com imóvel | Vínculos independentes, temporais e históricos | BL-001, BL-003 |
 | BL-005 | P0 | Implementar moradores, proprietários e ocupantes | Múltiplas pessoas por imóvel e responsável identificável | PEN-009 |
-| BL-006 | P0 | Implementar inquilinos e turistas | Vigência obrigatória e revogação automática | Rotinas agendadas |
+| BL-006 | P0 | Implementar inquilinos, visitantes temporários e turistas | Vigência obrigatória; visitante vinculado a imóvel; turista vinculado à praia | Rotinas agendadas |
 | BL-007 | P0 | Implementar empresas e prestadores | Empresa, serviço, destino e autorização rastreáveis | Regras documentais |
 | BL-008 | P0 | Implementar veículos | Placa normalizada, vínculos e conflitos detectáveis | Política de veículos |
 | BL-009 | P0 | Implementar arquivos protegidos | Documento e selfie acessíveis somente por autorização | S3 compatível |
@@ -252,7 +252,7 @@ O backlog abaixo organiza o trabalho funcional inicial. Estimativas, responsáve
 - **HU-009:** Como gestor, quero consultar vínculos encerrados sem reativá-los para preservar o histórico de ocupação.
 - **HU-010:** Como usuário autorizado, quero encerrar ou inativar um vínculo em vez de excluí-lo para manter rastreabilidade.
 
-## EP-003 — Visitantes, turistas e prestadores
+## EP-003 — Visitantes de imóveis, turistas da praia e prestadores
 
 **Objetivo:** antecipar a coleta e submeter acessos temporários à aprovação.
 
@@ -575,7 +575,7 @@ As pendências abaixo consolidam pontos ainda não decididos nas Partes 01 e 02 
 | PEN-004 | Confirmar estrutura real de condomínio, blocos, imóveis e pontos de acesso de Santa Rita | Bloqueadora para carga | Modelo e dados iniciais | Levantamento cadastral |
 | PEN-005 | Definir base legal, finalidade, transparência, retenção e descarte de biometria, documentos e imagens | Bloqueadora para produção | LGPD e segurança | Avaliação jurídica e política de dados |
 | PEN-006 | Definir política de retenção para eventos, auditoria, arquivos, imagens LPR e dados financeiros operacionais | Alta | Armazenamento e conformidade | Política versionada |
-| PEN-007 | Definir regras específicas de turista, hospedagem e locação curta | Alta | Vínculos temporários | Regras e critérios de aceite |
+| PEN-007 | Consolidar distinção entre turista e visitante | Resolvida em 10/08/2026 | Turista visita a praia sem imóvel; visitante visita imóvel por período determinado | Regras e critérios de aceite |
 | PEN-008 | Definir saída automática, estacionamento e tratamento de veículo sem placa ou com troca temporária | Alta | Jornada veicular | Regras operacionais |
 | PEN-009 | Separar formalmente os conceitos de proprietário, morador, titular, responsável e parentesco | Alta | Modelo de vínculos e permissões | Regras de negócio e modelo de dados |
 | PEN-010 | Definir finalidade do endereço coletado no pré-cadastro, pois a referência solicita endereço da pessoa e o domínio centraliza o endereço residencial no imóvel | Contradição funcional | Privacidade e modelo de dados | Decisão de produto; não copiar endereço para moradores |

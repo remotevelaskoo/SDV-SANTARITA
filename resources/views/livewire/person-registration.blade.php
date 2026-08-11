@@ -13,8 +13,8 @@
                     ['value' => 'resident', 'label' => 'Morador', 'description' => 'Residente com vínculo ativo', 'icon' => 'building'],
                     ['value' => 'tenant', 'label' => 'Inquilino', 'description' => 'Ocupante com contrato vigente', 'icon' => 'key'],
                     ['value' => 'provider', 'label' => 'Prestador', 'description' => 'Serviço autorizado', 'icon' => 'wrench'],
-                    ['value' => 'visitor', 'label' => 'Visitante', 'description' => 'Entrada vinculada a responsável', 'icon' => 'users'],
-                    ['value' => 'tourist', 'label' => 'Turista', 'description' => 'Hospedagem com período definido', 'icon' => 'package'],
+                    ['value' => 'visitor', 'label' => 'Visitante', 'description' => 'Visita temporária a um imóvel', 'icon' => 'users'],
+                    ['value' => 'tourist', 'label' => 'Turista', 'description' => 'Visita à praia, sem vínculo com imóvel', 'icon' => 'package'],
                 ] as $type)
                     <label>
                         <input type="radio" name="access_type" value="{{ $type['value'] }}" wire:model.live="accessType">
@@ -102,7 +102,12 @@
                     <p class="registration-hint">OCR opcional: o resultado sugerido exige conferência humana e não substitui a validação do documento.</p>
                 </x-ui.card>
             @elseif ($currentStep === 3)
-                <x-ui.card title="Endereço e contato" description="Vínculo com o endereço do imóvel">
+                <x-ui.card title="Endereço e contato" description="{{ $accessType === 'tourist' ? 'Destino turístico sem vínculo residencial' : 'Vínculo com o endereço do imóvel' }}">
+                    @if ($accessType === 'tourist')
+                        <x-ui.alert variant="info" title="Destino: Praia do Santa Rita">
+                            O turista não é vinculado a casa ou imóvel. A autorização temporária e a validação na portaria continuam obrigatórias.
+                        </x-ui.alert>
+                    @else
                     <x-ui.alert variant="info" title="Endereço compartilhado">
                         Este endereço pertence ao imóvel e é compartilhado pelos vínculos residenciais.
                     </x-ui.alert>
@@ -111,15 +116,20 @@
                         <x-ui.field id="linkedPropertyAddress" label="Endereço principal do imóvel" :value="$linkedProperty['address']" readonly />
                     </div>
                     <p class="registration-hint">Alterações estruturais no endereço só podem ser feitas a partir do cadastro do imóvel, por quem tiver permissão.</p>
+                    @endif
                 </x-ui.card>
             @elseif ($currentStep === 4)
                 <x-ui.card title="Informações de acesso" description="Vigência, natureza e permissões do vínculo">
                     <div class="registration-fields">
+                        @if ($accessType !== 'tourist')
                         <x-ui.select id="property" label="Imóvel" wire:model="property" required :error="$errors->first('property')">
                             <option value="Bloco B — Apto 304">Bloco B — Apto 304</option>
                             <option value="Bloco A — Apto 112">Bloco A — Apto 112</option>
                             <option value="Bloco C — Apto 501">Bloco C — Apto 501</option>
                         </x-ui.select>
+                        @else
+                            <x-ui.field id="tourist-destination" label="Destino" value="Praia do Santa Rita" readonly />
+                        @endif
                         <x-ui.select id="nature" label="Natureza" wire:model="nature" required :error="$errors->first('nature')">
                             <option value="proprietario">Proprietário</option>
                             <option value="morador">Morador</option>
@@ -133,7 +143,7 @@
                             <option value="dependente">Dependente</option>
                             <option value="outro">Outro</option>
                         </x-ui.select>
-                        @if (in_array($accessType, ['visitor', 'tourist'], true))
+                        @if ($accessType === 'visitor')
                             <x-ui.field id="responsible" label="Responsável" wire:model="responsible" required :error="$errors->first('responsible')" help="Pessoa que responde por este acesso" />
                         @endif
                         <x-ui.field id="startDate" label="Data de início" type="date" wire:model="startDate" required :error="$errors->first('startDate')" />

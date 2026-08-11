@@ -182,7 +182,7 @@ Conforme perfil, configuração e disponibilidade:
 - equipamentos indisponíveis;
 - caixa aberto ou fechado;
 - sincronizações com falha;
-- indicadores de turistas;
+- indicadores de turistas com destino à praia;
 - atalhos operacionais.
 
 Conteúdo condicional deverá ser incorporado sem substituir a estrutura principal por um layout genérico. Alertas críticos podem anteceder os indicadores.

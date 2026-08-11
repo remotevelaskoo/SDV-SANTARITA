@@ -216,10 +216,10 @@ O sistema deverá alertar quando houver vínculos incompatíveis ou sobrepostos 
 # 10. Catálogo consolidado — Visitantes
 
 **RN-023 — Responsável pelo visitante**  
-Todo visitante autorizado deverá possuir um responsável identificado.
+Todo visitante de imóvel autorizado deverá possuir um responsável identificado e vinculado ao imóvel de destino. O turista não exige responsável de imóvel.
 
 **RN-024 — Imóvel de destino**  
-Todo visitante deverá estar associado a um imóvel ou destino válido.
+Todo visitante deverá estar associado ao imóvel visitado. Para o turista, o destino válido será a Praia do Santa Rita, sem vínculo com imóvel.
 
 **RN-025 — Autorização limitada**  
 A autorização deverá conter período, quantidade de acessos ou outra condição de validade aprovada.
@@ -391,7 +391,7 @@ O pré-cadastro deverá seguir estados e transições definidos, preservando ato
 A aprovação do pré-cadastro somente habilita a solicitação para as próximas validações e não garante entrada ou comando físico.
 
 **RN-072 — Correção versionada**  
-Solicitação de correção e reenvio deverão preservar a submissão anterior e identificar os campos alterados.
+Solicitação de correção, reenvio e edição autorizada pela portaria deverão preservar a submissão anterior e identificar os campos alterados. A edição pelo operador exige permissão e justificativa, registra valor anterior, valor novo, operador e instante, e não altera silenciosamente cadastros, vínculos, autorizações ou credenciais relacionados.
 
 **RN-073 — Mensagem pública separada**  
 Motivo e observação internos não deverão ser enviados automaticamente ao solicitante; a mensagem pública deverá ser controlada separadamente.
@@ -573,8 +573,8 @@ Segredos de integração não deverão retornar ao frontend ou aos logs, e alter
 | Dado | Morador | Inquilino | Visitante | Turista | Prestador |
 |---|---:|---:|---:|---:|---:|
 | Pessoa | Obrigatório | Obrigatório | Obrigatório | Obrigatório | Obrigatório |
-| Imóvel ou destino | Obrigatório | Obrigatório | Obrigatório | Obrigatório | Conforme autorização |
-| Responsável | Conforme papel | Obrigatório conforme regra | Obrigatório | Obrigatório | Conforme serviço |
+| Imóvel ou destino | Obrigatório | Obrigatório | Imóvel obrigatório | Praia do Santa Rita | Conforme autorização |
+| Responsável | Conforme papel | Obrigatório conforme regra | Responsável do imóvel obrigatório | Não exige responsável de imóvel | Conforme serviço |
 | Início | Obrigatório | Obrigatório | Obrigatório | Obrigatório | Obrigatório |
 | Término | Conforme regra | Obrigatório | Obrigatório | Obrigatório | Obrigatório salvo exceção |
 | Empresa | Não | Não | Não | Não | Quando aplicável |
@@ -781,7 +781,7 @@ A precedência exata entre concessão e negação permanece pendente.
 | PEN-RNG-004 | Campos obrigatórios por tipo | `RN-013`, `RN-065` |
 | PEN-RNG-005 | Política de documentos, imagens e biometria | `RN-028`, `RN-065`, `RN-066`, `RN-075` |
 | PEN-RNG-006 | Finalidade do endereço informado no pré-cadastro | `RN-002`, `RN-060`, `RN-065` |
-| PEN-RNG-007 | Regras de turista | `RN-011`, `RN-025` |
+| PEN-RNG-007 | Regras de turista — resolvida em 10/08/2026: destino praia, sem imóvel e com vigência | `RN-011`, `RN-024`, `RN-025` |
 | PEN-RNG-008 | Documentação de prestador | `RN-031` |
 | PEN-RNG-009 | Vínculo definitivo de veículo | `RN-018`, `RN-036` |
 | PEN-RNG-010 | Limiar LPR | `RN-087` |
