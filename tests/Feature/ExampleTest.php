@@ -14,9 +14,12 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use App\Models\Imovel;
+use App\Models\Implantacao;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Models\User;
+use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -25,6 +28,20 @@ use Tests\TestCase;
 class ExampleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+    }
+
+    protected function tearDown(): void
+    {
+        ImplantacaoContext::forgetCurrent();
+
+        parent::tearDown();
+    }
 
     private function portariaOperator(bool $canEdit = true): User
     {
@@ -566,6 +583,63 @@ class ExampleTest extends TestCase
             ->assertHasErrors('editDestinationProperty');
 
         $this->assertSame($record->destination_property, $record->fresh()->destination_property, 'sem imóvel válido a alteração não deve ser persistida');
+    }
+
+    public function test_reading_imoveis_is_isolated_between_implantacoes(): void
+    {
+        $implantacaoA = Implantacao::current();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $imovelB = Imovel::factory()->create(['codigo' => 'SRA-B-999']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $imovelA = Imovel::factory()->create(['codigo' => 'SRA-A-999']);
+
+        $visiveis = Imovel::query()->pluck('id');
+
+        $this->assertTrue($visiveis->contains($imovelA->id));
+        $this->assertFalse($visiveis->contains($imovelB->id), 'um imóvel de outra implantação não pode aparecer na listagem');
+        $this->assertNull(Imovel::query()->find($imovelB->id), 'buscar por id conhecido de outra implantação deve falhar como não encontrado');
+    }
+
+    public function test_creating_an_imovel_always_uses_the_server_assigned_implantacao(): void
+    {
+        $implantacaoAtual = Implantacao::current();
+        $outraImplantacao = Implantacao::factory()->create();
+
+        $imovel = Imovel::factory()->create(['implantacao_id' => $outraImplantacao->id]);
+
+        $this->assertSame($implantacaoAtual->id, $imovel->fresh()->implantacao_id, 'implantacao_id enviado pelo chamador não pode sobrescrever o contexto do servidor');
+    }
+
+    public function test_imovel_version_uses_optimistic_concurrency(): void
+    {
+        $imovel = Imovel::factory()->create(['versao' => 1]);
+
+        $atualizadoPrimeiro = Imovel::query()->where('id', $imovel->id)->where('versao', 1)->update(['status' => 'inativo', 'versao' => 2]);
+        $this->assertSame(1, $atualizadoPrimeiro);
+
+        $atualizadoComVersaoDesatualizada = Imovel::query()->where('id', $imovel->id)->where('versao', 1)->update(['status' => 'ativo', 'versao' => 3]);
+        $this->assertSame(0, $atualizadoComVersaoDesatualizada, 'uma atualização com versão desatualizada não pode sobrescrever a mais recente');
+
+        $this->assertSame('inativo', $imovel->fresh()->status);
+        $this->assertSame(2, $imovel->fresh()->versao);
+    }
+
+    public function test_pre_registrations_are_isolated_between_implantacoes_after_the_retrofit(): void
+    {
+        $implantacaoA = Implantacao::current();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $registroB = PreRegistration::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $registroA = PreRegistration::factory()->create();
+
+        $visiveis = PreRegistration::query()->pluck('id');
+
+        $this->assertTrue($visiveis->contains($registroA->id));
+        $this->assertFalse($visiveis->contains($registroB->id), 'pré-cadastros de outra implantação não podem vazar após o retrofit de implantacao_id');
     }
 
     public function test_the_property_management_renders_the_p11_list(): void

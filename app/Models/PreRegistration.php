@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToImplantacao;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+// implantacao_id é fillable para os seeders (rodam com eventos de model desativados);
+// em runtime normal, BelongsToImplantacao::bootBelongsToImplantacao() sobrescreve o valor no `creating`.
 #[Fillable([
+    'implantacao_id',
     'protocol', 'name', 'document', 'birth_date', 'phone', 'email',
     'access_type', 'address_informed',
     'destination_property', 'destination_label', 'responsible_name',
@@ -19,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class PreRegistration extends Model
 {
-    use HasFactory, HasUuids;
+    use BelongsToImplantacao, HasFactory, HasUuids;
 
     public const ACCESS_TYPES = ['turista', 'visitante', 'prestador'];
 

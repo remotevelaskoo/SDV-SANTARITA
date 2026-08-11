@@ -36,11 +36,11 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | Situação | Quantidade | Partes |
 |---|---:|---|
 | ✅ Concluídas | 15 | P01 a P15 |
-| 🟢 Disponíveis | 1 | P18 |
+| 🟡 Em andamento | 1 | P18 |
 | 🔴 Bloqueadas | 10 | P16, P17, P19 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
-O avanço por quantidade de partes é de **15 concluídas em 27 (aproximadamente 56%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
+O avanço por quantidade de partes é de **15 concluídas em 27 (aproximadamente 56%)**, com o P18 em andamento. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
 
 ## 3. Termos usados pela equipe
 
@@ -166,7 +166,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟢 Disponível (já existe um precedente restrito: `pre_registrations` e `pre_registration_edits`, sem `implantacao_id`/multi-implantação — ver nota no P08) | A definir | A definir |
+| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟡 Em andamento — fundação multi-implantação (`organizacoes`, `implantacoes`, ADR-002/003) e o grupo Imóveis (`condominios`, `blocos`, `imoveis`, `enderecos_imoveis`) entregues, com testes de isolamento e concorrência otimista; `pre_registrations`/`pre_registration_edits` retrofitados com `implantacao_id`, fechando a pendência do P08. Faltam Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões antes de marcar ✅ Concluída | Vinicius | [`vinicius/p18-fundacao-imoveis`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/22) |
 | P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🔴 Bloqueada (já existe um precedente restrito: `Auth::attempt` contra `users`, sem logout nem recuperação de acesso — ver nota no P08) | A definir | A definir |
 | P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🔴 Bloqueada (já existe um precedente restrito: `users.can_edit_pre_registrations`, uma única permissão pontual, não um sistema de perfis — ver nota no P08) | A definir | A definir |
 | P21 | Conexão das telas | Trocar dados demonstrativos por cadastros e operações reais | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
@@ -184,11 +184,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14 e P15 já foram concluídas (protótipos demonstrativos). A parte disponível para iniciar agora é:
-
-1. **P18 — Banco de dados inicial:** parte interna; as regras, o modelo de dados e a arquitetura estão aprovados.
-
-A **P18** está liberada tecnicamente e pode ser iniciada por qualquer responsável definido pela equipe. As demais partes (P16, P17, P19 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
+P09, P14 e P15 já foram concluídas (protótipos demonstrativos). O **P18 — Banco de dados inicial** está em andamento com Vinicius (fundação multi-implantação e o grupo Imóveis entregues; Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões seguem como próximos passos dentro da própria P18, sem exigir nova atribuição). As demais partes (P16, P17, P19 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
@@ -241,7 +237,7 @@ Uma parte somente estará pronta quando:
 | Definir os atalhos exatos do Modo Portaria | Lucas e Vinicius | Pendente — protótipo do P05 usa atalhos provisórios até confirmação |
 | Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Resolvida — campos implementados e P07 concluída |
 | Escolher os responsáveis por P09, P14 e P15 | Lucas e Vinicius | Resolvida — Vinicius desenvolveu as três partes |
-| Escolher o responsável por P18 | Lucas e Vinicius | Pendente |
+| Escolher o responsável por P18 | Lucas e Vinicius | Resolvida — Vinicius iniciou pela fundação e pelo grupo Imóveis |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 
