@@ -35,12 +35,12 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 
 | Situação | Quantidade | Partes |
 |---|---:|---|
-| ✅ Concluídas | 12 | P01 a P08 e P10 a P13 |
-| 🟢 Disponíveis | 4 | P09, P14, P15 e P18 |
+| ✅ Concluídas | 15 | P01 a P15 |
+| 🟢 Disponíveis | 1 | P18 |
 | 🔴 Bloqueadas | 10 | P16, P17, P19 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
-O avanço por quantidade de partes é de **12 concluídas em 27 (aproximadamente 44%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
+O avanço por quantidade de partes é de **15 concluídas em 27 (aproximadamente 56%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
 
 ## 3. Termos usados pela equipe
 
@@ -181,14 +181,11 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-Depois de definir um responsável, as seguintes partes podem ser iniciadas agora:
+P09, P14 e P15 já foram concluídas (protótipos demonstrativos). A parte disponível para iniciar agora é:
 
-1. **P09 — Entradas e saídas:** frontend do histórico operacional; a dependência P06 está concluída;
-2. **P14 — Caixa:** frontend demonstrativo; o P04 e as regras financeiras estão concluídos e aprovados;
-3. **P15 — Encomendas:** frontend do recebimento e entrega; o P04 e o cadastro de pessoas estão concluídos;
-4. **P18 — Banco de dados inicial:** parte interna; as regras, o modelo de dados e a arquitetura estão aprovados.
+1. **P18 — Banco de dados inicial:** parte interna; as regras, o modelo de dados e a arquitetura estão aprovados.
 
-Como a equipe escolheu desenvolver primeiro o frontend, a sequência recomendada é **P09, P14 e P15**. A **P18** já está liberada tecnicamente e pode ser iniciada depois desses protótipos ou em paralelo por outro responsável, desde que a equipe combine a divisão para evitar alterações conflitantes.
+A **P18** está liberada tecnicamente e pode ser iniciada por qualquer responsável definido pela equipe. As demais partes (P16, P17, P19 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
@@ -240,7 +237,8 @@ Uma parte somente estará pronta quando:
 | Escolher a primeira parte que Vinicius desenvolverá | Lucas e Vinicius | Resolvida — P05 (Modo Portaria) |
 | Definir os atalhos exatos do Modo Portaria | Lucas e Vinicius | Pendente — protótipo do P05 usa atalhos provisórios até confirmação |
 | Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Resolvida — campos implementados e P07 concluída |
-| Escolher os responsáveis por P09, P14, P15 e P18 | Lucas e Vinicius | Pendente |
+| Escolher os responsáveis por P09, P14 e P15 | Lucas e Vinicius | Resolvida — Vinicius desenvolveu as três partes |
+| Escolher o responsável por P18 | Lucas e Vinicius | Pendente |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 
