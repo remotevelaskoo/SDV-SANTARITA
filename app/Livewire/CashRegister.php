@@ -2,21 +2,26 @@
 
 namespace App\Livewire;
 
+use App\Models\CaixaMovimentacao;
+use App\Models\CaixaTurno;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CashRegister extends Component
 {
-    public string $status = 'aberto';
+    public string $status = 'fechado';
 
     public string $terminal = 'Caixa 01 — Guarita';
 
-    public string $operator = 'Tatiane Souza';
+    public ?string $operator = null;
 
-    public string $openedAt = '13:00';
+    public ?string $openedAt = null;
 
-    public float $openingBalance = 200.00;
+    public float $openingBalance = 0.0;
+
+    public ?string $currentTurnoId = null;
 
     // Formulário de abertura
     public string $openingBalanceInput = '200,00';
@@ -41,19 +46,10 @@ class CashRegister extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    /** @var list<array<string, mixed>> */
-    public array $movements = [
-        ['id' => 1, 'time' => '13:05', 'type' => 'entrada', 'amount' => 15.00, 'method' => 'dinheiro', 'description' => 'Contribuição — visitante Camila Andrade', 'protocol' => 'SRA-20260810-004112', 'operator' => 'Tatiane Souza'],
-        ['id' => 2, 'time' => '13:33', 'type' => 'entrada', 'amount' => 15.00, 'method' => 'pix', 'description' => 'Contribuição — visitante Camila Andrade', 'protocol' => 'SRA-20260810-004150', 'operator' => 'Tatiane Souza'],
-        ['id' => 3, 'time' => '15:33', 'type' => 'entrada', 'amount' => 20.00, 'method' => 'dinheiro', 'description' => 'Contribuição — prestador Sérgio Aparecido Luz', 'protocol' => 'SRA-20260810-004178', 'operator' => 'Tatiane Souza'],
-        ['id' => 4, 'time' => '15:41', 'type' => 'estorno', 'amount' => 15.00, 'method' => 'dinheiro', 'description' => 'Estorno — entrada negada (Bianca Moretti)', 'protocol' => 'SRA-20260810-004179', 'operator' => 'Tatiane Souza'],
-    ];
-
-    /** @var list<array<string, mixed>> */
-    public array $closedSessions = [
-        ['id' => 1, 'terminal' => 'Caixa 01 — Guarita', 'operator' => 'Marcos Almeida', 'period' => '09/08/2026 07:00 às 19:00', 'opening' => 150.00, 'expected' => 612.50, 'informed' => 612.50, 'difference' => 0.0, 'status' => 'conferido'],
-        ['id' => 2, 'terminal' => 'Caixa 01 — Guarita', 'operator' => 'Tatiane Souza', 'period' => '08/08/2026 07:00 às 19:00', 'opening' => 150.00, 'expected' => 498.00, 'informed' => 490.00, 'difference' => -8.0, 'status' => 'diferenca'],
-    ];
+    public function mount(): void
+    {
+        $this->syncCurrentTurno();
+    }
 
     public function openRegister(): void
     {
@@ -64,20 +60,29 @@ class CashRegister extends Component
             'regex' => 'Informe um valor numérico válido, ex.: 200,00.',
         ]);
 
-        $this->status = 'aberto';
-        $this->openingBalance = (float) str_replace(',', '.', $this->openingBalanceInput);
-        $this->openedAt = now()->format('H:i');
-        $this->movements = [];
+        $openingBalance = (float) str_replace(',', '.', $this->openingBalanceInput);
+
+        CaixaTurno::query()->create([
+            'terminal' => $this->terminal,
+            'operator_id' => Auth::id(),
+            'opened_at' => now(),
+            'opening_balance' => $openingBalance,
+            'status' => 'aberto',
+        ]);
+
+        $this->syncCurrentTurno();
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Caixa aberto',
-            'message' => "Saldo inicial de R$ {$this->formatMoney($this->openingBalance)} registrado. Movimentações liberadas.",
+            'message' => "Saldo inicial de R$ {$this->formatMoney($openingBalance)} registrado. Movimentações liberadas.",
         ];
     }
 
     public function registerMovement(): void
     {
-        if ($this->status !== 'aberto') {
+        $turno = $this->currentTurno();
+
+        if (! $turno) {
             $this->feedback = [
                 'variant' => 'danger',
                 'title' => 'Caixa fechado',
@@ -103,16 +108,15 @@ class CashRegister extends Component
             return;
         }
 
-        $this->movements[] = [
-            'id' => count($this->movements) ? max(array_column($this->movements, 'id')) + 1 : 1,
-            'time' => now()->format('H:i'),
+        CaixaMovimentacao::query()->create([
+            'caixa_turno_id' => $turno->id,
             'type' => $this->movementType,
             'amount' => (float) str_replace(',', '.', $this->movementAmount),
             'method' => $this->movementMethod,
             'description' => $this->movementDescription,
-            'protocol' => null,
-            'operator' => $this->operator,
-        ];
+            'operator_id' => Auth::id(),
+            'occurred_at' => now(),
+        ]);
 
         $this->reset(['movementAmount', 'movementDescription']);
         $this->movementType = 'entrada';
@@ -126,6 +130,12 @@ class CashRegister extends Component
 
     public function closeRegister(): void
     {
+        $turno = $this->currentTurno();
+
+        if (! $turno) {
+            return;
+        }
+
         $this->validate([
             'informedAmount' => ['required', 'regex:'.self::MONEY_REGEX],
         ], [
@@ -134,23 +144,20 @@ class CashRegister extends Component
         ]);
 
         $informed = (float) str_replace(',', '.', $this->informedAmount);
-        $expected = $this->expectedBalance();
+        $expected = $turno->expectedBalance();
         $difference = round($informed - $expected, 2);
 
-        $this->closedSessions[] = [
-            'id' => count($this->closedSessions) ? max(array_column($this->closedSessions, 'id')) + 1 : 1,
-            'terminal' => $this->terminal,
-            'operator' => $this->operator,
-            'period' => now()->format('d/m/Y').' '.$this->openedAt.' às '.now()->format('H:i'),
-            'opening' => $this->openingBalance,
-            'expected' => $expected,
-            'informed' => $informed,
+        $turno->update([
+            'closed_at' => now(),
+            'informed_amount' => $informed,
+            'expected_amount' => $expected,
             'difference' => $difference,
-            'status' => abs($difference) < 0.01 ? 'conferido' : 'diferenca',
-        ];
+            'closing_notes' => $this->closingNotes !== '' ? $this->closingNotes : null,
+            'status' => 'fechado',
+            'closing_status' => abs($difference) < 0.01 ? 'conferido' : 'diferenca',
+        ]);
 
-        $this->status = 'fechado';
-        $this->movements = [];
+        $this->syncCurrentTurno();
         $this->reset(['informedAmount', 'closingNotes']);
         $this->feedback = [
             'variant' => abs($difference) < 0.01 ? 'success' : 'warning',
@@ -161,27 +168,46 @@ class CashRegister extends Component
         ];
     }
 
-    public function expectedBalance(): float
-    {
-        $income = collect($this->movements)->where('type', 'entrada')->sum('amount');
-        $outflow = collect($this->movements)->whereIn('type', ['saida', 'estorno'])->sum('amount');
-
-        return round($this->openingBalance + $income - $outflow, 2);
-    }
-
     public function incomeTotal(): float
     {
-        return round(collect($this->movements)->where('type', 'entrada')->sum('amount'), 2);
+        return $this->currentTurno()?->incomeTotal() ?? 0.0;
     }
 
     public function outflowTotal(): float
     {
-        return round(collect($this->movements)->whereIn('type', ['saida', 'estorno'])->sum('amount'), 2);
+        return $this->currentTurno()?->outflowTotal() ?? 0.0;
     }
 
     public function cancellationsTotal(): float
     {
-        return round(collect($this->movements)->where('type', 'estorno')->sum('amount'), 2);
+        return $this->currentTurno()?->cancellationsTotal() ?? 0.0;
+    }
+
+    public function expectedBalance(): float
+    {
+        return $this->currentTurno()?->expectedBalance() ?? 0.0;
+    }
+
+    private function currentTurno(): ?CaixaTurno
+    {
+        return $this->currentTurnoId ? CaixaTurno::query()->find($this->currentTurnoId) : null;
+    }
+
+    private function syncCurrentTurno(): void
+    {
+        $turno = CaixaTurno::query()->where('status', 'aberto')->latest('opened_at')->first();
+
+        if ($turno) {
+            $this->currentTurnoId = $turno->id;
+            $this->status = 'aberto';
+            $this->operator = $turno->operator?->name ?? 'Sistema';
+            $this->terminal = $turno->terminal;
+            $this->openedAt = $turno->opened_at->format('H:i');
+            $this->openingBalance = (float) $turno->opening_balance;
+        } else {
+            $this->currentTurnoId = null;
+            $this->status = 'fechado';
+        }
     }
 
     private function formatMoney(float $value): string
@@ -191,11 +217,42 @@ class CashRegister extends Component
 
     public function render(): View
     {
-        return view('livewire.cash-register')
-            ->layout('components.layouts.app', [
-                'title' => 'Caixa',
-                'heading' => 'Caixa',
-                'headingDescription' => 'Abertura, movimentações, conferência e fechamento — protótipo demonstrativo',
-            ]);
+        $turno = $this->currentTurno();
+
+        $movements = $turno
+            ? $turno->movimentacoes()->with('operator')->orderBy('occurred_at')->get()
+                ->map(fn (CaixaMovimentacao $movimentacao) => [
+                    'id' => $movimentacao->id,
+                    'time' => $movimentacao->occurred_at->format('H:i'),
+                    'type' => $movimentacao->type,
+                    'amount' => (float) $movimentacao->amount,
+                    'method' => $movimentacao->method,
+                    'description' => $movimentacao->description,
+                    'protocol' => $movimentacao->protocol,
+                    'operator' => $movimentacao->operator?->name ?? 'Sistema',
+                ])->values()->all()
+            : [];
+
+        $closedSessions = CaixaTurno::query()->where('status', 'fechado')->with('operator')->orderBy('closed_at')->get()
+            ->map(fn (CaixaTurno $sessao) => [
+                'id' => $sessao->id,
+                'terminal' => $sessao->terminal,
+                'operator' => $sessao->operator?->name ?? 'Sistema',
+                'period' => $sessao->opened_at->format('d/m/Y').' '.$sessao->opened_at->format('H:i').' às '.$sessao->closed_at?->format('H:i'),
+                'opening' => (float) $sessao->opening_balance,
+                'expected' => (float) $sessao->expected_amount,
+                'informed' => (float) $sessao->informed_amount,
+                'difference' => (float) $sessao->difference,
+                'status' => $sessao->closing_status,
+            ])->values()->all();
+
+        return view('livewire.cash-register', [
+            'movements' => $movements,
+            'closedSessions' => $closedSessions,
+        ])->layout('components.layouts.app', [
+            'title' => 'Caixa',
+            'heading' => 'Caixa',
+            'headingDescription' => 'Abertura, movimentações, conferência e fechamento',
+        ]);
     }
 }
