@@ -2,8 +2,15 @@
 
 namespace App\Livewire;
 
+use App\Models\Bloco;
+use App\Models\Condominio;
+use App\Models\EnderecoImovel;
+use App\Models\Imovel;
+use App\Models\Pessoa;
+use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -15,9 +22,9 @@ class PropertyManagement extends Component
 
     public string $statusFilter = 'todos';
 
-    public ?int $selectedPropertyId = null;
+    public ?string $selectedPropertyId = null;
 
-    public ?int $editingPropertyId = null;
+    public ?string $editingPropertyId = null;
 
     public string $organization = 'Condomínio Santa Rita';
 
@@ -50,50 +57,6 @@ class PropertyManagement extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    /** @var list<array<string, mixed>> */
-    public array $properties = [
-        [
-            'id' => 1, 'code' => 'SRA-A-102', 'block' => 'A', 'unit' => '102', 'address' => 'Rua das Acácias, 100 · Jardim das Flores', 'status' => 'ativo', 'responsible' => 'Marcos Vinicius da Silva', 'occupants' => 3, 'vehicles' => 2, 'updated' => '10/08/2026 às 16:30', 'alert' => null,
-            'links' => [
-                ['name' => 'Marcos Vinicius da Silva', 'document' => '***.654.321-**', 'nature' => 'Proprietário', 'role' => 'Titular', 'responsibility' => 'Responsável principal', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-                ['name' => 'Fernanda da Silva', 'document' => '***.218.904-**', 'nature' => 'Moradora', 'role' => 'Cônjuge', 'responsibility' => 'Responsável adicional', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-                ['name' => 'Lucas da Silva', 'document' => '***.760.115-**', 'nature' => 'Morador', 'role' => 'Dependente', 'responsibility' => 'Sem responsabilidade administrativa', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-            ],
-            'vehicleList' => [
-                ['plate' => 'ABC1D23', 'model' => 'Toyota Corolla', 'color' => 'Prata', 'owner' => 'Marcos Vinicius', 'link' => 'Pessoa e imóvel', 'status' => 'ativo'],
-                ['plate' => 'DEF4G56', 'model' => 'Honda HR-V', 'color' => 'Branco', 'owner' => 'Fernanda da Silva', 'link' => 'Pessoa e imóvel', 'status' => 'ativo'],
-            ],
-        ],
-        [
-            'id' => 2, 'code' => 'SRA-A-208', 'block' => 'A', 'unit' => '208', 'address' => 'Rua das Acácias, 100 · Jardim das Flores', 'status' => 'ativo', 'responsible' => 'Bianca Moretti', 'occupants' => 2, 'vehicles' => 1, 'updated' => '10/08/2026 às 14:12', 'alert' => 'Contrato de locação vence em 28 dias',
-            'links' => [
-                ['name' => 'Bianca Moretti', 'document' => '***.615.338-**', 'nature' => 'Inquilina', 'role' => 'Titular', 'responsibility' => 'Responsável principal', 'validity' => 'Até 07/09/2026', 'status' => 'ativo'],
-                ['name' => 'André Moretti', 'document' => '***.447.901-**', 'nature' => 'Morador', 'role' => 'Cônjuge', 'responsibility' => 'Sem responsabilidade administrativa', 'validity' => 'Até 07/09/2026', 'status' => 'ativo'],
-            ],
-            'vehicleList' => [
-                ['plate' => 'GHI7J89', 'model' => 'Volkswagen T-Cross', 'color' => 'Cinza', 'owner' => 'Bianca Moretti', 'link' => 'Pessoa e imóvel', 'status' => 'ativo'],
-            ],
-        ],
-        [
-            'id' => 3, 'code' => 'SRA-B-304', 'block' => 'B', 'unit' => '304', 'address' => 'Rua das Acácias, 120 · Jardim das Flores', 'status' => 'ativo', 'responsible' => 'Mariana Souza', 'occupants' => 4, 'vehicles' => 2, 'updated' => '09/08/2026 às 18:44', 'alert' => null,
-            'links' => [
-                ['name' => 'Mariana Souza', 'document' => '***.331.407-**', 'nature' => 'Proprietária', 'role' => 'Titular', 'responsibility' => 'Responsável principal', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-            ],
-            'vehicleList' => [],
-        ],
-        [
-            'id' => 4, 'code' => 'SRA-C-501', 'block' => 'C', 'unit' => '501', 'address' => 'Rua das Palmeiras, 50 · Jardim das Flores', 'status' => 'bloqueado', 'responsible' => 'Rafael Domingues', 'occupants' => 1, 'vehicles' => 1, 'updated' => '08/08/2026 às 11:05', 'alert' => 'Imóvel bloqueado para novas autorizações',
-            'links' => [
-                ['name' => 'Rafael Domingues', 'document' => '***.004.120-**', 'nature' => 'Proprietário', 'role' => 'Titular', 'responsibility' => 'Responsável principal', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-            ],
-            'vehicleList' => [],
-        ],
-        [
-            'id' => 5, 'code' => 'SRA-C-706', 'block' => 'C', 'unit' => '706', 'address' => 'Rua das Palmeiras, 50 · Jardim das Flores', 'status' => 'implantacao', 'responsible' => 'Não definido', 'occupants' => 0, 'vehicles' => 0, 'updated' => '07/08/2026 às 09:20', 'alert' => 'Responsável principal ainda não definido',
-            'links' => [], 'vehicleList' => [],
-        ],
-    ];
-
     public function setStatusFilter(string $status): void
     {
         if (in_array($status, ['todos', 'ativo', 'implantacao', 'inativo', 'bloqueado'], true)) {
@@ -101,9 +64,9 @@ class PropertyManagement extends Component
         }
     }
 
-    public function openProperty(int $id): void
+    public function openProperty(string $id): void
     {
-        if ($this->findProperty($id)) {
+        if (Imovel::query()->whereKey($id)->exists()) {
             $this->selectedPropertyId = $id;
             $this->mode = 'detail';
             $this->feedback = null;
@@ -123,26 +86,29 @@ class PropertyManagement extends Component
         $this->mode = 'form';
     }
 
-    public function editProperty(int $id): void
+    public function editProperty(string $id): void
     {
-        $property = $this->findProperty($id);
+        $imovel = Imovel::query()->with(['bloco', 'condominio'])->find($id);
 
-        if (! $property) {
+        if (! $imovel) {
             return;
         }
 
+        $endereco = $imovel->enderecoVigente();
+
         $this->editingPropertyId = $id;
-        $this->organization = 'Condomínio Santa Rita';
-        $this->block = $property['block'];
-        $this->unit = $property['unit'];
-        $this->code = $property['code'];
-        $this->zipCode = '12000-000';
-        $this->street = str($property['address'])->before(',')->toString();
-        $this->number = str($property['address'])->after(', ')->before(' ·')->toString();
-        $this->district = str($property['address'])->after('· ')->toString();
-        $this->city = 'Taubaté';
-        $this->state = 'SP';
-        $this->propertyStatus = $property['status'];
+        $this->organization = $imovel->condominio->nome;
+        $this->block = $imovel->bloco !== null ? str_replace('Bloco ', '', $imovel->bloco->nome) : '';
+        $this->unit = $imovel->unidade;
+        $this->code = $imovel->codigo;
+        $this->zipCode = $endereco?->zip_code ?? '';
+        $this->street = $endereco?->address ?? '';
+        $this->number = $endereco?->address_number ?? '';
+        $this->complement = $endereco?->address_complement ?? '';
+        $this->district = $endereco?->district ?? '';
+        $this->city = $endereco?->city ?? 'Taubaté';
+        $this->state = $endereco?->state ?? 'SP';
+        $this->propertyStatus = $imovel->status;
         $this->notes = '';
         $this->mode = 'form';
         $this->feedback = null;
@@ -196,33 +162,75 @@ class PropertyManagement extends Component
     {
         $this->validateProperty();
 
-        foreach ($this->properties as $property) {
-            if ($property['block'] === strtoupper($this->block) && $property['unit'] === $this->unit && $property['id'] !== $this->editingPropertyId) {
-                $this->addError('unit', 'Já existe um imóvel com este bloco e unidade.');
+        $code = strtoupper($this->code);
 
-                return;
-            }
+        $duplicate = Imovel::query()
+            ->where('codigo', $code)
+            ->when($this->editingPropertyId, fn ($query) => $query->where('id', '!=', $this->editingPropertyId))
+            ->exists();
+
+        if ($duplicate) {
+            $this->addError('code', 'Já existe um imóvel com este código.');
+
+            return;
         }
 
-        $address = "{$this->street}, {$this->number}".($this->complement !== '' ? " · {$this->complement}" : '')." · {$this->district}";
+        $condominio = Condominio::query()->firstOrCreate(
+            ['nome' => $this->organization],
+            ['codigo' => Str::upper(Str::slug($this->organization, '')), 'status' => 'ativo']
+        );
+
+        $blocoId = null;
+
+        if (trim($this->block) !== '') {
+            $letra = strtoupper(trim($this->block));
+            $bloco = Bloco::query()->firstOrCreate(
+                ['condominio_id' => $condominio->id, 'nome' => "Bloco {$letra}"],
+                ['codigo' => $letra, 'status' => 'ativo']
+            );
+            $blocoId = $bloco->id;
+        }
 
         if ($this->editingPropertyId) {
-            foreach ($this->properties as $index => $property) {
-                if ($property['id'] === $this->editingPropertyId) {
-                    $this->properties[$index] = array_merge($property, [
-                        'code' => strtoupper($this->code), 'block' => strtoupper($this->block), 'unit' => $this->unit, 'address' => $address, 'status' => $this->propertyStatus, 'updated' => '10/08/2026 às 18:42',
-                    ]);
-                }
-            }
-            $id = $this->editingPropertyId;
+            $imovel = Imovel::query()->findOrFail($this->editingPropertyId);
+            $imovel->update([
+                'condominio_id' => $condominio->id,
+                'bloco_id' => $blocoId,
+                'codigo' => $code,
+                'unidade' => $this->unit,
+                'status' => $this->propertyStatus,
+                'versao' => $imovel->versao + 1,
+            ]);
         } else {
-            $id = max(array_column($this->properties, 'id')) + 1;
-            $this->properties[] = [
-                'id' => $id, 'code' => strtoupper($this->code), 'block' => strtoupper($this->block), 'unit' => $this->unit, 'address' => $address, 'status' => $this->propertyStatus, 'responsible' => 'Não definido', 'occupants' => 0, 'vehicles' => 0, 'updated' => '10/08/2026 às 18:42', 'alert' => 'Responsável principal ainda não definido', 'links' => [], 'vehicleList' => [],
-            ];
+            $imovel = Imovel::query()->create([
+                'condominio_id' => $condominio->id,
+                'bloco_id' => $blocoId,
+                'codigo' => $code,
+                'unidade' => $this->unit,
+                'tipo' => 'apartamento',
+                'status' => $this->propertyStatus,
+                'versao' => 1,
+            ]);
         }
 
-        $this->selectedPropertyId = $id;
+        $enderecoVigente = $imovel->enderecoVigente();
+        $enderecoDados = [
+            'zip_code' => $this->zipCode,
+            'address' => $this->street,
+            'address_number' => $this->number,
+            'address_complement' => $this->complement !== '' ? $this->complement : null,
+            'district' => $this->district,
+            'city' => $this->city,
+            'state' => $this->state,
+        ];
+
+        if ($enderecoVigente) {
+            $enderecoVigente->update($enderecoDados);
+        } else {
+            EnderecoImovel::query()->create([...$enderecoDados, 'imovel_id' => $imovel->id, 'started_at' => now()]);
+        }
+
+        $this->selectedPropertyId = $imovel->id;
         $this->mode = 'detail';
         $this->feedback = [
             'variant' => 'success',
@@ -237,18 +245,20 @@ class PropertyManagement extends Component
             return;
         }
 
-        foreach ($this->properties as $index => $property) {
-            if ($property['id'] === $this->selectedPropertyId) {
-                $newStatus = $property['status'] === 'bloqueado' ? 'ativo' : 'bloqueado';
-                $this->properties[$index]['status'] = $newStatus;
-                $this->properties[$index]['alert'] = $newStatus === 'bloqueado' ? 'Imóvel bloqueado para novas autorizações' : null;
-                $this->feedback = [
-                    'variant' => $newStatus === 'bloqueado' ? 'warning' : 'success',
-                    'title' => $newStatus === 'bloqueado' ? 'Imóvel bloqueado' : 'Imóvel reativado',
-                    'message' => 'A situação estrutural foi alterada. Os vínculos individuais continuam preservados para análise própria.',
-                ];
-            }
+        $imovel = Imovel::query()->find($this->selectedPropertyId);
+
+        if (! $imovel) {
+            return;
         }
+
+        $newStatus = $imovel->status === 'bloqueado' ? 'ativo' : 'bloqueado';
+        $imovel->update(['status' => $newStatus, 'versao' => $imovel->versao + 1]);
+
+        $this->feedback = [
+            'variant' => $newStatus === 'bloqueado' ? 'warning' : 'success',
+            'title' => $newStatus === 'bloqueado' ? 'Imóvel bloqueado' : 'Imóvel reativado',
+            'message' => 'A situação estrutural foi alterada. Os vínculos individuais continuam preservados para análise própria.',
+        ];
     }
 
     /** @return list<array<string, mixed>> */
@@ -256,30 +266,143 @@ class PropertyManagement extends Component
     {
         $search = mb_strtolower(trim($this->search));
 
-        return array_values(array_filter($this->properties, function (array $property) use ($search): bool {
-            $matchesStatus = $this->statusFilter === 'todos' || $property['status'] === $this->statusFilter;
-            $matchesSearch = $search === '' || str_contains(mb_strtolower(implode(' ', [$property['code'], $property['block'], $property['unit'], $property['address'], $property['responsible']])), $search);
+        $query = Imovel::query()->with(['bloco', 'condominio']);
 
-            return $matchesStatus && $matchesSearch;
-        }));
+        if ($this->statusFilter !== 'todos') {
+            $query->where('status', $this->statusFilter);
+        }
+
+        $imoveis = $query->orderBy('codigo')->get();
+
+        if ($search !== '') {
+            $imoveis = $imoveis->filter(function (Imovel $imovel) use ($search): bool {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $imovel->codigo,
+                    $imovel->bloco?->nome,
+                    $imovel->unidade,
+                    $this->addressLine($imovel),
+                    $imovel->responsavelPrincipal()?->nomeExibicao(),
+                ])));
+
+                return str_contains($haystack, $search);
+            });
+        }
+
+        return $imoveis->map(fn (Imovel $imovel) => $this->toArray($imovel))->values()->all();
     }
 
     /** @return array<string, mixed>|null */
     public function selectedProperty(): ?array
     {
-        return $this->selectedPropertyId ? $this->findProperty($this->selectedPropertyId) : null;
+        if ($this->selectedPropertyId === null) {
+            return null;
+        }
+
+        $imovel = Imovel::query()->with(['bloco', 'condominio'])->find($this->selectedPropertyId);
+
+        return $imovel ? $this->toArray($imovel) : null;
     }
 
-    /** @return array<string, mixed>|null */
-    private function findProperty(int $id): ?array
+    /** @return array{active: int, implementation: int, blocked: int, occupants: int} */
+    public function propertyCounts(): array
     {
-        foreach ($this->properties as $property) {
-            if ($property['id'] === $id) {
-                return $property;
-            }
+        return [
+            'active' => Imovel::query()->where('status', 'ativo')->count(),
+            'implementation' => Imovel::query()->where('status', 'implantacao')->count(),
+            'blocked' => Imovel::query()->where('status', 'bloqueado')->count(),
+            'occupants' => Vinculo::query()->whereNull('ended_at')->count(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function toArray(Imovel $imovel): array
+    {
+        $vinculosAtivos = $imovel->vinculos()->whereNull('ended_at')->with('pessoa.documentos')->get();
+        $responsavel = $imovel->responsavelPrincipal();
+        $veiculoVinculos = $imovel->veiculoVinculos()->whereNull('ended_at')->with(['veiculo', 'pessoa'])->get();
+
+        return [
+            'id' => $imovel->id,
+            'code' => $imovel->codigo,
+            'block' => $imovel->bloco !== null ? str_replace('Bloco ', '', $imovel->bloco->nome) : '',
+            'unit' => $imovel->unidade,
+            'address' => $this->addressLine($imovel),
+            'status' => $imovel->status,
+            'responsible' => $responsavel?->nomeExibicao() ?? 'Não definido',
+            'occupants' => $vinculosAtivos->count(),
+            'vehicles' => $veiculoVinculos->count(),
+            'updated' => $imovel->updated_at->format('d/m/Y').' às '.$imovel->updated_at->format('H:i'),
+            'alert' => $this->alertFor($imovel, $responsavel),
+            'links' => $vinculosAtivos->map(fn (Vinculo $vinculo) => [
+                'name' => $vinculo->pessoa->nomeExibicao(),
+                'document' => $vinculo->pessoa->documentos->first()?->valor_apresentacao ?? '—',
+                'nature' => $this->naturezaLabel($vinculo->tipo),
+                'role' => $this->papelLabel($vinculo->papel),
+                'responsibility' => $vinculo->responsabilidades()->where('tipo', 'responsavel_principal')->whereNull('ended_at')->exists()
+                    ? 'Responsável principal'
+                    : 'Sem responsabilidade administrativa',
+                'validity' => $vinculo->ended_at !== null ? 'Até '.$vinculo->ended_at->format('d/m/Y') : 'Prazo indeterminado',
+                'status' => $vinculo->status,
+            ])->values()->all(),
+            'vehicleList' => $veiculoVinculos->map(fn ($veiculoVinculo) => [
+                'plate' => $veiculoVinculo->veiculo->plate_display,
+                'model' => $veiculoVinculo->veiculo->model,
+                'color' => $veiculoVinculo->veiculo->color,
+                'owner' => $veiculoVinculo->pessoa?->nomeExibicao() ?? '—',
+                'link' => 'Pessoa e imóvel',
+                'status' => $veiculoVinculo->veiculo->status,
+            ])->values()->all(),
+        ];
+    }
+
+    private function addressLine(Imovel $imovel): string
+    {
+        $endereco = $imovel->enderecoVigente();
+
+        if (! $endereco) {
+            return 'Endereço não informado';
+        }
+
+        $linha = "{$endereco->address}, {$endereco->address_number}";
+
+        if ($endereco->address_complement) {
+            $linha .= " · {$endereco->address_complement}";
+        }
+
+        return "{$linha} · {$endereco->district}";
+    }
+
+    private function alertFor(Imovel $imovel, ?Pessoa $responsavel): ?string
+    {
+        if ($imovel->status === 'bloqueado') {
+            return 'Imóvel bloqueado para novas autorizações';
+        }
+
+        if ($responsavel === null) {
+            return 'Responsável principal ainda não definido';
         }
 
         return null;
+    }
+
+    private function naturezaLabel(string $tipo): string
+    {
+        return match ($tipo) {
+            'proprietario' => 'Proprietário',
+            'inquilino' => 'Inquilino',
+            'morador' => 'Morador',
+            default => ucfirst($tipo),
+        };
+    }
+
+    private function papelLabel(?string $papel): string
+    {
+        return match ($papel) {
+            'titular' => 'Titular',
+            'conjuge' => 'Cônjuge',
+            'dependente' => 'Dependente',
+            default => $papel !== null ? ucfirst($papel) : '—',
+        };
     }
 
     private function resetForm(): void
@@ -329,6 +452,8 @@ class PropertyManagement extends Component
         return view('livewire.property-management', [
             'filteredProperties' => $this->filteredProperties(),
             'selectedProperty' => $this->selectedProperty(),
+            'propertyCounts' => $this->propertyCounts(),
+            'totalProperties' => Imovel::query()->count(),
         ])->layout('components.layouts.app', [
             'title' => 'Imóveis',
             'heading' => $this->mode === 'form' ? ($this->editingPropertyId ? 'Editar imóvel' : 'Cadastrar imóvel') : ($this->mode === 'detail' ? 'Detalhe do imóvel' : 'Imóveis'),

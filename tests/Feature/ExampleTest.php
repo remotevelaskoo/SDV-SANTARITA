@@ -15,6 +15,7 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use App\Models\EnderecoImovel;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
 use App\Models\Implantacao;
@@ -985,6 +986,9 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('imoveis.consultar'));
 
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        EnderecoImovel::factory()->for($imovel, 'imovel')->create();
+
         $response = $this->get('/imoveis');
 
         $response
@@ -998,18 +1002,29 @@ class ExampleTest extends TestCase
 
     public function test_the_property_detail_preserves_people_links_and_vehicles(): void
     {
+        $imovel = Imovel::factory()->create();
+        EnderecoImovel::factory()->for($imovel, 'imovel')->create();
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
+        $vinculo = Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+        ImovelResponsabilidade::factory()->for($imovel, 'imovel')->for($vinculo, 'vinculo')->create();
+
+        $veiculo = Veiculo::factory()->create(['plate_display' => 'ABC1D23']);
+        VeiculoVinculo::factory()->for($veiculo, 'veiculo')->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
         Livewire::test(PropertyManagement::class)
-            ->call('openProperty', 1)
+            ->call('openProperty', $imovel->id)
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedPropertyId', 1)
+            ->assertSet('selectedPropertyId', $imovel->id)
             ->assertSee('Pessoas e vínculos')
             ->assertSee('Responsável principal')
             ->assertSee('Marcos Vinicius da Silva')
             ->assertSee('ABC1D23')
             ->call('togglePropertyBlock')
-            ->assertSet('properties.0.status', 'bloqueado')
             ->assertSet('feedback.variant', 'warning')
             ->assertSee('Os vínculos individuais continuam preservados');
+
+        $this->assertDatabaseHas('imoveis', ['id' => $imovel->id, 'status' => 'bloqueado']);
     }
 
     public function test_the_property_form_creates_a_demo_property_without_implicit_links(): void
@@ -1028,17 +1043,18 @@ class ExampleTest extends TestCase
             ->call('saveProperty')
             ->assertHasNoErrors()
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedPropertyId', 6)
-            ->assertSet('properties.5.code', 'SRA-D-801')
-            ->assertSet('properties.5.occupants', 0)
-            ->assertSet('properties.5.vehicles', 0)
             ->assertSee('Pessoas, vínculos e autorizações permanecem separados.');
+
+        $this->assertDatabaseHas('imoveis', ['codigo' => 'SRA-D-801', 'unidade' => '801', 'status' => 'ativo']);
+        $this->assertDatabaseHas('enderecos_imoveis', ['address' => 'Rua das Palmeiras', 'district' => 'Jardim das Flores']);
     }
 
     public function test_the_vehicle_management_renders_the_p12_list(): void
     {
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('veiculos.consultar'));
+
+        Veiculo::factory()->create(['plate_display' => 'ABC1D23']);
 
         $response = $this->get('/veiculos');
 
@@ -1052,22 +1068,29 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_detail_preserves_links_when_blocked(): void
     {
+        $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        $veiculo = Veiculo::factory()->create();
+        VeiculoVinculo::factory()->for($veiculo, 'veiculo')->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
         Livewire::test(VehicleManagement::class)
-            ->call('openVehicle', 1)
+            ->call('openVehicle', $veiculo->id)
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedVehicleId', 1)
+            ->assertSet('selectedVehicleId', $veiculo->id)
             ->assertSee('Proprietário e vínculo')
             ->assertSee('Marcos Vinicius da Silva')
             ->assertSee('SRA-A-102')
             ->call('toggleVehicleBlock')
-            ->assertSet('vehicles.0.status', 'bloqueado')
-            ->assertSet('vehicles.0.owner', 'Marcos Vinicius da Silva')
             ->assertSet('feedback.variant', 'warning')
             ->assertSee('O histórico e os vínculos foram preservados');
+
+        $this->assertDatabaseHas('veiculos', ['id' => $veiculo->id, 'status' => 'bloqueado']);
     }
 
     public function test_the_vehicle_form_creates_a_demo_vehicle_without_releasing_access(): void
     {
+        Pessoa::factory()->create(['nome' => 'Camila Andrade']);
+
         Livewire::test(VehicleManagement::class)
             ->call('createVehicle')
             ->set('plate', 'QRS-8T90')
@@ -1079,20 +1102,21 @@ class ExampleTest extends TestCase
             ->set('renavam', '12345678901')
             ->set('owner', 'Camila Andrade')
             ->set('ownerDocument', '987.654.321-00')
-            ->set('propertyCode', 'SRA-B-304')
             ->set('vehicleStatus', 'pendente')
             ->call('saveVehicle')
             ->assertHasNoErrors()
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedVehicleId', 6)
-            ->assertSet('vehicles.5.plate', 'QRS8T90')
-            ->assertSet('vehicles.5.status', 'pendente')
-            ->assertSet('vehicles.5.lprStatus', 'nao_sincronizado')
             ->assertSee('Pessoa, imóvel, situação e autorização continuam independentes.');
+
+        $this->assertDatabaseHas('veiculos', ['plate_normalized' => 'QRS8T90', 'status' => 'pendente']);
+        $this->assertDatabaseHas('veiculo_vinculos', ['pessoa_id' => Pessoa::query()->where('nome', 'Camila Andrade')->value('id')]);
     }
 
     public function test_the_vehicle_form_rejects_a_duplicate_plate(): void
     {
+        Pessoa::factory()->create(['nome' => 'Outra pessoa']);
+        Veiculo::factory()->create(['plate_display' => 'ABC1D23', 'plate_normalized' => 'ABC1D23']);
+
         Livewire::test(VehicleManagement::class)
             ->call('createVehicle')
             ->set('plate', 'ABC-1D23')
@@ -1105,6 +1129,22 @@ class ExampleTest extends TestCase
             ->call('saveVehicle')
             ->assertHasErrors(['plate'])
             ->assertSee('Esta placa já está cadastrada no sistema.');
+    }
+
+    public function test_the_vehicle_form_rejects_an_owner_that_does_not_exist(): void
+    {
+        Livewire::test(VehicleManagement::class)
+            ->call('createVehicle')
+            ->set('plate', 'QRS-8T90')
+            ->set('type', 'moto')
+            ->set('brand', 'Yamaha')
+            ->set('model', 'Fazer 250')
+            ->set('color', 'Azul')
+            ->set('year', '2025')
+            ->set('owner', 'Pessoa Inexistente')
+            ->call('saveVehicle')
+            ->assertHasErrors(['owner'])
+            ->assertSee('Pessoa não encontrada.');
     }
 
     public function test_the_person_registration_renders_the_first_step(): void

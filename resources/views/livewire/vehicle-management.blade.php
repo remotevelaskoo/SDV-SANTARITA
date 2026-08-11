@@ -6,15 +6,6 @@
     @endif
 
     @if ($mode === 'list')
-        @php
-            $vehicleCounts = [
-                'active' => collect($vehicles)->where('status', 'ativo')->count(),
-                'pending' => collect($vehicles)->where('status', 'pendente')->count(),
-                'blocked' => collect($vehicles)->where('status', 'bloqueado')->count(),
-                'synced' => collect($vehicles)->where('lprStatus', 'sincronizado')->count(),
-            ];
-        @endphp
-
         <section class="vehicle-summary-grid" aria-label="Resumo dos veículos">
             <article><span>Veículos ativos</span><strong>{{ $vehicleCounts['active'] }}</strong><small>Cadastros disponíveis</small></article>
             <article><span>Aguardando análise</span><strong>{{ $vehicleCounts['pending'] }}</strong><small>Sem liberação automática</small></article>
@@ -87,7 +78,7 @@
                 </x-slot:cards>
             </x-ui.responsive-table>
 
-            <footer class="vehicle-list-footer"><span>Exibindo {{ count($filteredVehicles) }} de {{ count($vehicles) }} veículos</span><small>Dados demonstrativos da P12</small></footer>
+            <footer class="vehicle-list-footer"><span>Exibindo {{ count($filteredVehicles) }} de {{ $totalVehicles }} veículos</span></footer>
         </section>
     @elseif ($mode === 'detail' && $selectedVehicle)
         <nav class="vehicle-breadcrumb" aria-label="Caminho da página"><button type="button" wire:click="backToList">Veículos</button><x-icon name="chevron-right" /><span aria-current="page">{{ $selectedVehicle['plate'] }}</span></nav>
@@ -160,7 +151,7 @@
                 <x-ui.card title="O que acontece ao salvar?" description="O cadastro não abre nenhum acesso">
                     <ul><li><x-icon name="car" /><span><strong>Veículo</strong><small>Placa e características ficam registradas.</small></span></li><li><x-icon name="users" /><span><strong>Proprietário</strong><small>Nenhuma pessoa é criada ou alterada.</small></span></li><li><x-icon name="building" /><span><strong>Imóvel</strong><small>O vínculo é apenas demonstrativo nesta etapa.</small></span></li><li><x-icon name="shield" /><span><strong>Entrada</strong><small>A portaria ainda precisa validar cada acesso.</small></span></li></ul>
                 </x-ui.card>
-                <x-ui.alert variant="warning" title="Protótipo demonstrativo">Os dados ficam somente na memória desta tela. Nenhuma câmera, portão ou equipamento real está conectado.</x-ui.alert>
+                <x-ui.alert variant="warning" title="Sem equipamento conectado">Nenhuma câmera, portão ou leitor de placa real está conectado a este cadastro.</x-ui.alert>
             </aside>
         </section>
     @endif

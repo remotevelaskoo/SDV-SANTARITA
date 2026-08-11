@@ -2,6 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\Imovel;
+use App\Models\Pessoa;
+use App\Models\Veiculo;
+use App\Models\VeiculoVinculo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -16,9 +20,9 @@ class VehicleManagement extends Component
 
     public string $typeFilter = 'todos';
 
-    public ?int $selectedVehicleId = null;
+    public ?string $selectedVehicleId = null;
 
-    public ?int $editingVehicleId = null;
+    public ?string $editingVehicleId = null;
 
     public string $plate = '';
 
@@ -51,28 +55,9 @@ class VehicleManagement extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    /** @var list<array<string, mixed>> */
-    public array $vehicles = [
-        [
-            'id' => 1, 'plate' => 'ABC1D23', 'type' => 'carro', 'brand' => 'Toyota', 'model' => 'Corolla XEi', 'color' => 'Prata', 'year' => '2022', 'renavam' => '*******4821', 'status' => 'ativo', 'accessUse' => 'morador', 'owner' => 'Marcos Vinicius da Silva', 'ownerDocument' => '***.654.321-**', 'propertyCode' => 'SRA-A-102', 'relationship' => 'Pessoa e imóvel', 'updated' => '10/08/2026 às 17:18', 'lprStatus' => 'sincronizado', 'lastReading' => '10/08/2026 às 17:42 · Portão social', 'alert' => null,
-        ],
-        [
-            'id' => 2, 'plate' => 'DEF4G56', 'type' => 'carro', 'brand' => 'Honda', 'model' => 'HR-V Touring', 'color' => 'Branco', 'year' => '2023', 'renavam' => '*******1934', 'status' => 'ativo', 'accessUse' => 'morador', 'owner' => 'Fernanda da Silva', 'ownerDocument' => '***.218.904-**', 'propertyCode' => 'SRA-A-102', 'relationship' => 'Pessoa e imóvel', 'updated' => '10/08/2026 às 15:35', 'lprStatus' => 'sincronizado', 'lastReading' => '09/08/2026 às 21:06 · Garagem', 'alert' => null,
-        ],
-        [
-            'id' => 3, 'plate' => 'GHI7J89', 'type' => 'carro', 'brand' => 'Volkswagen', 'model' => 'T-Cross Comfortline', 'color' => 'Cinza', 'year' => '2021', 'renavam' => '*******7508', 'status' => 'ativo', 'accessUse' => 'morador', 'owner' => 'Bianca Moretti', 'ownerDocument' => '***.615.338-**', 'propertyCode' => 'SRA-A-208', 'relationship' => 'Pessoa e imóvel', 'updated' => '09/08/2026 às 18:02', 'lprStatus' => 'revisao', 'lastReading' => '08/08/2026 às 08:11 · Garagem', 'alert' => 'Leitura da placa requer revisão visual',
-        ],
-        [
-            'id' => 4, 'plate' => 'JKL2M34', 'type' => 'moto', 'brand' => 'Honda', 'model' => 'CG 160 Titan', 'color' => 'Vermelho', 'year' => '2024', 'renavam' => '*******2240', 'status' => 'pendente', 'accessUse' => 'prestador', 'owner' => 'Eduardo Nunes', 'ownerDocument' => '***.904.117-**', 'propertyCode' => 'SRA-B-304', 'relationship' => 'Pessoa autorizada', 'updated' => '08/08/2026 às 12:26', 'lprStatus' => 'nao_sincronizado', 'lastReading' => 'Nenhuma leitura registrada', 'alert' => 'Vínculo aguardando conferência da administração',
-        ],
-        [
-            'id' => 5, 'plate' => 'MNO5P67', 'type' => 'utilitario', 'brand' => 'Fiat', 'model' => 'Fiorino Endurance', 'color' => 'Branco', 'year' => '2020', 'renavam' => '*******6612', 'status' => 'bloqueado', 'accessUse' => 'prestador', 'owner' => 'Vale Serviços Ltda.', 'ownerDocument' => '**.***.482/****-**', 'propertyCode' => 'Sem vínculo fixo', 'relationship' => 'Empresa prestadora', 'updated' => '07/08/2026 às 09:41', 'lprStatus' => 'suspenso', 'lastReading' => '02/08/2026 às 14:20 · Portão de serviço', 'alert' => 'Veículo bloqueado para novas autorizações',
-        ],
-    ];
-
-    public function openVehicle(int $id): void
+    public function openVehicle(string $id): void
     {
-        if ($this->findVehicle($id)) {
+        if (Veiculo::query()->whereKey($id)->exists()) {
             $this->selectedVehicleId = $id;
             $this->mode = 'detail';
             $this->feedback = null;
@@ -94,32 +79,30 @@ class VehicleManagement extends Component
         $this->mode = 'form';
     }
 
-    public function editVehicle(int $id): void
+    public function editVehicle(string $id): void
     {
-        $vehicle = $this->findVehicle($id);
+        $veiculo = Veiculo::query()->find($id);
 
-        if (! $vehicle) {
+        if (! $veiculo) {
             return;
         }
 
+        $vinculo = $veiculo->vinculos()->whereNull('ended_at')->with(['pessoa', 'imovel'])->first();
+
         $this->editingVehicleId = $id;
-        $this->plate = $vehicle['plate'];
-        $this->type = $vehicle['type'];
-        $this->brand = $vehicle['brand'];
-        $this->model = $vehicle['model'];
-        $this->color = $vehicle['color'];
-        $this->year = $vehicle['year'];
+        $this->plate = $veiculo->plate_display;
+        $this->type = $veiculo->type;
+        $this->brand = $veiculo->brand ?? '';
+        $this->model = $veiculo->model ?? '';
+        $this->color = $veiculo->color ?? '';
+        $this->year = '';
         $this->renavam = '';
-        $this->owner = $vehicle['owner'];
+        $this->owner = $vinculo?->pessoa?->nomeExibicao() ?? '';
         $this->ownerDocument = '';
-        $this->propertyCode = $vehicle['propertyCode'] === 'Sem vínculo fixo' ? '' : $vehicle['propertyCode'];
-        $this->relationship = match ($vehicle['relationship']) {
-            'Pessoa e imóvel' => 'proprietario',
-            'Empresa prestadora' => 'empresa',
-            default => 'autorizado',
-        };
-        $this->vehicleStatus = $vehicle['status'];
-        $this->accessUse = $vehicle['accessUse'];
+        $this->propertyCode = $vinculo?->imovel?->codigo ?? '';
+        $this->relationship = $vinculo?->tipo ?? 'proprietario';
+        $this->vehicleStatus = $veiculo->status;
+        $this->accessUse = 'morador';
         $this->notes = '';
         $this->mode = 'form';
         $this->feedback = null;
@@ -149,65 +132,75 @@ class VehicleManagement extends Component
         $this->plate = $this->normalizePlate($this->plate);
         $this->validateVehicle();
 
-        foreach ($this->vehicles as $vehicle) {
-            if ($vehicle['plate'] === $this->plate && $vehicle['id'] !== $this->editingVehicleId) {
-                $this->addError('plate', 'Esta placa já está cadastrada no sistema.');
+        $plateNormalized = Veiculo::normalizePlate($this->plate);
+
+        $duplicate = Veiculo::query()
+            ->where('plate_normalized', $plateNormalized)
+            ->when($this->editingVehicleId, fn ($query) => $query->where('id', '!=', $this->editingVehicleId))
+            ->exists();
+
+        if ($duplicate) {
+            $this->addError('plate', 'Esta placa já está cadastrada no sistema.');
+
+            return;
+        }
+
+        $pessoa = Pessoa::query()->whereRaw('LOWER(nome) = ?', [mb_strtolower(trim($this->owner))])->first();
+
+        if (! $pessoa) {
+            $this->addError('owner', 'Pessoa não encontrada. Cadastre a pessoa antes de vincular o veículo.');
+
+            return;
+        }
+
+        $imovelId = null;
+
+        if (trim($this->propertyCode) !== '') {
+            $imovel = Imovel::query()->where('codigo', strtoupper(trim($this->propertyCode)))->first();
+
+            if (! $imovel) {
+                $this->addError('propertyCode', 'Imóvel não encontrado com este código.');
 
                 return;
             }
+
+            $imovelId = $imovel->id;
         }
 
-        $relationshipLabel = match ($this->relationship) {
-            'empresa' => 'Empresa prestadora',
-            'autorizado' => 'Pessoa autorizada',
-            default => 'Pessoa e imóvel',
-        };
-        $propertyLabel = $this->propertyCode !== '' ? strtoupper($this->propertyCode) : 'Sem vínculo fixo';
-        $renavamMasked = $this->renavam !== '' ? '*******'.substr($this->renavam, -4) : 'Não informado';
-
-        $data = [
-            'plate' => $this->plate,
+        $dados = [
+            'plate_display' => $this->plate,
+            'plate_normalized' => $plateNormalized,
+            'country' => 'BR',
             'type' => $this->type,
             'brand' => $this->brand,
             'model' => $this->model,
             'color' => $this->color,
-            'year' => $this->year,
-            'renavam' => $renavamMasked,
             'status' => $this->vehicleStatus,
-            'accessUse' => $this->accessUse,
-            'owner' => $this->owner,
-            'ownerDocument' => $this->maskDocument($this->ownerDocument),
-            'propertyCode' => $propertyLabel,
-            'relationship' => $relationshipLabel,
-            'updated' => '10/08/2026 às 19:24',
         ];
 
         if ($this->editingVehicleId) {
-            foreach ($this->vehicles as $index => $vehicle) {
-                if ($vehicle['id'] === $this->editingVehicleId) {
-                    if ($this->renavam === '') {
-                        $data['renavam'] = $vehicle['renavam'];
-                    }
-
-                    if ($this->ownerDocument === '') {
-                        $data['ownerDocument'] = $vehicle['ownerDocument'];
-                    }
-
-                    $this->vehicles[$index] = array_merge($vehicle, $data);
-                }
-            }
-            $id = $this->editingVehicleId;
+            $veiculo = Veiculo::query()->findOrFail($this->editingVehicleId);
+            $veiculo->update($dados);
         } else {
-            $id = max(array_column($this->vehicles, 'id')) + 1;
-            $this->vehicles[] = array_merge($data, [
-                'id' => $id,
-                'lprStatus' => 'nao_sincronizado',
-                'lastReading' => 'Nenhuma leitura registrada',
-                'alert' => $this->vehicleStatus === 'ativo' ? null : 'Cadastro aguardando liberação ou conferência',
-            ]);
+            $veiculo = Veiculo::query()->create($dados);
         }
 
-        $this->selectedVehicleId = $id;
+        $vinculoDados = [
+            'pessoa_id' => $pessoa->id,
+            'imovel_id' => $imovelId,
+            'tipo' => $this->relationship,
+            'status' => 'ativo',
+        ];
+
+        $vinculo = $veiculo->vinculos()->whereNull('ended_at')->first();
+
+        if ($vinculo) {
+            $vinculo->update([...$vinculoDados, 'versao' => $vinculo->versao + 1]);
+        } else {
+            VeiculoVinculo::query()->create([...$vinculoDados, 'veiculo_id' => $veiculo->id, 'started_at' => now(), 'versao' => 1]);
+        }
+
+        $this->selectedVehicleId = $veiculo->id;
         $this->mode = 'detail';
         $this->feedback = [
             'variant' => 'success',
@@ -222,19 +215,20 @@ class VehicleManagement extends Component
             return;
         }
 
-        foreach ($this->vehicles as $index => $vehicle) {
-            if ($vehicle['id'] === $this->selectedVehicleId) {
-                $newStatus = $vehicle['status'] === 'bloqueado' ? 'ativo' : 'bloqueado';
-                $this->vehicles[$index]['status'] = $newStatus;
-                $this->vehicles[$index]['lprStatus'] = $newStatus === 'bloqueado' ? 'suspenso' : 'nao_sincronizado';
-                $this->vehicles[$index]['alert'] = $newStatus === 'bloqueado' ? 'Veículo bloqueado para novas autorizações' : null;
-                $this->feedback = [
-                    'variant' => $newStatus === 'bloqueado' ? 'warning' : 'success',
-                    'title' => $newStatus === 'bloqueado' ? 'Veículo bloqueado' : 'Veículo reativado',
-                    'message' => 'O histórico e os vínculos foram preservados. A liberação de entrada continua sendo uma decisão separada.',
-                ];
-            }
+        $veiculo = Veiculo::query()->find($this->selectedVehicleId);
+
+        if (! $veiculo) {
+            return;
         }
+
+        $newStatus = $veiculo->status === 'bloqueado' ? 'ativo' : 'bloqueado';
+        $veiculo->update(['status' => $newStatus]);
+
+        $this->feedback = [
+            'variant' => $newStatus === 'bloqueado' ? 'warning' : 'success',
+            'title' => $newStatus === 'bloqueado' ? 'Veículo bloqueado' : 'Veículo reativado',
+            'message' => 'O histórico e os vínculos foram preservados. A liberação de entrada continua sendo uma decisão separada.',
+        ];
     }
 
     /** @return list<array<string, mixed>> */
@@ -242,32 +236,92 @@ class VehicleManagement extends Component
     {
         $search = mb_strtolower(trim($this->search));
 
-        return array_values(array_filter($this->vehicles, function (array $vehicle) use ($search): bool {
-            $matchesStatus = $this->statusFilter === 'todos' || $vehicle['status'] === $this->statusFilter;
-            $matchesType = $this->typeFilter === 'todos' || $vehicle['type'] === $this->typeFilter;
-            $haystack = implode(' ', [$vehicle['plate'], $vehicle['brand'], $vehicle['model'], $vehicle['owner'], $vehicle['propertyCode']]);
-            $matchesSearch = $search === '' || str_contains(mb_strtolower($haystack), $search);
+        $query = Veiculo::query();
 
-            return $matchesStatus && $matchesType && $matchesSearch;
-        }));
+        if ($this->statusFilter !== 'todos') {
+            $query->where('status', $this->statusFilter);
+        }
+
+        if ($this->typeFilter !== 'todos') {
+            $query->where('type', $this->typeFilter);
+        }
+
+        $veiculos = $query->orderBy('plate_display')->get();
+
+        if ($search !== '') {
+            $veiculos = $veiculos->filter(function (Veiculo $veiculo) use ($search): bool {
+                $vinculo = $veiculo->vinculos()->whereNull('ended_at')->with(['pessoa', 'imovel'])->first();
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $veiculo->plate_display, $veiculo->brand, $veiculo->model,
+                    $vinculo?->pessoa?->nomeExibicao(), $vinculo?->imovel?->codigo,
+                ])));
+
+                return str_contains($haystack, $search);
+            });
+        }
+
+        return $veiculos->map(fn (Veiculo $veiculo) => $this->toArray($veiculo))->values()->all();
     }
 
     /** @return array<string, mixed>|null */
     public function selectedVehicle(): ?array
     {
-        return $this->selectedVehicleId ? $this->findVehicle($this->selectedVehicleId) : null;
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findVehicle(int $id): ?array
-    {
-        foreach ($this->vehicles as $vehicle) {
-            if ($vehicle['id'] === $id) {
-                return $vehicle;
-            }
+        if ($this->selectedVehicleId === null) {
+            return null;
         }
 
-        return null;
+        $veiculo = Veiculo::query()->find($this->selectedVehicleId);
+
+        return $veiculo ? $this->toArray($veiculo) : null;
+    }
+
+    /** @return array{active: int, pending: int, blocked: int, synced: int} */
+    public function vehicleCounts(): array
+    {
+        return [
+            'active' => Veiculo::query()->where('status', 'ativo')->count(),
+            'pending' => Veiculo::query()->where('status', 'pendente')->count(),
+            'blocked' => Veiculo::query()->where('status', 'bloqueado')->count(),
+            'synced' => 0,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function toArray(Veiculo $veiculo): array
+    {
+        $vinculo = $veiculo->vinculos()->whereNull('ended_at')->with(['pessoa.documentos', 'imovel'])->first();
+
+        $relationshipLabel = match ($vinculo?->tipo) {
+            'empresa' => 'Empresa prestadora',
+            'autorizado' => 'Pessoa autorizada',
+            'proprietario' => 'Pessoa e imóvel',
+            default => 'Sem vínculo registrado',
+        };
+
+        return [
+            'id' => $veiculo->id,
+            'plate' => $veiculo->plate_display,
+            'type' => $veiculo->type,
+            'brand' => $veiculo->brand ?? '—',
+            'model' => $veiculo->model ?? '—',
+            'color' => $veiculo->color ?? '—',
+            'year' => '—',
+            'renavam' => 'Não informado',
+            'status' => $veiculo->status,
+            'accessUse' => 'morador',
+            'owner' => $vinculo?->pessoa?->nomeExibicao() ?? 'Não vinculado',
+            'ownerDocument' => $vinculo?->pessoa?->documentos->first()?->valor_apresentacao ?? 'Não informado',
+            'propertyCode' => $vinculo?->imovel?->codigo ?? 'Sem vínculo fixo',
+            'relationship' => $relationshipLabel,
+            'updated' => $veiculo->updated_at->format('d/m/Y').' às '.$veiculo->updated_at->format('H:i'),
+            'lprStatus' => 'nao_sincronizado',
+            'lastReading' => 'Nenhuma leitura registrada',
+            'alert' => match (true) {
+                $veiculo->status === 'bloqueado' => 'Veículo bloqueado para novas autorizações',
+                $vinculo === null => 'Vínculo aguardando conferência da administração',
+                default => null,
+            },
+        ];
     }
 
     private function resetForm(): void
@@ -321,22 +375,13 @@ class VehicleManagement extends Component
         return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $plate) ?? '');
     }
 
-    private function maskDocument(string $document): string
-    {
-        $digits = preg_replace('/\D/', '', $document) ?? '';
-
-        if ($digits === '') {
-            return 'Não informado';
-        }
-
-        return strlen($digits) > 11 ? '**.***.'.substr($digits, -6, 3).'/****-**' : '***.***.'.substr($digits, -5, 3).'-**';
-    }
-
     public function render(): View
     {
         return view('livewire.vehicle-management', [
             'filteredVehicles' => $this->filteredVehicles(),
             'selectedVehicle' => $this->selectedVehicle(),
+            'vehicleCounts' => $this->vehicleCounts(),
+            'totalVehicles' => Veiculo::query()->count(),
         ])->layout('components.layouts.app', [
             'title' => 'Veículos',
             'heading' => $this->mode === 'form' ? ($this->editingVehicleId ? 'Editar veículo' : 'Cadastrar veículo') : ($this->mode === 'detail' ? 'Detalhe do veículo' : 'Veículos'),
