@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\InvalidTemporalRangeException;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\CashRegister;
@@ -15,12 +16,14 @@ use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
 use App\Models\Imovel;
+use App\Models\ImovelResponsabilidade;
 use App\Models\Implantacao;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Models\User;
+use App\Models\Vinculo;
 use App\Support\ImplantacaoContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -694,6 +697,55 @@ class ExampleTest extends TestCase
 
         $documentoRepetidoEmOutraImplantacao = PessoaDocumento::factory()->for($pessoaOutraImplantacao, 'pessoa')->create(['valor_normalizado' => '12345678900']);
         $this->assertSame('12345678900', $documentoRepetidoEmOutraImplantacao->valor_normalizado, 'o mesmo número de documento é permitido em implantações diferentes');
+    }
+
+    public function test_reading_vinculos_is_isolated_between_implantacoes(): void
+    {
+        $implantacaoA = Implantacao::current();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $vinculoB = Vinculo::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $vinculoA = Vinculo::factory()->create();
+
+        $visiveis = Vinculo::query()->pluck('id');
+
+        $this->assertTrue($visiveis->contains($vinculoA->id));
+        $this->assertFalse($visiveis->contains($vinculoB->id), 'um vínculo de outra implantação não pode aparecer na listagem');
+    }
+
+    public function test_vinculo_version_uses_optimistic_concurrency(): void
+    {
+        $vinculo = Vinculo::factory()->create(['versao' => 1]);
+
+        $atualizadoPrimeiro = Vinculo::query()->where('id', $vinculo->id)->where('versao', 1)->update(['papel' => 'conjuge', 'versao' => 2]);
+        $this->assertSame(1, $atualizadoPrimeiro);
+
+        $atualizadoComVersaoDesatualizada = Vinculo::query()->where('id', $vinculo->id)->where('versao', 1)->update(['papel' => 'filho', 'versao' => 3]);
+        $this->assertSame(0, $atualizadoComVersaoDesatualizada, 'uma atualização com versão desatualizada não pode sobrescrever a mais recente');
+
+        $this->assertSame('conjuge', $vinculo->fresh()->papel);
+    }
+
+    public function test_a_vinculo_cannot_end_before_it_starts(): void
+    {
+        $vinculo = Vinculo::factory()->create();
+
+        $this->expectException(InvalidTemporalRangeException::class);
+
+        $vinculo->update(['ended_at' => $vinculo->started_at->copy()->subDay()]);
+    }
+
+    public function test_imovel_responsabilidade_links_the_main_responsible_to_the_property(): void
+    {
+        $pessoa = Pessoa::factory()->create(['nome' => 'Responsável de Teste']);
+        $imovel = Imovel::factory()->create();
+        $vinculo = Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
+        ImovelResponsabilidade::factory()->for($imovel, 'imovel')->for($vinculo, 'vinculo')->create();
+
+        $this->assertSame('Responsável de Teste', $imovel->responsavelPrincipal()?->nome);
     }
 
     public function test_the_property_management_renders_the_p11_list(): void
