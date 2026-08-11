@@ -23,6 +23,8 @@ use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Models\User;
+use App\Models\Veiculo;
+use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Support\ImplantacaoContext;
 use Illuminate\Database\QueryException;
@@ -746,6 +748,48 @@ class ExampleTest extends TestCase
         ImovelResponsabilidade::factory()->for($imovel, 'imovel')->for($vinculo, 'vinculo')->create();
 
         $this->assertSame('Responsável de Teste', $imovel->responsavelPrincipal()?->nome);
+    }
+
+    public function test_reading_veiculos_is_isolated_between_implantacoes(): void
+    {
+        $implantacaoA = Implantacao::current();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $veiculoB = Veiculo::factory()->create(['plate_normalized' => 'ABC1234']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $veiculoA = Veiculo::factory()->create(['plate_normalized' => 'XYZ9876']);
+
+        $visiveis = Veiculo::query()->pluck('id');
+
+        $this->assertTrue($visiveis->contains($veiculoA->id));
+        $this->assertFalse($visiveis->contains($veiculoB->id), 'um veículo de outra implantação não pode aparecer na listagem');
+    }
+
+    public function test_a_duplicate_plate_is_rejected_within_the_same_implantacao_but_allowed_across_implantacoes(): void
+    {
+        Veiculo::factory()->create(['plate_normalized' => 'ABC1D23']);
+
+        try {
+            Veiculo::factory()->create(['plate_normalized' => 'ABC1D23']);
+            $this->fail('uma placa já cadastrada na mesma implantação não pode ser duplicada.');
+        } catch (QueryException $exception) {
+            $this->assertTrue(true);
+        }
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $veiculoOutraImplantacao = Veiculo::factory()->create(['plate_normalized' => 'ABC1D23']);
+        $this->assertSame('ABC1D23', $veiculoOutraImplantacao->plate_normalized, 'a mesma placa é permitida em implantações diferentes');
+    }
+
+    public function test_veiculo_vinculo_resolves_the_owner_of_the_vehicle(): void
+    {
+        $pessoa = Pessoa::factory()->create(['nome' => 'Dono do Veículo']);
+        $veiculo = Veiculo::factory()->create();
+
+        VeiculoVinculo::factory()->for($veiculo, 'veiculo')->for($pessoa, 'pessoa')->create();
+
+        $this->assertSame('Dono do Veículo', $veiculo->proprietario()?->nome);
     }
 
     public function test_the_property_management_renders_the_p11_list(): void
