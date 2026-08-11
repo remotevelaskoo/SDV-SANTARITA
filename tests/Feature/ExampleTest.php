@@ -11,6 +11,7 @@ use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PersonRegistration;
+use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
@@ -243,6 +244,81 @@ class ExampleTest extends TestCase
             ->call('toggleCamera', 'cam-01')
             ->assertSet('cameraStatus.cam-01', false)
             ->assertSee('SEM SINAL');
+    }
+
+    public function test_the_portaria_shows_the_real_operator_and_open_cash_register(): void
+    {
+        $this->withoutVite();
+        $operator = $this->operatorWithPermissions('validacao.registrar');
+        $operator->update(['name' => 'Beatriz Cardoso']);
+        $turno = CaixaTurno::factory()->create([
+            'status' => 'aberto',
+            'terminal' => 'Caixa 01 — Guarita',
+            'opening_balance' => 200,
+        ]);
+
+        $response = $this->actingAs($operator)->get('/portaria');
+
+        $response
+            ->assertOk()
+            ->assertSee('Olá, Beatriz Cardoso')
+            ->assertSee('Caixa 01 — Guarita')
+            ->assertSee('Aberto')
+            ->assertSee('R$ 200,00');
+
+        $this->assertSame($turno->id, CaixaTurno::query()->where('status', 'aberto')->first()->id);
+    }
+
+    public function test_the_portaria_shows_no_open_cash_register_when_none_is_open(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
+
+        Livewire::test(Portaria::class)
+            ->assertSee('Nenhum caixa aberto')
+            ->assertSee('Fechado');
+    }
+
+    public function test_the_portaria_lists_recent_attendances_from_real_history(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Rafael Domingues']);
+        HistoricoAcesso::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'entrada',
+            'resultado' => 'liberado',
+            'ponto_acesso' => 'Portaria Principal',
+            'occurred_at' => now()->subMinutes(5),
+        ]);
+
+        Livewire::test(Portaria::class)
+            ->assertSee('Rafael Domingues')
+            ->assertSee('Validação de entrada — Portaria Principal')
+            ->assertSee('Liberado');
+    }
+
+    public function test_the_portaria_alerts_pre_registrations_pending_for_more_than_a_day(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
+
+        PreRegistration::factory()->create(['status' => 'aguardando', 'submitted_at' => now()->subDays(2)]);
+        PreRegistration::factory()->create(['status' => 'aguardando', 'submitted_at' => now()->subHours(2)]);
+
+        Livewire::test(Portaria::class)
+            ->assertSee('1 pré-cadastro aguardando análise há mais de 24 horas');
+    }
+
+    public function test_the_portaria_shortcuts_link_to_real_routes(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
+
+        $response = $this->get('/portaria');
+
+        $response
+            ->assertOk()
+            ->assertSee(route('validation'), false)
+            ->assertSee(route('pre-registrations'), false)
+            ->assertSee(route('cash-register'), false);
     }
 
     public function test_the_access_validation_renders_the_complete_p06_journey(): void

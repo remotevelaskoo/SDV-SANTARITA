@@ -1,6 +1,6 @@
 <div class="portaria-home">
     <section class="welcome" aria-labelledby="welcome-title">
-        <h2 id="welcome-title">Olá, Tatiane</h2>
+        <h2 id="welcome-title">Olá, {{ auth()->user()->name }}</h2>
         <p>Resumo do turno e atalhos operacionais da Portaria Principal.</p>
     </section>
 
@@ -34,7 +34,7 @@
             </ul>
 
             <x-slot:footer>
-                <x-ui.button variant="secondary" disabled title="Módulo do Caixa será portado em uma próxima etapa (P14)">
+                <x-ui.button variant="secondary" href="{{ route('cash-register') }}">
                     Ver movimentações
                 </x-ui.button>
             </x-slot:footer>
@@ -62,7 +62,12 @@
 
     <section aria-label="Atendimentos recentes">
         <x-ui.card title="Atendimentos recentes" description="Últimas interações realizadas nesta portaria">
-            <x-ui.responsive-table label="Atendimentos recentes">
+            <x-ui.responsive-table
+                label="Atendimentos recentes"
+                :state="count($recentAttendances) ? 'ready' : 'empty'"
+                empty-title="Nenhum atendimento registrado"
+                empty-description="Os atendimentos aparecem aqui assim que uma entrada ou saída for validada."
+            >
                 <x-slot:table>
                     <thead>
                         <tr>
