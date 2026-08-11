@@ -2,18 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToImplantacao;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+// implantacao_id é fillable pelo mesmo motivo documentado em PreRegistration.
 #[Fillable([
+    'implantacao_id',
     'pre_registration_id', 'action', 'field', 'old_value', 'new_value',
     'reason', 'result', 'operator_id', 'operator_name', 'occurred_at',
 ])]
 class PreRegistrationEdit extends Model
 {
-    use HasUuids;
+    use BelongsToImplantacao, HasUuids;
 
     public const UPDATED_AT = null;
 

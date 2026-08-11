@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Implantacao;
 use App\Models\PreRegistration;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -11,6 +12,10 @@ class PortariaDemoSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(FoundationSeeder::class);
+
+        $implantacaoId = Implantacao::query()->where('slug', 'santa-rita')->value('id');
+
         User::query()->updateOrCreate(
             ['username' => 'portaria'],
             [
@@ -38,6 +43,7 @@ class PortariaDemoSeeder extends Seeder
         $now = now();
 
         PreRegistration::query()->create([
+            'implantacao_id' => $implantacaoId,
             'protocol' => 'PRE-SRA-X7K9M2',
             'name' => 'Camila Andrade',
             'document' => '***.***.331-**',
@@ -60,6 +66,7 @@ class PortariaDemoSeeder extends Seeder
         ]);
 
         PreRegistration::query()->create([
+            'implantacao_id' => $implantacaoId,
             'protocol' => 'PRE-SRA-M4N8Q1',
             'name' => 'Paulo Henrique Lima',
             'document' => '***.***.760-**',
@@ -82,6 +89,7 @@ class PortariaDemoSeeder extends Seeder
         ]);
 
         PreRegistration::query()->create([
+            'implantacao_id' => $implantacaoId,
             'protocol' => 'PRE-SRA-C2P5T8',
             'name' => 'Renata Alves',
             'document' => '***.***.218-**',
@@ -105,6 +113,7 @@ class PortariaDemoSeeder extends Seeder
         ]);
 
         PreRegistration::query()->create([
+            'implantacao_id' => $implantacaoId,
             'protocol' => 'PRE-SRA-R6V3B7',
             'name' => 'Felipe Martins',
             'document' => '***.***.004-**',
@@ -128,6 +137,7 @@ class PortariaDemoSeeder extends Seeder
         ]);
 
         PreRegistration::query()->create([
+            'implantacao_id' => $implantacaoId,
             'protocol' => 'PRE-SRA-H9D2K4',
             'name' => 'Sérgio Luz',
             'document' => '***.***.447-**',
