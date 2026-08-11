@@ -15,6 +15,8 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use App\Models\CaixaMovimentacao;
+use App\Models\CaixaTurno;
 use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
@@ -1428,6 +1430,11 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'));
 
+        $turno = CaixaTurno::factory()->create(['status' => 'aberto']);
+        CaixaMovimentacao::factory()->for($turno, 'caixaTurno')->create([
+            'description' => 'Contribuição — visitante Camila Andrade',
+        ]);
+
         $response = $this->get('/caixa');
 
         $response
@@ -1441,6 +1448,8 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_records_a_manual_movement(): void
     {
+        CaixaTurno::factory()->create(['status' => 'aberto']);
+
         Livewire::test(CashRegister::class)
             ->set('movementType', 'saida')
             ->set('movementAmount', '25,00')
@@ -1450,10 +1459,18 @@ class ExampleTest extends TestCase
             ->assertHasNoErrors()
             ->assertSee('Movimentação registrada')
             ->assertSee('Troco para portão de serviço');
+
+        $this->assertDatabaseHas('caixa_movimentacoes', [
+            'type' => 'saida',
+            'amount' => 25.00,
+            'description' => 'Troco para portão de serviço',
+        ]);
     }
 
     public function test_the_cash_register_blocks_movement_when_closed_and_reopens(): void
     {
+        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+
         Livewire::test(CashRegister::class)
             ->set('informedAmount', '50,00')
             ->call('closeRegister')
@@ -1464,12 +1481,16 @@ class ExampleTest extends TestCase
             ->assertSee('RN-084')
             ->set('openingBalanceInput', '200')
             ->call('openRegister')
-            ->assertSet('status', 'aberto')
-            ->assertSet('movements', []);
+            ->assertSet('status', 'aberto');
+
+        $this->assertDatabaseCount('caixa_turnos', 2);
+        $this->assertDatabaseHas('caixa_turnos', ['status' => 'aberto', 'opening_balance' => 200.00]);
     }
 
     public function test_the_cash_register_closing_computes_the_difference(): void
     {
+        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+
         Livewire::test(CashRegister::class)
             ->assertSet('status', 'aberto')
             ->set('informedAmount', '240,00')
@@ -1477,10 +1498,14 @@ class ExampleTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('status', 'fechado')
             ->assertSee('diferença de R$');
+
+        $this->assertDatabaseHas('caixa_turnos', ['status' => 'fechado', 'difference' => 40.00, 'closing_status' => 'diferenca']);
     }
 
     public function test_the_cash_register_rejects_a_zero_value_movement(): void
     {
+        CaixaTurno::factory()->create(['status' => 'aberto']);
+
         Livewire::test(CashRegister::class)
             ->set('movementType', 'entrada')
             ->set('movementAmount', '0,00')
