@@ -16,10 +16,13 @@ use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
 use App\Models\Imovel;
 use App\Models\Implantacao;
+use App\Models\Pessoa;
+use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Models\User;
 use App\Support\ImplantacaoContext;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -640,6 +643,57 @@ class ExampleTest extends TestCase
 
         $this->assertTrue($visiveis->contains($registroA->id));
         $this->assertFalse($visiveis->contains($registroB->id), 'pré-cadastros de outra implantação não podem vazar após o retrofit de implantacao_id');
+    }
+
+    public function test_reading_pessoas_is_isolated_between_implantacoes(): void
+    {
+        $implantacaoA = Implantacao::current();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $pessoaB = Pessoa::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $pessoaA = Pessoa::factory()->create();
+
+        $visiveis = Pessoa::query()->pluck('id');
+
+        $this->assertTrue($visiveis->contains($pessoaA->id));
+        $this->assertFalse($visiveis->contains($pessoaB->id), 'uma pessoa de outra implantação não pode aparecer na listagem');
+        $this->assertNull(Pessoa::query()->find($pessoaB->id), 'buscar por id conhecido de outra implantação deve falhar como não encontrado');
+    }
+
+    public function test_pessoa_version_uses_optimistic_concurrency(): void
+    {
+        $pessoa = Pessoa::factory()->create(['versao' => 1]);
+
+        $atualizadoPrimeiro = Pessoa::query()->where('id', $pessoa->id)->where('versao', 1)->update(['nome' => 'Nome Corrigido', 'versao' => 2]);
+        $this->assertSame(1, $atualizadoPrimeiro);
+
+        $atualizadoComVersaoDesatualizada = Pessoa::query()->where('id', $pessoa->id)->where('versao', 1)->update(['nome' => 'Sobrescrita Indevida', 'versao' => 3]);
+        $this->assertSame(0, $atualizadoComVersaoDesatualizada, 'uma atualização com versão desatualizada não pode sobrescrever a mais recente');
+
+        $this->assertSame('Nome Corrigido', $pessoa->fresh()->nome);
+    }
+
+    public function test_a_duplicate_document_is_rejected_within_the_same_implantacao_but_allowed_across_implantacoes(): void
+    {
+        $pessoa = Pessoa::factory()->create();
+        PessoaDocumento::factory()->for($pessoa, 'pessoa')->create(['valor_normalizado' => '12345678900']);
+
+        $outraPessoaMesmaImplantacao = Pessoa::factory()->create();
+
+        try {
+            PessoaDocumento::factory()->for($outraPessoaMesmaImplantacao, 'pessoa')->create(['valor_normalizado' => '12345678900']);
+            $this->fail('um CPF já cadastrado na mesma implantação não pode ser duplicado em outra pessoa.');
+        } catch (QueryException $exception) {
+            $this->assertTrue(true);
+        }
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $pessoaOutraImplantacao = Pessoa::factory()->create();
+
+        $documentoRepetidoEmOutraImplantacao = PessoaDocumento::factory()->for($pessoaOutraImplantacao, 'pessoa')->create(['valor_normalizado' => '12345678900']);
+        $this->assertSame('12345678900', $documentoRepetidoEmOutraImplantacao->valor_normalizado, 'o mesmo número de documento é permitido em implantações diferentes');
     }
 
     public function test_the_property_management_renders_the_p11_list(): void
