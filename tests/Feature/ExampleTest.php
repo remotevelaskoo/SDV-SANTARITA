@@ -110,6 +110,28 @@ class ExampleTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_logging_out_invalidates_the_session_and_redirects_to_login(): void
+    {
+        $user = $this->portariaOperator();
+        $this->actingAs($user);
+
+        $response = $this->post(route('logout'));
+
+        $response->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_the_dashboard_shows_the_real_logged_in_operator_name(): void
+    {
+        $this->withoutVite();
+        $user = $this->portariaOperator();
+        $user->update(['name' => 'Operador de Teste']);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $response->assertOk()->assertSee('Operador de Teste');
+    }
+
     public function test_the_dashboard_renders_the_approved_visual_structure(): void
     {
         $this->withoutVite();

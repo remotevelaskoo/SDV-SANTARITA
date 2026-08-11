@@ -13,11 +13,22 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/entrar');
 
 Route::get('/entrar', Login::class)->name('login');
+
+Route::post('/sair', function (Request $request) {
+    Auth::logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login');
+})->name('logout');
 Route::get('/dashboard', Dashboard::class)->name('dashboard');
 Route::get('/portaria', Portaria::class)->name('portaria');
 Route::get('/validacao', AccessValidation::class)->name('validation');
