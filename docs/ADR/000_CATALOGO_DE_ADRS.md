@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.21
+**Versão:** 1.0.22
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -37,6 +37,7 @@
 | 1.0.19 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-013 |
 | 1.0.20 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-014 |
 | 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
+| 1.0.22 | 11/08/2026 | Product Owner | Criação e aprovação retrospectiva do ADR-015 (integração externa de consulta de CEP) |
 
 ---
 
@@ -261,6 +262,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
+| [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -376,6 +378,7 @@ Antes da produção:
 | ADR-012 | `RN-088`, `RN-100` |
 | ADR-013 | `RN-045`, `RN-065`, `RN-066`, `RN-075` |
 | ADR-014 | `RN-041`, `RN-046` a `RN-049`, `RN-086` |
+| ADR-015 | `RN-002`, `RN-060` |
 
 ---
 
@@ -395,6 +398,7 @@ Antes da produção:
 | ADR-012 | `PEN-ARQ-012`, `PEN-ARQ-013`, `PEN-ARQ-019`, `PEN-ARQ-020` |
 | ADR-013 | `PEN-RNG-005`, `PEN-BDD-007`, `PEN-ARQ-008` |
 | ADR-014 | `PEN-BDD-021`, `PEN-BDD-025`, `PEN-ARQ-017` |
+| ADR-015 | `PEN-RNG-006` |
 
 ---
 
@@ -513,7 +517,7 @@ Ficam propostas para aprovação:
 
 # 24. Situação do conjunto e próxima etapa
 
-O conjunto inicial está completo:
+O conjunto inicial (`ADR-001` a `ADR-014`) está completo:
 
 - `ADR-001` a `ADR-007`: aprovados;
 - `ADR-008`: adiado com aprovação formal;
@@ -524,10 +528,12 @@ O conjunto inicial está completo:
 
 Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas.
 
+Fora do conjunto inicial, `ADR-015` (Integração externa: consulta de CEP — ViaCEP) foi criado e aprovado retrospectivamente em 11/08/2026, registrando uma decisão já implementada nas partes P08 e P11, conforme a seção 9 deste catálogo.
+
 A próxima etapa documental é a especificação de APIs. Devido à divergência de numeração registrada em `PEN-ADR-CAT-001`, o arquivo deverá usar o próximo número principal disponível, sem renomear silenciosamente a arquitetura aprovada.
 
 ---
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP.
