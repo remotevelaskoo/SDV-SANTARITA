@@ -19,6 +19,7 @@ use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
 use App\Models\EmpresaServico;
+use App\Models\Encomenda;
 use App\Models\EnderecoImovel;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
@@ -1495,6 +1496,13 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('encomendas.registrar'));
 
+        $imovel = Imovel::factory()->create();
+        $encomenda = Encomenda::factory()->for($imovel, 'imovel')->create([
+            'recipient_name' => 'Bianca Moretti',
+            'protocol' => 'SRE-20260810-0042',
+            'status' => 'aguardando',
+        ]);
+
         $response = $this->get('/encomendas');
 
         $response
@@ -1503,43 +1511,56 @@ class ExampleTest extends TestCase
             ->assertSee('Bianca Moretti')
             ->assertSee('SRE-20260810-0042')
             ->assertSee('Aguardando retirada')
-            ->assertSee('Registrar encomenda');
+            ->assertSee('Registrar encomenda')
+            ->assertSee("openPackage('{$encomenda->id}')", false);
     }
 
     public function test_the_package_detail_notifies_and_delivers(): void
     {
+        $imovel = Imovel::factory()->create();
+        $encomenda = Encomenda::factory()->for($imovel, 'imovel')->create(['recipient_name' => 'Rafael Domingues']);
+
         Livewire::test(PackageManagement::class)
-            ->call('openPackage', 3)
+            ->call('openPackage', $encomenda->id)
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedPackageId', 3)
+            ->assertSet('selectedPackageId', $encomenda->id)
             ->assertSee('Rafael Domingues')
             ->call('notifyRecipient')
-            ->assertSet('packages.2.status', 'avisado')
             ->assertSee('Morador avisado')
             ->set('deliveredTo', 'Rafael Domingues')
             ->call('deliverPackage')
-            ->assertSet('packages.2.status', 'entregue')
-            ->assertSet('packages.2.deliveredTo', 'Rafael Domingues')
             ->assertSee('Entrega registrada');
+
+        $this->assertDatabaseHas('encomendas', [
+            'id' => $encomenda->id,
+            'status' => 'entregue',
+            'delivered_to' => 'Rafael Domingues',
+        ]);
     }
 
     public function test_the_package_form_creates_a_demo_package_awaiting_notification(): void
     {
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-B-304']);
+
         Livewire::test(PackageManagement::class)
             ->call('createPackage')
             ->assertSet('mode', 'form')
             ->set('recipientName', 'Camila Andrade')
-            ->set('property', 'Bloco B — Apto 304')
+            ->set('property', 'SRA-B-304')
             ->set('carrier', 'Shopee')
             ->set('type', 'caixa')
             ->set('storageLocation', 'Prateleira A1')
             ->call('savePackage')
             ->assertHasNoErrors()
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedPackageId', 6)
-            ->assertSet('packages.5.status', 'aguardando')
-            ->assertSet('packages.5.notifiedAt', null)
             ->assertSee('O morador ainda não foi avisado.');
+
+        $this->assertDatabaseHas('encomendas', [
+            'recipient_name' => 'Camila Andrade',
+            'imovel_id' => $imovel->id,
+            'status' => 'aguardando',
+            'notified_at' => null,
+        ]);
     }
 
     public function test_the_public_pre_registration_welcome_reflects_a_tourist_stay(): void
