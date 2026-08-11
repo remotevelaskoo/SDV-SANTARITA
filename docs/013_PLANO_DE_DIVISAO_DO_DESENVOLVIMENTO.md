@@ -84,7 +84,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P05 | Modo Portaria | Página inicial do porteiro com caixa, atalhos, alertas e atendimentos recentes | P01 e definição dos atalhos | ✅ Concluída (protótipo — atalhos provisórios, aguardando confirmação da equipe) | Vinicius | [`vinicius/p05-modo-portaria`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/4) |
 | P06 | Validação de entrada | Identificação da pessoa, veículo, contribuição, observações, negação e liberação | P04 | ✅ Concluída (protótipo demonstrativo, sem equipamento real) | Lucas + Codex | `codex/p06-validacao-entrada` |
 | P07 | Cadastro rápido no atendimento | Criar cadastro mínimo sem perder a validação em andamento | P06 e P10 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p07-cadastro-rapido` |
-| P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p08-pre-cadastro` |
+| P08 | Pré-cadastro | Solicitação antecipada e análise pela portaria | P04 | ✅ Concluída (convite público ainda demonstrativo; fila e análise da portaria com persistência real desde o PR #21) | Lucas + Codex + Vinicius | `codex/p08-pre-cadastro`, [`vinicius/pre-registration-review-persistente`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/21) |
 | P09 | Entradas e saídas | Histórico, consulta, filtros, detalhes e resultados das tentativas | P06 | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p09-entradas-saidas` |
 | P10 | Cadastro de pessoas | Dados pessoais, documentos, foto, vínculos, credenciais e situação | P04 | ✅ Concluída (protótipo — sem persistência real, OCR ou sincronização facial) | Vinicius | `vinicius/p10-cadastro-pessoas` |
 | P11 | Cadastro de imóveis | Blocos, unidades, endereços, moradores, responsáveis e vínculos | P04 | ✅ Concluída (protótipo demonstrativo) | Lucas + Codex | `codex/p11-cadastro-imoveis` |
@@ -121,10 +121,13 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | Convite público | Boas-vindas, destino protegido, período, validade e aviso de segurança | ✅ Concluída |
 | Fluxo em seis etapas | Dados pessoais, endereço informado, documento, selfie, veículo opcional e confirmação | ✅ Concluída |
 | Protocolo | Resultado demonstrativo, cópia e mensagem de que o protocolo não autoriza entrada | ✅ Concluída |
-| Fila da portaria | Resumo, busca, filtros, tabela responsiva e cartões no celular | ✅ Concluída |
-| Análise | Detalhes, checklist, histórico, aprovação, rejeição e solicitação de correção | ✅ Concluída |
+| Fila da portaria | Resumo, busca, filtros, tabela responsiva e cartões no celular, com dados persistidos em banco (`pre_registrations`) | ✅ Concluída |
+| Análise | Ficha completa com todos os dados preenchidos (não só checklist), histórico, aprovação, rejeição e solicitação de correção | ✅ Concluída |
+| Edição controlada pela portaria | Correção textual com permissão específica, justificativa obrigatória, auditoria persistente (`pre_registration_edits`) e controle de concorrência por versão — [PR #21](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/21) | ✅ Concluída |
 | Segurança do protótipo | Aprovação separada da Validação de Entrada e ausência de comando físico | ✅ Concluída |
 | Qualidade | Computador, celular, validações, testes automáticos e compilação visual | ✅ Aprovada |
+
+**Nota sobre persistência e login (PR #21):** a fila e a análise da portaria deixaram de usar dados demonstrativos em array e passaram a usar tabelas reais (UUIDv7, conforme `ADR-003`), com login real via `Auth::attempt` restrito à permissão de edição. Isso é uma fatia mínima e escopada de P18/P19/P20, feita apenas para viabilizar a edição auditada — não é a entrega completa dessas partes, que seguem conforme registrado abaixo. O convite público do pré-cadastro (etapas 1 a 6) continua demonstrativo e ainda não persiste no banco.
 
 #### Acompanhamento detalhado da P11
 
@@ -163,9 +166,9 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟢 Disponível | A definir | A definir |
-| P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🔴 Bloqueada | A definir | A definir |
-| P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🔴 Bloqueada | A definir | A definir |
+| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟢 Disponível (já existe um precedente restrito: `pre_registrations` e `pre_registration_edits`, sem `implantacao_id`/multi-implantação — ver nota no P08) | A definir | A definir |
+| P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🔴 Bloqueada (já existe um precedente restrito: `Auth::attempt` contra `users`, sem logout nem recuperação de acesso — ver nota no P08) | A definir | A definir |
+| P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🔴 Bloqueada (já existe um precedente restrito: `users.can_edit_pre_registrations`, uma única permissão pontual, não um sistema de perfis — ver nota no P08) | A definir | A definir |
 | P21 | Conexão das telas | Trocar dados demonstrativos por cadastros e operações reais | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 | P22 | Auditoria | Registrar quem realizou cada operação, quando e em qual contexto | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 
