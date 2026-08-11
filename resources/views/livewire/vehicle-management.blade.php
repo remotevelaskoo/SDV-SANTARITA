@@ -58,7 +58,7 @@
                                 <td><strong>{{ $vehicle['propertyCode'] }}</strong><small>{{ $vehicle['relationship'] }}</small></td>
                                 <td><x-ui.badge :variant="match ($vehicle['status']) { 'ativo' => 'success', 'bloqueado' => 'danger', 'pendente' => 'warning', default => 'neutral' }">{{ match ($vehicle['status']) { 'ativo' => 'Ativo', 'bloqueado' => 'Bloqueado', 'pendente' => 'Pendente', default => 'Inativo' } }}</x-ui.badge></td>
                                 <td><x-ui.badge :variant="match ($vehicle['lprStatus']) { 'sincronizado' => 'success', 'revisao' => 'warning', 'suspenso' => 'danger', default => 'neutral' }">{{ match ($vehicle['lprStatus']) { 'sincronizado' => 'Sincronizada', 'revisao' => 'Em revisão', 'suspenso' => 'Suspensa', default => 'Não sincronizada' } }}</x-ui.badge></td>
-                                <td><div class="vehicle-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openVehicle({{ $vehicle['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editVehicle({{ $vehicle['id'] }})">Editar</x-ui.button></div></td>
+                                <td><div class="vehicle-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openVehicle('{{ $vehicle['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editVehicle('{{ $vehicle['id'] }}')">Editar</x-ui.button></div></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -71,7 +71,7 @@
                                 <header><div><strong>{{ $vehicle['plate'] }}</strong><small>{{ $vehicle['brand'] }} {{ $vehicle['model'] }}</small></div><x-ui.badge :variant="match ($vehicle['status']) { 'ativo' => 'success', 'bloqueado' => 'danger', 'pendente' => 'warning', default => 'neutral' }">{{ match ($vehicle['status']) { 'ativo' => 'Ativo', 'bloqueado' => 'Bloqueado', 'pendente' => 'Pendente', default => 'Inativo' } }}</x-ui.badge></header>
                                 <dl><div><dt>Proprietário</dt><dd>{{ $vehicle['owner'] }}</dd></div><div><dt>Imóvel</dt><dd>{{ $vehicle['propertyCode'] }}</dd></div><div><dt>Características</dt><dd>{{ $vehicle['color'] }} · {{ $vehicle['year'] }}</dd></div><div><dt>Leitura de placa</dt><dd>{{ match ($vehicle['lprStatus']) { 'sincronizado' => 'Sincronizada', 'revisao' => 'Em revisão', 'suspenso' => 'Suspensa', default => 'Não sincronizada' } }}</dd></div></dl>
                                 @if ($vehicle['alert'])<x-ui.alert variant="warning">{{ $vehicle['alert'] }}</x-ui.alert>@endif
-                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openVehicle({{ $vehicle['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editVehicle({{ $vehicle['id'] }})">Editar</x-ui.button></footer>
+                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openVehicle('{{ $vehicle['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editVehicle('{{ $vehicle['id'] }}')">Editar</x-ui.button></footer>
                             </li>
                         @endforeach
                     </ul>
@@ -86,7 +86,7 @@
         <section class="vehicle-detail-hero">
             <span class="vehicle-detail-icon"><x-icon name="car" /></span>
             <div><span>Placa do veículo</span><h2>{{ $selectedVehicle['plate'] }}</h2><p>{{ $selectedVehicle['brand'] }} {{ $selectedVehicle['model'] }} · {{ $selectedVehicle['color'] }} · {{ $selectedVehicle['year'] }}</p></div>
-            <div class="vehicle-detail-hero__actions"><x-ui.badge :variant="match ($selectedVehicle['status']) { 'ativo' => 'success', 'bloqueado' => 'danger', 'pendente' => 'warning', default => 'neutral' }">{{ match ($selectedVehicle['status']) { 'ativo' => 'Ativo', 'bloqueado' => 'Bloqueado', 'pendente' => 'Pendente', default => 'Inativo' } }}</x-ui.badge><x-ui.button variant="secondary" wire:click="editVehicle({{ $selectedVehicle['id'] }})">Editar dados</x-ui.button></div>
+            <div class="vehicle-detail-hero__actions"><x-ui.badge :variant="match ($selectedVehicle['status']) { 'ativo' => 'success', 'bloqueado' => 'danger', 'pendente' => 'warning', default => 'neutral' }">{{ match ($selectedVehicle['status']) { 'ativo' => 'Ativo', 'bloqueado' => 'Bloqueado', 'pendente' => 'Pendente', default => 'Inativo' } }}</x-ui.badge><x-ui.button variant="secondary" wire:click="editVehicle('{{ $selectedVehicle['id'] }}')">Editar dados</x-ui.button></div>
         </section>
 
         @if ($selectedVehicle['alert'])<x-ui.alert variant="warning" title="Atenção necessária">{{ $selectedVehicle['alert'] }}</x-ui.alert>@endif
