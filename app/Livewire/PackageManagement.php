@@ -2,7 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\Encomenda;
+use App\Models\Imovel;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -14,12 +18,12 @@ class PackageManagement extends Component
 
     public string $statusFilter = 'todas';
 
-    public ?int $selectedPackageId = null;
+    public ?string $selectedPackageId = null;
 
     // Formulário de recebimento
     public string $recipientName = '';
 
-    public string $property = 'Bloco B — Apto 304';
+    public string $property = '';
 
     public string $carrier = '';
 
@@ -37,25 +41,6 @@ class PackageManagement extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    /** @var list<array<string, mixed>> */
-    public array $packages = [
-        [
-            'id' => 1, 'protocol' => 'SRE-20260810-0041', 'recipient' => 'Marcos Vinicius da Silva', 'property' => 'Bloco A — Apto 102', 'carrier' => 'Correios', 'type' => 'caixa', 'storageLocation' => 'Prateleira A3', 'status' => 'entregue', 'receivedAt' => '10/08/2026 09:12', 'receivedBy' => 'Tatiane Souza', 'notifiedAt' => '10/08/2026 09:14', 'deliveredAt' => '10/08/2026 18:30', 'deliveredTo' => 'Marcos Vinicius da Silva', 'notes' => null,
-        ],
-        [
-            'id' => 2, 'protocol' => 'SRE-20260810-0042', 'recipient' => 'Bianca Moretti', 'property' => 'Bloco A — Apto 208', 'carrier' => 'Mercado Livre', 'type' => 'caixa', 'storageLocation' => 'Prateleira B1', 'status' => 'avisado', 'receivedAt' => '10/08/2026 11:05', 'receivedBy' => 'Tatiane Souza', 'notifiedAt' => '10/08/2026 11:07', 'deliveredAt' => null, 'deliveredTo' => null, 'notes' => 'Volume grande, não empilhar.',
-        ],
-        [
-            'id' => 3, 'protocol' => 'SRE-20260810-0043', 'recipient' => 'Rafael Domingues', 'property' => 'Bloco C — Apto 501', 'carrier' => 'Amazon', 'type' => 'envelope', 'storageLocation' => 'Gaveta C2', 'status' => 'aguardando', 'receivedAt' => '10/08/2026 14:40', 'receivedBy' => 'Tatiane Souza', 'notifiedAt' => null, 'deliveredAt' => null, 'deliveredTo' => null, 'notes' => null,
-        ],
-        [
-            'id' => 4, 'protocol' => 'SRE-20260810-0044', 'recipient' => 'Mariana Souza', 'property' => 'Bloco B — Apto 304', 'carrier' => 'Transportadora Vale Express', 'type' => 'volume', 'storageLocation' => 'Depósito — Setor 2', 'status' => 'aguardando', 'receivedAt' => '10/08/2026 16:20', 'receivedBy' => 'Tatiane Souza', 'notifiedAt' => null, 'deliveredAt' => null, 'deliveredTo' => null, 'notes' => 'Requer duas pessoas para transporte.',
-        ],
-        [
-            'id' => 5, 'protocol' => 'SRE-20260809-0038', 'recipient' => 'Eduardo Nogueira', 'property' => 'Bloco A — Apto 112', 'carrier' => 'Correios', 'type' => 'envelope', 'storageLocation' => 'Gaveta C1', 'status' => 'entregue', 'receivedAt' => '09/08/2026 10:02', 'receivedBy' => 'Marcos Almeida', 'notifiedAt' => '09/08/2026 10:05', 'deliveredAt' => '09/08/2026 19:40', 'deliveredTo' => 'Eduardo Nogueira', 'notes' => null,
-        ],
-    ];
-
     public function setStatusFilter(string $status): void
     {
         if (in_array($status, ['todas', 'aguardando', 'avisado', 'entregue'], true)) {
@@ -63,9 +48,9 @@ class PackageManagement extends Component
         }
     }
 
-    public function openPackage(int $id): void
+    public function openPackage(string $id): void
     {
-        if ($this->findPackage($id)) {
+        if (Encomenda::query()->whereKey($id)->exists()) {
             $this->selectedPackageId = $id;
             $this->mode = 'detail';
             $this->feedback = null;
@@ -97,26 +82,28 @@ class PackageManagement extends Component
             'required' => 'Preencha este campo para registrar a encomenda.',
         ]);
 
-        $id = count($this->packages) ? max(array_column($this->packages, 'id')) + 1 : 1;
+        $imovel = Imovel::query()->where('codigo', $this->property)->first();
 
-        $this->packages[] = [
-            'id' => $id,
-            'protocol' => 'SRE-'.now()->format('Ymd').'-'.str_pad((string) (count($this->packages) + 40), 4, '0', STR_PAD_LEFT),
-            'recipient' => $this->recipientName,
-            'property' => $this->property,
+        if (! $imovel) {
+            $this->addError('property', 'Selecione um imóvel válido.');
+
+            return;
+        }
+
+        $encomenda = Encomenda::query()->create([
+            'protocol' => $this->generateProtocol(),
+            'recipient_name' => $this->recipientName,
+            'imovel_id' => $imovel->id,
             'carrier' => $this->carrier,
             'type' => $this->type,
-            'storageLocation' => $this->storageLocation,
+            'storage_location' => $this->storageLocation,
             'status' => 'aguardando',
-            'receivedAt' => now()->format('d/m/Y H:i'),
-            'receivedBy' => 'Tatiane Souza',
-            'notifiedAt' => null,
-            'deliveredAt' => null,
-            'deliveredTo' => null,
+            'received_at' => now(),
+            'received_by' => Auth::id(),
             'notes' => $this->notes !== '' ? $this->notes : null,
-        ];
+        ]);
 
-        $this->selectedPackageId = $id;
+        $this->selectedPackageId = $encomenda->id;
         $this->mode = 'detail';
         $this->feedback = [
             'variant' => 'success',
@@ -127,18 +114,13 @@ class PackageManagement extends Component
 
     public function notifyRecipient(): void
     {
-        $package = $this->findPackage($this->selectedPackageId ?? 0);
+        $encomenda = Encomenda::query()->find($this->selectedPackageId);
 
-        if (! $package || $package['status'] !== 'aguardando') {
+        if (! $encomenda || $encomenda->status !== 'aguardando') {
             return;
         }
 
-        foreach ($this->packages as $index => $item) {
-            if ($item['id'] === $package['id']) {
-                $this->packages[$index]['status'] = 'avisado';
-                $this->packages[$index]['notifiedAt'] = now()->format('d/m/Y H:i');
-            }
-        }
+        $encomenda->update(['status' => 'avisado', 'notified_at' => now()]);
 
         $this->feedback = [
             'variant' => 'success',
@@ -149,9 +131,9 @@ class PackageManagement extends Component
 
     public function deliverPackage(): void
     {
-        $package = $this->findPackage($this->selectedPackageId ?? 0);
+        $encomenda = Encomenda::query()->find($this->selectedPackageId);
 
-        if (! $package || $package['status'] === 'entregue') {
+        if (! $encomenda || $encomenda->status === 'entregue') {
             return;
         }
 
@@ -162,16 +144,12 @@ class PackageManagement extends Component
             'required' => 'Informe quem retirou a encomenda.',
         ]);
 
-        foreach ($this->packages as $index => $item) {
-            if ($item['id'] === $package['id']) {
-                $this->packages[$index]['status'] = 'entregue';
-                $this->packages[$index]['deliveredAt'] = now()->format('d/m/Y H:i');
-                $this->packages[$index]['deliveredTo'] = $this->deliveredTo;
-                if ($this->deliveryNotes !== '') {
-                    $this->packages[$index]['notes'] = trim(($item['notes'] ?? '').' '.$this->deliveryNotes);
-                }
-            }
-        }
+        $encomenda->update([
+            'status' => 'entregue',
+            'delivered_at' => now(),
+            'delivered_to' => $this->deliveredTo,
+            'notes' => $this->deliveryNotes !== '' ? trim(($encomenda->notes ?? '').' '.$this->deliveryNotes) : $encomenda->notes,
+        ]);
 
         $this->reset(['deliveredTo', 'deliveryNotes']);
         $this->feedback = [
@@ -186,38 +164,84 @@ class PackageManagement extends Component
     {
         $search = mb_strtolower(trim($this->search));
 
-        return array_values(array_filter($this->packages, function (array $package) use ($search): bool {
-            $matchesStatus = $this->statusFilter === 'todas' || $package['status'] === $this->statusFilter;
-            $matchesSearch = $search === '' || str_contains(mb_strtolower(implode(' ', [
-                $package['recipient'], $package['property'], $package['protocol'], $package['carrier'],
-            ])), $search);
+        $query = Encomenda::query()->with(['imovel', 'recebidaPor']);
 
-            return $matchesStatus && $matchesSearch;
-        }));
+        if ($this->statusFilter !== 'todas') {
+            $query->where('status', $this->statusFilter);
+        }
+
+        $encomendas = $query->orderByDesc('received_at')->get();
+
+        if ($search !== '') {
+            $encomendas = $encomendas->filter(fn (Encomenda $encomenda) => str_contains(
+                mb_strtolower(implode(' ', array_filter([
+                    $encomenda->recipient_name, $encomenda->imovel->codigo, $encomenda->protocol, $encomenda->carrier,
+                ]))),
+                $search
+            ));
+        }
+
+        return $encomendas->map(fn (Encomenda $encomenda) => $this->toArray($encomenda))->values()->all();
     }
 
     /** @return array<string, mixed>|null */
     public function selectedPackage(): ?array
     {
-        return $this->selectedPackageId ? $this->findPackage($this->selectedPackageId) : null;
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findPackage(int $id): ?array
-    {
-        foreach ($this->packages as $package) {
-            if ($package['id'] === $id) {
-                return $package;
-            }
+        if ($this->selectedPackageId === null) {
+            return null;
         }
 
-        return null;
+        $encomenda = Encomenda::query()->with(['imovel', 'recebidaPor'])->find($this->selectedPackageId);
+
+        return $encomenda ? $this->toArray($encomenda) : null;
+    }
+
+    /** @return array{aguardando: int, avisado: int, entregue: int} */
+    public function packageCounts(): array
+    {
+        return [
+            'aguardando' => Encomenda::query()->where('status', 'aguardando')->count(),
+            'avisado' => Encomenda::query()->where('status', 'avisado')->count(),
+            'entregue' => Encomenda::query()->where('status', 'entregue')->count(),
+        ];
+    }
+
+    /** @return Collection<int, Imovel> */
+    public function imoveis(): Collection
+    {
+        return Imovel::query()->orderBy('codigo')->get();
+    }
+
+    /** @return array<string, mixed> */
+    private function toArray(Encomenda $encomenda): array
+    {
+        return [
+            'id' => $encomenda->id,
+            'protocol' => $encomenda->protocol,
+            'recipient' => $encomenda->recipient_name,
+            'property' => $encomenda->imovel->label(),
+            'carrier' => $encomenda->carrier,
+            'type' => $encomenda->type,
+            'storageLocation' => $encomenda->storage_location,
+            'status' => $encomenda->status,
+            'receivedAt' => $encomenda->received_at->format('d/m/Y H:i'),
+            'receivedBy' => $encomenda->recebidaPor?->name ?? 'Sistema',
+            'notifiedAt' => $encomenda->notified_at?->format('d/m/Y H:i'),
+            'deliveredAt' => $encomenda->delivered_at?->format('d/m/Y H:i'),
+            'deliveredTo' => $encomenda->delivered_to,
+            'notes' => $encomenda->notes,
+        ];
+    }
+
+    private function generateProtocol(): string
+    {
+        return 'SRE-'.now()->format('Ymd').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     private function resetForm(): void
     {
         $this->recipientName = '';
-        $this->property = 'Bloco B — Apto 304';
+        $this->property = '';
         $this->carrier = '';
         $this->type = 'caixa';
         $this->storageLocation = '';
@@ -231,6 +255,9 @@ class PackageManagement extends Component
         return view('livewire.package-management', [
             'filteredPackages' => $this->filteredPackages(),
             'selectedPackage' => $this->selectedPackage(),
+            'packageCounts' => $this->packageCounts(),
+            'totalPackages' => Encomenda::query()->count(),
+            'imoveis' => $this->imoveis(),
         ])->layout('components.layouts.app', [
             'title' => 'Encomendas',
             'heading' => $this->mode === 'form' ? 'Registrar encomenda' : ($this->mode === 'detail' ? 'Detalhe da encomenda' : 'Encomendas'),

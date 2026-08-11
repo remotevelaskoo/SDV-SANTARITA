@@ -12,19 +12,11 @@
     @endphp
 
     @if ($mode === 'list')
-        @php
-            $packageCounts = [
-                'aguardando' => collect($packages)->where('status', 'aguardando')->count(),
-                'avisado' => collect($packages)->where('status', 'avisado')->count(),
-                'entregue' => collect($packages)->where('status', 'entregue')->count(),
-            ];
-        @endphp
-
         <section class="package-summary-grid" aria-label="Resumo das encomendas">
             <article><span>Aguardando retirada</span><strong>{{ $packageCounts['aguardando'] }}</strong><small>Ainda não avisadas</small></article>
             <article><span>Moradores avisados</span><strong>{{ $packageCounts['avisado'] }}</strong><small>Aguardando retirada</small></article>
             <article><span>Entregues</span><strong>{{ $packageCounts['entregue'] }}</strong><small>Ciclo concluído</small></article>
-            <article><span>Total no filtro</span><strong>{{ count($filteredPackages) }}</strong><small>De {{ count($packages) }} registradas</small></article>
+            <article><span>Total no filtro</span><strong>{{ count($filteredPackages) }}</strong><small>De {{ $totalPackages }} registradas</small></article>
         </section>
 
         <section class="package-list-card" aria-labelledby="package-list-title">
@@ -64,7 +56,7 @@
                                 <td>{{ $package['storageLocation'] }}</td>
                                 <td>{{ $package['receivedAt'] }}</td>
                                 <td><x-ui.badge :variant="$statusVariant($package['status'])">{{ $statusLabel($package['status']) }}</x-ui.badge></td>
-                                <td><x-ui.button variant="secondary" size="sm" wire:click="openPackage({{ $package['id'] }})">Detalhes</x-ui.button></td>
+                                <td><x-ui.button variant="secondary" size="sm" wire:click="openPackage('{{ $package['id'] }}')">Detalhes</x-ui.button></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -80,14 +72,14 @@
                                 </div>
                                 <time>{{ $package['receivedAt'] }}</time>
                                 <x-ui.badge :variant="$statusVariant($package['status'])">{{ $statusLabel($package['status']) }}</x-ui.badge>
-                                <x-ui.button variant="ghost" size="sm" wire:click="openPackage({{ $package['id'] }})">Detalhes</x-ui.button>
+                                <x-ui.button variant="ghost" size="sm" wire:click="openPackage('{{ $package['id'] }}')">Detalhes</x-ui.button>
                             </li>
                         @endforeach
                     </ul>
                 </x-slot:cards>
             </x-ui.responsive-table>
 
-            <footer class="package-list-footer"><span>Exibindo {{ count($filteredPackages) }} de {{ count($packages) }} encomendas</span><small>Dados demonstrativos da P15</small></footer>
+            <footer class="package-list-footer"><span>Exibindo {{ count($filteredPackages) }} de {{ $totalPackages }} encomendas</span></footer>
         </section>
     @elseif ($mode === 'detail' && $selectedPackage)
         <nav class="package-breadcrumb" aria-label="Caminho da página"><button type="button" wire:click="backToList">Encomendas</button><x-icon name="chevron-right" /><span aria-current="page">{{ $selectedPackage['protocol'] }}</span></nav>
@@ -158,11 +150,10 @@
                     <div class="package-form-fields">
                         <x-ui.field id="package-recipient" label="Destinatário" wire:model="recipientName" :error="$errors->first('recipientName')" required />
                         <x-ui.select id="package-property" label="Imóvel" wire:model="property" :error="$errors->first('property')" required>
-                            <option value="Bloco A — Apto 102">Bloco A — Apto 102</option>
-                            <option value="Bloco A — Apto 112">Bloco A — Apto 112</option>
-                            <option value="Bloco A — Apto 208">Bloco A — Apto 208</option>
-                            <option value="Bloco B — Apto 304">Bloco B — Apto 304</option>
-                            <option value="Bloco C — Apto 501">Bloco C — Apto 501</option>
+                            <option value="">Selecione o imóvel</option>
+                            @foreach ($imoveis as $imovel)
+                                <option value="{{ $imovel->codigo }}">{{ $imovel->label() }}</option>
+                            @endforeach
                         </x-ui.select>
                         <x-ui.field id="package-carrier" label="Transportadora" wire:model="carrier" placeholder="Ex.: Correios, Mercado Livre" :error="$errors->first('carrier')" required />
                         <x-ui.select id="package-type" label="Tipo" wire:model="type" :error="$errors->first('type')" required>
@@ -195,7 +186,7 @@
                         <li><x-icon name="check-circle" /><span><strong>Entrega</strong><small>Só é concluída com o nome de quem retirou.</small></span></li>
                     </ul>
                 </x-ui.card>
-                <x-ui.alert variant="warning" title="Protótipo demonstrativo">Os dados ficam somente na memória desta tela e não são gravados em banco de dados nesta etapa.</x-ui.alert>
+                <x-ui.alert variant="info" title="Registro de recebimento">O aviso ao morador e a entrega são registrados em etapas separadas, na tela de detalhe.</x-ui.alert>
             </aside>
         </section>
     @endif
