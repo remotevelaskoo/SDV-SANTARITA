@@ -35,12 +35,12 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 
 | Situação | Quantidade | Partes |
 |---|---:|---|
-| ✅ Concluídas | 15 | P01 a P15 |
-| 🟡 Em andamento | 1 | P18 |
-| 🔴 Bloqueadas | 10 | P16, P17, P19 a P25 e P27 |
+| ✅ Concluídas | 16 | P01 a P15 e P18 |
+| 🟢 Disponíveis | 2 | P19, P20 |
+| 🔴 Bloqueadas | 8 | P16, P17, P21 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
-O avanço por quantidade de partes é de **15 concluídas em 27 (aproximadamente 56%)**, com o P18 em andamento. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
+O avanço por quantidade de partes é de **16 concluídas em 27 (aproximadamente 59%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
 
 ## 3. Termos usados pela equipe
 
@@ -166,9 +166,9 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | 🟡 Em andamento — fundação multi-implantação, grupo Imóveis, grupo Pessoas, grupo Vínculos e grupo Veículos (`veiculos`, `veiculo_vinculos`) entregues, todos com testes de isolamento e concorrência; placa normalizada única por implantação; alvo principal do vínculo veicular restrito a pessoa + imóvel opcional (`PEN-BDD-011` pendente — empresa/autorização ainda não existem como tabelas reais); dados de demonstração reaproveitam os veículos de `VehicleManagement.php` cujo dono já existe como Pessoa semeada. Falta Usuários/Perfis/Permissões antes de marcar ✅ Concluída | Vinicius | [`vinicius/p18-fundacao-imoveis`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/22), [`vinicius/p18-pessoas`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/23), [`vinicius/p18-vinculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/26), [`vinicius/p18-veiculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/27) |
-| P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🔴 Bloqueada (já existe um precedente restrito: `Auth::attempt` contra `users`, sem logout nem recuperação de acesso — ver nota no P08) | A definir | A definir |
-| P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🔴 Bloqueada (já existe um precedente restrito: `users.can_edit_pre_registrations`, uma única permissão pontual, não um sistema de perfis — ver nota no P08) | A definir | A definir |
+| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | ✅ Concluída — fundação multi-implantação, grupo Imóveis, grupo Pessoas, grupo Vínculos, grupo Veículos e grupo Usuários/Perfis/Permissões (`usuario_implantacoes`, `permissoes`, `perfis`, `perfil_permissoes`, `usuario_perfis`) entregues, todos com testes de isolamento e concorrência. Pendências conhecidas, deixadas para quando existir tela real de administração (P19/P20/P21): `usuario_excecoes_permissao` e `sessoes_usuario` não construídas (sem consumidor ainda); `users.can_edit_pre_registrations` continua em paralelo ao novo perfil "Portaria" (mesma permissão nos dois lugares, não reconciliados); `ImplantacaoContext::current()` ainda não consulta `usuario_implantacoes` — resolve sempre para a implantação única; precedência entre concessão e negação de permissão segue indefinida (`PEN-BDD-017`); integridade temporal (`término > início`) só é validada em `vinculos`/`veiculo_vinculos`/`usuario_perfis`, faltando em `enderecos_imoveis`/`pessoa_documentos`/`pessoa_contatos`/`pessoa_enderecos` | Vinicius | [`vinicius/p18-fundacao-imoveis`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/22), [`vinicius/p18-pessoas`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/23), [`vinicius/p18-vinculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/26), [`vinicius/p18-veiculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/27), [`vinicius/p18-usuarios`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/28) |
+| P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🟢 Disponível — P18 concluído; já existe um precedente restrito (`Auth::attempt` contra `users`, `usuario_implantacoes`), mas sem logout, recuperação de acesso, `sessoes_usuario` nem resolução real de contexto multi-implantação | A definir | A definir |
+| P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🟢 Disponível — P18 concluído; já existe a estrutura de dados (`perfis`, `permissoes`, `perfil_permissoes`, `usuario_perfis`) e um perfil de exemplo ("Portaria"), mas nenhuma tela de administração nem os perfis reais (porteiro, caixa, gestor, administrador, auditor) definidos | A definir | A definir |
 | P21 | Conexão das telas | Trocar dados demonstrativos por cadastros e operações reais | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 | P22 | Auditoria | Registrar quem realizou cada operação, quando e em qual contexto | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 
@@ -184,7 +184,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14 e P15 já foram concluídas (protótipos demonstrativos). O **P18 — Banco de dados inicial** está em andamento com Vinicius (fundação multi-implantação e o grupo Imóveis entregues; Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões seguem como próximos passos dentro da própria P18, sem exigir nova atribuição). As demais partes (P16, P17, P19 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
+P09, P14, P15 e agora o **P18 — Banco de dados inicial** (fundação multi-implantação e os grupos Imóveis, Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões) já foram concluídos. Com o P18 pronto, **P19 — Login real** e **P20 — Perfis e permissões** ficam disponíveis para começar — ainda sem responsável definido. As demais partes (P16, P17, P21 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
