@@ -31,6 +31,7 @@ use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Support\ImplantacaoContext;
+use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -58,11 +59,23 @@ class ExampleTest extends TestCase
 
     private function portariaOperator(bool $canEdit = true): User
     {
-        return User::factory()->create([
+        $user = User::factory()->create([
             'username' => 'portaria',
             'password' => 'sdv2026',
-            'can_edit_pre_registrations' => $canEdit,
         ]);
+
+        if ($canEdit) {
+            $permissao = Permissao::query()->firstOrCreate(
+                ['chave' => 'pre-registro.editar'],
+                ['modulo' => 'pre-cadastro', 'descricao' => 'Corrigir dados de um pré-cadastro antes da aprovação']
+            );
+            $perfil = Perfil::factory()->create();
+            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+
+            UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+        }
+
+        return $user;
     }
 
     public function test_the_home_page_redirects_to_the_login(): void
@@ -537,7 +550,7 @@ class ExampleTest extends TestCase
             ->call('beginEdit', $record->id)
             ->assertSet('editingId', null);
 
-        $this->assertFalse($operatorWithoutPermission->fresh()->can_edit_pre_registrations);
+        $this->assertFalse($operatorWithoutPermission->fresh()->hasPermission('pre-registro.editar'));
     }
 
     public function test_editing_is_denied_for_a_guest_operator(): void
@@ -851,6 +864,56 @@ class ExampleTest extends TestCase
         Permissao::factory()->create(['chave' => 'teste.permissao']);
 
         $this->assertFalse($user->hasPermission('teste.permissao'));
+    }
+
+    public function test_the_demo_seeder_grants_the_spec_permissions_to_each_perfil(): void
+    {
+        $this->seed(UsuarioDemoSeeder::class);
+
+        $porteiroCaixa = Perfil::query()->where('nome', 'Porteiro/Caixa')->firstOrFail();
+        $gestor = Perfil::query()->where('nome', 'Gestor')->firstOrFail();
+        $auditor = Perfil::query()->where('nome', 'Auditor')->firstOrFail();
+        $administrador = Perfil::query()->where('nome', 'Administrador')->firstOrFail();
+
+        $this->assertTrue($porteiroCaixa->concede('validacao.registrar'));
+        $this->assertTrue($porteiroCaixa->concede('veiculos.consultar'));
+        $this->assertTrue($porteiroCaixa->concede('empresas.consultar'));
+        $this->assertTrue($porteiroCaixa->concede('encomendas.registrar'));
+        $this->assertFalse($porteiroCaixa->concede('usuarios.administrar'));
+        $this->assertFalse($porteiroCaixa->concede('caixa.consolidado.consultar'));
+
+        $this->assertTrue($gestor->concede('validacao.registrar'), 'gestor herda tudo do porteiro/caixa');
+        $this->assertTrue($gestor->concede('caixa.consolidado.consultar'));
+        $this->assertTrue($gestor->concede('autorizacoes.gerenciar'));
+        $this->assertFalse($gestor->concede('usuarios.administrar'));
+        $this->assertFalse($gestor->concede('perfis.administrar'));
+
+        $this->assertTrue($auditor->concede('relatorios.consolidado.consultar'));
+        $this->assertTrue($auditor->concede('imoveis.consultar'));
+        $this->assertFalse($auditor->concede('validacao.registrar'), 'auditor só consulta, não registra validações');
+        $this->assertFalse($auditor->concede('pre-registro.aprovar'));
+        $this->assertFalse($auditor->concede('caixa.proprio.gerenciar'));
+
+        $this->assertTrue($administrador->concede('usuarios.administrar'));
+        $this->assertTrue($administrador->concede('perfis.administrar'));
+        $this->assertTrue($administrador->concede('configuracoes.gerenciar'));
+        $this->assertTrue($administrador->concede('validacao.registrar'), 'administrador tem acesso completo');
+    }
+
+    public function test_the_demo_seeder_assigns_each_demo_user_to_the_matching_perfil(): void
+    {
+        $this->seed(UsuarioDemoSeeder::class);
+
+        $porteiro = User::query()->where('username', 'portaria')->firstOrFail();
+        $leitura = User::query()->where('username', 'portaria.leitura')->firstOrFail();
+        $gestor = User::query()->where('username', 'gestor')->firstOrFail();
+        $administrador = User::query()->where('username', 'administrador')->firstOrFail();
+
+        $this->assertTrue($porteiro->hasPermission('validacao.registrar'));
+        $this->assertTrue($leitura->hasPermission('relatorios.consolidado.consultar'));
+        $this->assertFalse($leitura->hasPermission('validacao.registrar'));
+        $this->assertTrue($gestor->hasPermission('autorizacoes.gerenciar'));
+        $this->assertTrue($administrador->hasPermission('usuarios.administrar'));
     }
 
     public function test_the_property_management_renders_the_p11_list(): void

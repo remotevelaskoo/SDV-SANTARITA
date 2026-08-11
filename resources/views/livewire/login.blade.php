@@ -88,9 +88,13 @@
             <div class="demo-access">
                 <div>
                     <strong>Acesso para testar</strong>
-                    <p>Identificação: <b>portaria</b> · Senha: <b>sdv2026</b></p>
+                    <p><b>portaria</b> — Porteiro/Caixa</p>
+                    <p><b>portaria.leitura</b> — Auditor</p>
+                    <p><b>gestor</b> — Gestor</p>
+                    <p><b>administrador</b> — Administrador</p>
+                    <p>Senha para todas: <b>sdv2026</b></p>
                 </div>
-                <button type="button" wire:click="useDemoAccount">Preencher</button>
+                <button type="button" wire:click="useDemoAccount">Preencher portaria</button>
             </div>
 
             <button class="forgot-password" type="button" disabled>Esqueci minha senha</button>

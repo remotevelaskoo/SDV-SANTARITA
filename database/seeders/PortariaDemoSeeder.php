@@ -22,7 +22,6 @@ class PortariaDemoSeeder extends Seeder
                 'name' => 'Tatiane Souza',
                 'email' => 'tatiane.souza@sdv-santarita.local',
                 'password' => Hash::make('sdv2026'),
-                'can_edit_pre_registrations' => true,
             ]
         );
 
@@ -32,7 +31,24 @@ class PortariaDemoSeeder extends Seeder
                 'name' => 'Operador de Leitura',
                 'email' => 'operador.leitura@sdv-santarita.local',
                 'password' => Hash::make('sdv2026'),
-                'can_edit_pre_registrations' => false,
+            ]
+        );
+
+        User::query()->updateOrCreate(
+            ['username' => 'gestor'],
+            [
+                'name' => 'Marcos Vieira',
+                'email' => 'marcos.vieira@sdv-santarita.local',
+                'password' => Hash::make('sdv2026'),
+            ]
+        );
+
+        User::query()->updateOrCreate(
+            ['username' => 'administrador'],
+            [
+                'name' => 'Beatriz Cardoso',
+                'email' => 'beatriz.cardoso@sdv-santarita.local',
+                'password' => Hash::make('sdv2026'),
             ]
         );
 
