@@ -399,8 +399,65 @@ class ExampleTest extends TestCase
             ->set('privacyAccepted', true)
             ->call('submit')
             ->assertSet('submitted', true)
-            ->assertSet('protocol', 'PRE-SRA-2026-X7K9M2')
             ->assertSee('O protocolo não é uma autorização');
+
+        $this->assertDatabaseHas('pre_registrations', [
+            'name' => 'Camila Andrade',
+            'document' => '987.654.321-00',
+            'access_type' => 'turista',
+            'destination_label' => 'Praia do Santa Rita',
+            'destination_property' => null,
+            'responsible_name' => null,
+        ]);
+    }
+
+    public function test_the_public_pre_registration_persists_a_visitor_with_vehicle_and_destination(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->set('accessType', 'visitante')
+            ->set('name', 'Felipe Martins')
+            ->set('cpf', '444.004.117-61')
+            ->set('birthDate', '1988-02-20')
+            ->set('phone', '(12) 98888-7777')
+            ->set('email', 'felipe@example.com')
+            ->call('nextStep')
+            ->assertSet('step', 2)
+            ->set('zipCode', '12010-000')
+            ->set('address', 'Rua das Acácias')
+            ->set('addressNumber', '42')
+            ->set('district', 'Jardim das Flores')
+            ->set('city', 'Taubaté')
+            ->set('state', 'SP')
+            ->set('destinationProperty', 'Bloco B — Apto 304')
+            ->call('nextStep')
+            ->assertSet('step', 3)
+            ->call('markDocumentReady')
+            ->call('nextStep')
+            ->call('markSelfieReady')
+            ->call('nextStep')
+            ->assertSet('step', 5)
+            ->set('hasVehicle', true)
+            ->set('plate', 'ABC1D23')
+            ->set('vehicleModel', 'Corolla')
+            ->set('vehicleColor', 'Prata')
+            ->call('nextStep')
+            ->assertSet('step', 6)
+            ->set('privacyAccepted', true)
+            ->call('submit')
+            ->assertSet('submitted', true);
+
+        $this->assertDatabaseHas('pre_registrations', [
+            'name' => 'Felipe Martins',
+            'access_type' => 'visitante',
+            'address_informed' => 'Rua das Acácias, 42 · Jardim das Flores · Taubaté/SP',
+            'destination_property' => 'Bloco B — Apto 304',
+            'destination_label' => 'Bloco B — Apto 304',
+            'responsible_name' => 'Mariana Souza',
+            'vehicle_plate' => 'ABC1D23',
+            'vehicle_model' => 'Corolla',
+            'vehicle_color' => 'Prata',
+        ]);
     }
 
     public function test_the_pre_registration_queue_renders_filters_and_analysis(): void
@@ -1157,7 +1214,6 @@ class ExampleTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Cadastro de pessoa')
-            ->assertSee('Protótipo demonstrativo')
             ->assertSee('Tipo de acesso')
             ->assertSee('Dados pessoais')
             ->assertSee('Nome completo')
@@ -1188,6 +1244,12 @@ class ExampleTest extends TestCase
 
     public function test_the_person_registration_detects_a_duplicate_document(): void
     {
+        $pessoa = Pessoa::factory()->create();
+        PessoaDocumento::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'cpf',
+            'valor_normalizado' => '11111111111',
+        ]);
+
         Livewire::test(PersonRegistration::class)
             ->set('document', '111.111.111-11')
             ->call('checkDocument')
@@ -1197,6 +1259,8 @@ class ExampleTest extends TestCase
 
     public function test_the_person_registration_completes_the_five_step_journey(): void
     {
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+
         Livewire::test(PersonRegistration::class)
             ->set('fullName', 'Marcos Andrade Ferreira')
             ->set('document', '222.333.444-55')
@@ -1206,6 +1270,7 @@ class ExampleTest extends TestCase
             ->assertSet('currentStep', 2)
             ->call('nextStep')
             ->assertSet('currentStep', 3)
+            ->set('property', 'SRA-A-102')
             ->call('nextStep')
             ->assertSet('currentStep', 4)
             ->set('startDate', '2026-08-10')
@@ -1213,8 +1278,12 @@ class ExampleTest extends TestCase
             ->assertSet('currentStep', 5)
             ->call('activate')
             ->assertSet('feedback.variant', 'success')
-            ->assertSee('A sincronização facial está pendente.')
+            ->assertSee('O cadastro e o vínculo com o imóvel foram registrados.')
             ->assertSet('protocol', fn (?string $protocol) => $protocol !== null && str_starts_with($protocol, 'SRP-'));
+
+        $this->assertDatabaseHas('pessoas', ['nome' => 'Marcos Andrade Ferreira']);
+        $this->assertDatabaseHas('pessoa_documentos', ['valor_normalizado' => '22233344455']);
+        $this->assertDatabaseHas('vinculos', ['imovel_id' => $imovel->id, 'tipo' => 'morador', 'papel' => 'titular']);
     }
 
     public function test_the_company_management_renders_the_p13_list(): void

@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\PreRegistration;
 use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -162,8 +164,51 @@ class PublicPreRegistration extends Component
     {
         $this->step = 6;
         $this->validateCurrentStep();
+
+        $addressLine = "{$this->address}, {$this->addressNumber}";
+
+        if ($this->addressComplement !== '') {
+            $addressLine .= " · {$this->addressComplement}";
+        }
+
+        $addressLine .= " · {$this->district} · {$this->city}/{$this->state}";
+
+        $isTourist = $this->accessType === 'turista';
+
+        $preRegistration = PreRegistration::query()->create([
+            'protocol' => $this->generateProtocol(),
+            'name' => $this->name,
+            'document' => $this->cpf,
+            'birth_date' => $this->birthDate,
+            'phone' => $this->phone,
+            'email' => $this->email,
+            'access_type' => $this->accessType,
+            'address_informed' => $addressLine,
+            'destination_property' => $isTourist ? null : $this->destinationProperty,
+            'destination_label' => $isTourist ? 'Praia do Santa Rita' : $this->destinationProperty,
+            'responsible_name' => $isTourist ? null : $this->destinationResponsible(),
+            // O formulário público ainda não coleta o período pretendido da
+            // visita — usamos uma janela padrão de 24h a partir do envio até
+            // essa decisão de produto ser tomada (registrado em docs/013).
+            'period_start' => now(),
+            'period_end' => now()->addDay(),
+            'vehicle_plate' => $this->hasVehicle ? $this->plate : null,
+            'vehicle_model' => $this->hasVehicle ? $this->vehicleModel : null,
+            'vehicle_color' => $this->hasVehicle ? $this->vehicleColor : null,
+            'document_status' => $this->documentReady ? 'Documento enviado e legível' : 'Documento não enviado',
+            'selfie_status' => $this->selfieReady ? 'Selfie enviada e adequada' : 'Selfie não enviada',
+            'status' => 'aguardando',
+            'submitted_at' => now(),
+        ]);
+
+        $this->protocol = $preRegistration->protocol;
         $this->submitted = true;
         $this->draftSaved = false;
+    }
+
+    private function generateProtocol(): string
+    {
+        return 'PRE-SRA-'.strtoupper(Str::random(6));
     }
 
     public function restart(): void
