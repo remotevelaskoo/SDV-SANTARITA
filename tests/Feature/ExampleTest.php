@@ -1054,7 +1054,8 @@ class ExampleTest extends TestCase
             ->assertSee('SRA-A-102')
             ->assertSee('Responsável')
             ->assertSee('Ocupantes ativos')
-            ->assertSee('Cadastrar imóvel');
+            ->assertSee('Cadastrar imóvel')
+            ->assertSee("openProperty('{$imovel->id}')", false);
     }
 
     public function test_the_property_detail_preserves_people_links_and_vehicles(): void
@@ -1111,7 +1112,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('veiculos.consultar'));
 
-        Veiculo::factory()->create(['plate_display' => 'ABC1D23']);
+        $veiculo = Veiculo::factory()->create(['plate_display' => 'ABC1D23']);
 
         $response = $this->get('/veiculos');
 
@@ -1120,7 +1121,8 @@ class ExampleTest extends TestCase
             ->assertSee('Cadastro de veículos')
             ->assertSee('ABC1D23')
             ->assertSee('Placas sincronizadas')
-            ->assertSee('Cadastrar veículo');
+            ->assertSee('Cadastrar veículo')
+            ->assertSee("openVehicle('{$veiculo->id}')", false);
     }
 
     public function test_the_vehicle_detail_preserves_links_when_blocked(): void

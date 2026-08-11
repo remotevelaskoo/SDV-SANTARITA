@@ -52,7 +52,7 @@
                                 <td class="numeric">{{ $property['occupants'] }}</td>
                                 <td class="numeric">{{ $property['vehicles'] }}</td>
                                 <td>{{ $property['updated'] }}</td>
-                                <td><div class="property-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openProperty({{ $property['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editProperty({{ $property['id'] }})">Editar</x-ui.button></div></td>
+                                <td><div class="property-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openProperty('{{ $property['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editProperty('{{ $property['id'] }}')">Editar</x-ui.button></div></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -66,7 +66,7 @@
                                 <p>{{ $property['address'] }}</p>
                                 <dl><div><dt>Responsável</dt><dd>{{ $property['responsible'] }}</dd></div><div><dt>Ocupantes</dt><dd>{{ $property['occupants'] }}</dd></div><div><dt>Veículos</dt><dd>{{ $property['vehicles'] }}</dd></div></dl>
                                 @if ($property['alert'])<x-ui.alert variant="warning">{{ $property['alert'] }}</x-ui.alert>@endif
-                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openProperty({{ $property['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editProperty({{ $property['id'] }})">Editar</x-ui.button></footer>
+                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openProperty('{{ $property['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editProperty('{{ $property['id'] }}')">Editar</x-ui.button></footer>
                             </li>
                         @endforeach
                     </ul>
@@ -82,7 +82,7 @@
             <div><span>Imóvel</span><h2>{{ $selectedProperty['code'] }}</h2><p>Bloco {{ $selectedProperty['block'] ?: '—' }} · Unidade {{ $selectedProperty['unit'] }} · {{ $selectedProperty['address'] }}</p></div>
             <div class="property-detail-hero__actions">
                 <x-ui.badge :variant="match ($selectedProperty['status']) { 'ativo' => 'success', 'bloqueado' => 'danger', 'implantacao' => 'warning', default => 'neutral' }">{{ match ($selectedProperty['status']) { 'ativo' => 'Ativo', 'bloqueado' => 'Bloqueado', 'implantacao' => 'Em implantação', default => 'Inativo' } }}</x-ui.badge>
-                <x-ui.button variant="secondary" wire:click="editProperty({{ $selectedProperty['id'] }})">Editar dados</x-ui.button>
+                <x-ui.button variant="secondary" wire:click="editProperty('{{ $selectedProperty['id'] }}')">Editar dados</x-ui.button>
             </div>
         </section>
 
