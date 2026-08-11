@@ -6,15 +6,6 @@
     @endif
 
     @if ($mode === 'list')
-        @php
-            $propertyCounts = [
-                'active' => collect($properties)->where('status', 'ativo')->count(),
-                'implementation' => collect($properties)->where('status', 'implantacao')->count(),
-                'blocked' => collect($properties)->where('status', 'bloqueado')->count(),
-                'occupants' => collect($properties)->sum('occupants'),
-            ];
-        @endphp
-
         <section class="property-summary-grid" aria-label="Resumo dos imóveis">
             <article><span>Imóveis ativos</span><strong>{{ $propertyCounts['active'] }}</strong><small>Estrutura disponível</small></article>
             <article><span>Em implantação</span><strong>{{ $propertyCounts['implementation'] }}</strong><small>Cadastros incompletos</small></article>
@@ -82,7 +73,7 @@
                 </x-slot:cards>
             </x-ui.responsive-table>
 
-            <footer class="property-list-footer"><span>Exibindo {{ count($filteredProperties) }} de {{ count($properties) }} imóveis</span><small>Dados demonstrativos da P11</small></footer>
+            <footer class="property-list-footer"><span>Exibindo {{ count($filteredProperties) }} de {{ $totalProperties }} imóveis</span></footer>
         </section>
     @elseif ($mode === 'detail' && $selectedProperty)
         <nav class="property-breadcrumb" aria-label="Caminho da página"><button type="button" wire:click="backToList">Imóveis</button><x-icon name="chevron-right" /><span aria-current="page">{{ $selectedProperty['code'] }}</span></nav>
@@ -197,7 +188,7 @@
                 <x-ui.card title="O que acontece ao salvar?" description="Cada entidade mantém seu próprio estado">
                     <ul><li><x-icon name="building" /><span><strong>Imóvel</strong><small>A estrutura e o endereço são registrados.</small></span></li><li><x-icon name="users" /><span><strong>Pessoas</strong><small>Nenhuma pessoa é criada automaticamente.</small></span></li><li><x-icon name="key" /><span><strong>Acessos</strong><small>Nenhuma autorização ou credencial é ativada.</small></span></li><li><x-icon name="car" /><span><strong>Veículos</strong><small>Serão ligados por fluxo próprio na P12.</small></span></li></ul>
                 </x-ui.card>
-                <x-ui.alert variant="warning" title="Protótipo demonstrativo">Os dados ficam somente na memória desta tela e não são gravados em banco de dados nesta etapa.</x-ui.alert>
+                <x-ui.alert variant="info" title="Cadastro estrutural">Pessoas, vínculos e autorizações são cadastrados em fluxos próprios e não são criados automaticamente aqui.</x-ui.alert>
             </aside>
         </section>
     @endif

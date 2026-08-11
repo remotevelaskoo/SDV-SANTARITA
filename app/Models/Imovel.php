@@ -64,6 +64,12 @@ class Imovel extends Model
         return $this->hasMany(ImovelResponsabilidade::class);
     }
 
+    /** @return HasMany<VeiculoVinculo, $this> */
+    public function veiculoVinculos(): HasMany
+    {
+        return $this->hasMany(VeiculoVinculo::class);
+    }
+
     public function responsavelPrincipal(): ?Pessoa
     {
         $responsabilidade = $this->responsabilidades()
