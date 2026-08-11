@@ -116,9 +116,10 @@
                 <x-ui.card title="Informações de acesso" description="Vigência, natureza e permissões do vínculo">
                     <div class="registration-fields">
                         <x-ui.select id="property" label="Imóvel" wire:model="property" required :error="$errors->first('property')">
-                            <option value="Bloco B — Apto 304">Bloco B — Apto 304</option>
-                            <option value="Bloco A — Apto 112">Bloco A — Apto 112</option>
-                            <option value="Bloco C — Apto 501">Bloco C — Apto 501</option>
+                            <option value="">Selecione o imóvel</option>
+                            @foreach ($imoveis as $imovel)
+                                <option value="{{ $imovel->codigo }}">{{ $imovel->label() }}</option>
+                            @endforeach
                         </x-ui.select>
                         <x-ui.select id="nature" label="Natureza" wire:model="nature" required :error="$errors->first('nature')">
                             <option value="proprietario">Proprietário</option>
@@ -197,13 +198,13 @@
                 :initials="$fullName !== '' ? collect(explode(' ', $fullName))->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->join('') : '—'"
                 :document="$document !== '' ? $document : 'Não informado'"
                 :type="match ($accessType) { 'resident' => 'Morador', 'tenant' => 'Inquilino', 'provider' => 'Prestador', 'visitor' => 'Visitante', default => 'Turista' }"
-                :property="$property"
+                :property="$linkedProperty['property']"
                 status="Rascunho"
                 tone="warning"
             />
 
             <x-ui.link-panel
-                :property="$property"
+                :property="$linkedProperty['property']"
                 :nature="match ($nature) { 'proprietario' => 'Proprietário', 'morador' => 'Morador', 'inquilino' => 'Inquilino', default => 'Outro ocupante' }"
                 :responsibility="$role === 'titular' ? 'Responsável principal' : 'Sem responsabilidade administrativa'"
                 :period="$indefiniteTerm ? 'Prazo indeterminado' : ($endDate !== '' ? 'Até '.\Illuminate\Support\Carbon::parse($endDate)->format('d/m/Y') : 'A definir')"
