@@ -18,11 +18,15 @@ use App\Livewire\VehicleManagement;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
 use App\Models\Implantacao;
+use App\Models\Perfil;
+use App\Models\Permissao;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Models\User;
+use App\Models\UsuarioImplantacao;
+use App\Models\UsuarioPerfil;
 use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
@@ -30,6 +34,7 @@ use App\Support\ImplantacaoContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -790,6 +795,40 @@ class ExampleTest extends TestCase
         VeiculoVinculo::factory()->for($veiculo, 'veiculo')->for($pessoa, 'pessoa')->create();
 
         $this->assertSame('Dono do Veículo', $veiculo->proprietario()?->nome);
+    }
+
+    public function test_reading_usuario_implantacoes_is_isolated_between_implantacoes(): void
+    {
+        $implantacaoA = Implantacao::current();
+        $user = User::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        UsuarioImplantacao::factory()->for($user)->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        UsuarioImplantacao::factory()->for($user)->create();
+
+        $this->assertSame(1, $user->implantacoes()->count(), 'só a associação da implantação atual deve ser visível');
+    }
+
+    public function test_a_perfil_grants_the_permission_it_was_given(): void
+    {
+        $user = User::factory()->create();
+        $permissao = Permissao::factory()->create(['chave' => 'teste.permissao']);
+        $perfil = Perfil::factory()->create();
+        $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+
+        UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+
+        $this->assertTrue($user->hasPermission('teste.permissao'));
+    }
+
+    public function test_a_user_without_a_perfil_does_not_have_the_permission(): void
+    {
+        $user = User::factory()->create();
+        Permissao::factory()->create(['chave' => 'teste.permissao']);
+
+        $this->assertFalse($user->hasPermission('teste.permissao'));
     }
 
     public function test_the_property_management_renders_the_p11_list(): void
