@@ -147,6 +147,12 @@ class PreRegistrationQueue extends Component
 
         Gate::authorize('edit', $record);
 
+        // O <dialog> nativo perde o estado "aberto" a cada remorph do Livewire.
+        // Reabrir aqui (e não em dehydrate(), que roda depois de SupportEvents já
+        // ter drenado os eventos despachados para a resposta) garante que o
+        // operador continue vendo o painel, inclusive quando o erro de estado abaixo é exibido.
+        $this->dispatch("pre-registration-edit-started-{$id}");
+
         $this->resetErrorBag();
 
         if (! $record->isEditable()) {
@@ -174,19 +180,6 @@ class PreRegistrationQueue extends Component
         $this->editReason = '';
     }
 
-    /**
-     * O <dialog> nativo perde o estado "aberto" sempre que o Livewire remorph o
-     * conteúdo do drawer (edição iniciada, erro de validação ao salvar, etc.).
-     * Reabrir o painel em toda resposta enquanto uma edição estiver em curso
-     * evita que o operador perca a tela — e as mensagens de erro — no meio da correção.
-     */
-    public function dehydrate(): void
-    {
-        if ($this->editingId !== null) {
-            $this->dispatch("pre-registration-edit-started-{$this->editingId}");
-        }
-    }
-
     public function cancelEdit(): void
     {
         $this->editingId = null;
@@ -204,6 +197,10 @@ class PreRegistrationQueue extends Component
         $record = PreRegistration::findOrFail($id);
 
         Gate::authorize('edit', $record);
+
+        // Despachado antes da validação para que o painel reabra mesmo quando
+        // $this->validate() lançar e interromper o resto do método (ver beginEdit()).
+        $this->dispatch("pre-registration-edit-started-{$id}");
 
         if (! $record->isEditable()) {
             $this->addError('state', 'Este pré-cadastro não está mais em análise e não pode ser editado.');
