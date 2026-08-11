@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'username', 'password', 'can_edit_pre_registrations'])]
+#[Fillable(['name', 'email', 'username', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,7 +28,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'can_edit_pre_registrations' => 'boolean',
         ];
     }
 
@@ -47,9 +46,6 @@ class User extends Authenticatable
     /**
      * Verifica se o usuário tem a permissão via algum perfil vigente,
      * dentro da implantação atual (App\Support\ImplantacaoContext).
-     * Não substitui `can_edit_pre_registrations`, que continua sendo a
-     * checagem usada por PreRegistrationPolicy — reconciliar os dois
-     * fica para quando houver tela de gestão de perfis (P19/P20).
      */
     public function hasPermission(string $chave): bool
     {

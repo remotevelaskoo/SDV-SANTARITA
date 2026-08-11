@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 10 de agosto de 2026
+**Última atualização:** 11 de agosto de 2026
 
 ## 1. Objetivo deste documento
 
@@ -36,8 +36,8 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | Situação | Quantidade | Partes |
 |---|---:|---|
 | ✅ Concluídas | 16 | P01 a P15 e P18 |
-| 🟡 Em andamento | 1 | P19 |
-| 🟢 Disponíveis | 1 | P20 |
+| 🟡 Em andamento | 2 | P19 e P20 |
+| 🟢 Disponíveis | 0 | — |
 | 🔴 Bloqueadas | 8 | P16, P17, P21 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
@@ -167,9 +167,9 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
-| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | ✅ Concluída — fundação multi-implantação, grupo Imóveis, grupo Pessoas, grupo Vínculos, grupo Veículos e grupo Usuários/Perfis/Permissões (`usuario_implantacoes`, `permissoes`, `perfis`, `perfil_permissoes`, `usuario_perfis`) entregues, todos com testes de isolamento e concorrência. Pendências conhecidas, deixadas para quando existir tela real de administração (P19/P20/P21): `usuario_excecoes_permissao` e `sessoes_usuario` não construídas (sem consumidor ainda); `users.can_edit_pre_registrations` continua em paralelo ao novo perfil "Portaria" (mesma permissão nos dois lugares, não reconciliados); `ImplantacaoContext::current()` ainda não consulta `usuario_implantacoes` — resolve sempre para a implantação única; precedência entre concessão e negação de permissão segue indefinida (`PEN-BDD-017`); integridade temporal (`término > início`) só é validada em `vinculos`/`veiculo_vinculos`/`usuario_perfis`, faltando em `enderecos_imoveis`/`pessoa_documentos`/`pessoa_contatos`/`pessoa_enderecos` | Vinicius | [`vinicius/p18-fundacao-imoveis`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/22), [`vinicius/p18-pessoas`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/23), [`vinicius/p18-vinculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/26), [`vinicius/p18-veiculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/27), [`vinicius/p18-usuarios`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/28) |
+| P18 | Banco de dados inicial | Estrutura segura para imóveis, pessoas, vínculos, veículos e usuários | Regras e arquitetura aprovadas | ✅ Concluída — fundação multi-implantação, grupo Imóveis, grupo Pessoas, grupo Vínculos, grupo Veículos e grupo Usuários/Perfis/Permissões (`usuario_implantacoes`, `permissoes`, `perfis`, `perfil_permissoes`, `usuario_perfis`) entregues, todos com testes de isolamento e concorrência. Pendências conhecidas, deixadas para quando existir tela real de administração (P19/P20/P21): `usuario_excecoes_permissao` e `sessoes_usuario` não construídas (sem consumidor ainda); `ImplantacaoContext::current()` ainda não consulta `usuario_implantacoes` — resolve sempre para a implantação única; precedência entre concessão e negação de permissão segue indefinida (`PEN-BDD-017`); integridade temporal (`término > início`) só é validada em `vinculos`/`veiculo_vinculos`/`usuario_perfis`, faltando em `enderecos_imoveis`/`pessoa_documentos`/`pessoa_contatos`/`pessoa_enderecos`. `users.can_edit_pre_registrations` foi removida na fatia 1 do P20 — `PreRegistrationPolicy` passou a usar `hasPermission('pre-registro.editar')` | Vinicius | [`vinicius/p18-fundacao-imoveis`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/22), [`vinicius/p18-pessoas`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/23), [`vinicius/p18-vinculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/26), [`vinicius/p18-veiculos`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/27), [`vinicius/p18-usuarios`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/28) |
 | P19 | Login real | Usuários individuais, senhas protegidas, sessões e recuperação de acesso | P18 | 🟡 Em andamento — login (`Auth::attempt`) e logout de verdade (`POST /sair`, invalida sessão e regenera token CSRF) entregues; nome e iniciais reais do operador logado substituem o "Tatiane Souza" fixo no layout (`components/layouts/app.blade.php`). Faltam recuperação de acesso (exige envio de e-mail, ainda não configurado), revogação de outras sessões/`sessoes_usuario`, resolução real de contexto multi-implantação (`ImplantacaoContext` continua fixo na única implantação) e proteção das rotas com middleware `auth` — hoje login é opcional, nenhuma tela exige estar autenticado | Vinicius | [`vinicius/p19-logout-real`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/29) |
-| P20 | Perfis e permissões | Definir o que porteiro, caixa, gestor, administrador e auditor podem fazer | P18 e P19 | 🟢 Disponível — P18 concluído; já existe a estrutura de dados (`perfis`, `permissoes`, `perfil_permissoes`, `usuario_perfis`) e um perfil de exemplo ("Portaria"), mas nenhuma tela de administração nem os perfis reais (porteiro, caixa, gestor, administrador, auditor) definidos | A definir | A definir |
+| P20 | Perfis e permissões | Definir o que porteiro/caixa, gestor, auditor e administrador podem fazer, e proteger as rotas internas | P18 e P19 | 🟡 Em andamento — fatia 1 entregue: catálogo real de 25 permissões e os 4 perfis definidos pelo PO (`PORTEIRO_CAIXA`, `GESTOR`, `AUDITOR`, `ADMINISTRADOR`), com os grants exatos da especificação (inclui Veículos/Empresas/Encomendas no PORTEIRO_CAIXA, por decisão do PO); `users.can_edit_pre_registrations` removida — `PreRegistrationPolicy` agora usa `hasPermission('pre-registro.editar')`; contas demo `portaria`→Porteiro/Caixa, `portaria.leitura`→Auditor, e duas novas (`gestor`, `administrador`). Falta a fatia 2 (proteger as rotas internas com `auth` + autorização granular — hoje nenhuma rota exige login) e, fora do escopo desta parte, o contexto operacional Portaria/Caixa (troca de tela sem novo login) e a auditoria genérica de toda operação (P22) | Vinicius | `vinicius/p20-perfis-permissoes` |
 | P21 | Conexão das telas | Trocar dados demonstrativos por cadastros e operações reais | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 | P22 | Auditoria | Registrar quem realizou cada operação, quando e em qual contexto | P18 a P20 | 🔴 Bloqueada | A definir | A definir |
 
@@ -185,7 +185,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14, P15 e agora o **P18 — Banco de dados inicial** (fundação multi-implantação e os grupos Imóveis, Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões) já foram concluídos. Com o P18 pronto, **P19 — Login real** e **P20 — Perfis e permissões** ficam disponíveis para começar — ainda sem responsável definido. As demais partes (P16, P17, P21 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
+P09, P14, P15 e o **P18 — Banco de dados inicial** (fundação multi-implantação e os grupos Imóveis, Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões) já foram concluídos. Com o P18 pronto, **P19 — Login real** e **P20 — Perfis e permissões** estão em andamento com Vinicius. As demais partes (P16, P17, P21 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
@@ -239,6 +239,7 @@ Uma parte somente estará pronta quando:
 | Definir os campos mínimos do cadastro rápido durante o atendimento | Lucas e Vinicius | Resolvida — campos implementados e P07 concluída |
 | Escolher os responsáveis por P09, P14 e P15 | Lucas e Vinicius | Resolvida — Vinicius desenvolveu as três partes |
 | Escolher o responsável por P18 | Lucas e Vinicius | Resolvida — Vinicius iniciou pela fundação e pelo grupo Imóveis |
+| Escolher o responsável por P20 | Lucas e Vinicius | Resolvida — Vinicius, a partir de especificação detalhada do PO ("Correção da decisão do P20") |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 

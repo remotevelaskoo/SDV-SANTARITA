@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sdv-santarita",
+      "url": "http://localhost:8000",
+      "port": 8000
+    }
+  ]
+}

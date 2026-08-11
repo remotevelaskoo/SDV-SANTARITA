@@ -14,6 +14,6 @@ class PreRegistrationPolicy
      */
     public function edit(User $user, PreRegistration $preRegistration): bool
     {
-        return $user->can_edit_pre_registrations;
+        return $user->hasPermission('pre-registro.editar');
     }
 }
