@@ -31,14 +31,28 @@
                 <x-navigation />
 
                 <div class="sidebar__footer">
-                    <div>
-                        <strong>Tatiane Souza</strong>
-                        <small>Operador de portaria</small>
-                    </div>
-                    <button type="button" disabled>
-                        <x-icon name="logout" />
-                        <span>Sair</span>
-                    </button>
+                    @auth
+                        <div>
+                            <strong>{{ auth()->user()->name }}</strong>
+                            <small>Operador de portaria</small>
+                        </div>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit">
+                                <x-icon name="logout" />
+                                <span>Sair</span>
+                            </button>
+                        </form>
+                    @else
+                        <div>
+                            <strong>Visitante</strong>
+                            <small>Não autenticado</small>
+                        </div>
+                        <a href="{{ route('login') }}">
+                            <x-icon name="logout" />
+                            <span>Entrar</span>
+                        </a>
+                    @endauth
                 </div>
             </aside>
 
@@ -86,17 +100,26 @@
                                 </div>
                             </details>
 
-                            <details class="header-popover user-menu">
-                                <summary class="user-chip">
-                                    <span class="avatar" aria-hidden="true">TS</span>
-                                    <span><strong>Tatiane Souza</strong><small>Operador de portaria</small></span>
-                                </summary>
-                                <div class="header-popover__panel user-menu__panel">
-                                    <strong>Tatiane Souza</strong>
-                                    <small>Operador de portaria · Portaria Principal</small>
-                                    <span>Condomínio Santa Rita</span>
-                                </div>
-                            </details>
+                            @auth
+                                <details class="header-popover user-menu">
+                                    <summary class="user-chip">
+                                        <span class="avatar" aria-hidden="true">{{ auth()->user()->initials() }}</span>
+                                        <span><strong>{{ auth()->user()->name }}</strong><small>Operador de portaria</small></span>
+                                    </summary>
+                                    <div class="header-popover__panel user-menu__panel">
+                                        <strong>{{ auth()->user()->name }}</strong>
+                                        <small>Operador de portaria · Portaria Principal</small>
+                                        <span>Condomínio Santa Rita</span>
+                                        <form method="POST" action="{{ route('logout') }}">
+                                            @csrf
+                                            <button type="submit" class="user-menu__logout">
+                                                <x-icon name="logout" />
+                                                <span>Sair</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </details>
+                            @endauth
                         </div>
                     </div>
 
