@@ -2,7 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\Empresa;
+use App\Models\EmpresaDocumento;
+use App\Models\EmpresaPrestador;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -14,9 +18,9 @@ class CompanyManagement extends Component
 
     public string $statusFilter = 'todas';
 
-    public ?int $selectedCompanyId = null;
+    public ?string $selectedCompanyId = null;
 
-    public ?int $editingCompanyId = null;
+    public ?string $editingCompanyId = null;
 
     public string $cnpj = '';
 
@@ -37,67 +41,6 @@ class CompanyManagement extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    /** @var list<array<string, mixed>> */
-    public array $companies = [
-        [
-            'id' => 1, 'cnpj' => '12.345.678/0001-90', 'name' => 'Manutenção Predial Vale Ltda', 'tradeName' => 'ValeManutenção', 'category' => 'manutencao', 'status' => 'ativo', 'phone' => '(24) 3344-5566', 'email' => 'contato@valemanutencao.com.br', 'updated' => '10/08/2026 às 15:10', 'alert' => null,
-            'providers' => [
-                ['name' => 'Sérgio Aparecido Luz', 'document' => '***.447.601-**', 'role' => 'Técnico eletricista', 'validity' => 'Até 31/12/2026', 'status' => 'ativo'],
-                ['name' => 'Luciana Ferraz', 'document' => '***.218.904-**', 'role' => 'Técnica hidráulica', 'validity' => 'Até 31/12/2026', 'status' => 'ativo'],
-            ],
-            'documents' => [
-                ['label' => 'Contrato de prestação de serviço', 'state' => 'validado'],
-                ['label' => 'Comprovante de CNPJ', 'state' => 'validado'],
-                ['label' => 'Certidão negativa de débitos', 'state' => 'enviado'],
-            ],
-            'services' => [
-                ['label' => 'Manutenção elétrica', 'status' => 'autorizado'],
-                ['label' => 'Manutenção hidráulica', 'status' => 'autorizado'],
-            ],
-        ],
-        [
-            'id' => 2, 'cnpj' => '23.456.789/0001-11', 'name' => 'Limpa Fácil Serviços de Limpeza Ltda', 'tradeName' => 'Limpa Fácil', 'category' => 'limpeza', 'status' => 'ativo', 'phone' => '(24) 3322-1100', 'email' => 'financeiro@limpafacil.com.br', 'updated' => '09/08/2026 às 11:40', 'alert' => 'Certidão negativa vence em 12 dias',
-            'providers' => [
-                ['name' => 'Marta Oliveira Santos', 'document' => '***.552.310-**', 'role' => 'Auxiliar de limpeza', 'validity' => 'Até 30/09/2026', 'status' => 'ativo'],
-            ],
-            'documents' => [
-                ['label' => 'Contrato de prestação de serviço', 'state' => 'validado'],
-                ['label' => 'Certidão negativa de débitos', 'state' => 'vencendo'],
-            ],
-            'services' => [
-                ['label' => 'Limpeza de áreas comuns', 'status' => 'autorizado'],
-            ],
-        ],
-        [
-            'id' => 3, 'cnpj' => '34.567.890/0001-22', 'name' => 'Vale Segurança Patrimonial Ltda', 'tradeName' => 'Vale Segurança', 'category' => 'seguranca', 'status' => 'ativo', 'phone' => '(24) 3355-7788', 'email' => 'operacoes@valeseguranca.com.br', 'updated' => '08/08/2026 às 09:15', 'alert' => null,
-            'providers' => [
-                ['name' => 'Eduardo Nogueira', 'document' => '***.760.115-**', 'role' => 'Vigilante', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-                ['name' => 'Rafael Domingues', 'document' => '***.004.120-**', 'role' => 'Supervisor', 'validity' => 'Prazo indeterminado', 'status' => 'ativo'],
-            ],
-            'documents' => [
-                ['label' => 'Contrato de prestação de serviço', 'state' => 'validado'],
-                ['label' => 'Alvará de funcionamento', 'state' => 'validado'],
-                ['label' => 'Comprovante de CNPJ', 'state' => 'validado'],
-            ],
-            'services' => [
-                ['label' => 'Rondas patrimoniais', 'status' => 'autorizado'],
-                ['label' => 'Monitoramento de câmeras', 'status' => 'autorizado'],
-            ],
-        ],
-        [
-            'id' => 4, 'cnpj' => '45.678.901/0001-33', 'name' => 'Jardim Verde Paisagismo Ltda', 'tradeName' => 'Jardim Verde', 'category' => 'jardinagem', 'status' => 'inativo', 'phone' => '(24) 3300-9911', 'email' => 'contato@jardimverde.com.br', 'updated' => '20/06/2026 às 16:00', 'alert' => 'Empresa inativa — sem novas autorizações',
-            'providers' => [
-                ['name' => 'Bianca Moretti', 'document' => '***.615.338-**', 'role' => 'Jardineira', 'validity' => 'Encerrado em 20/06/2026', 'status' => 'encerrado'],
-            ],
-            'documents' => [
-                ['label' => 'Contrato de prestação de serviço', 'state' => 'expirado'],
-            ],
-            'services' => [
-                ['label' => 'Paisagismo e jardinagem', 'status' => 'suspenso'],
-            ],
-        ],
-    ];
-
     public function setStatusFilter(string $status): void
     {
         if (in_array($status, ['todas', 'ativo', 'inativo'], true)) {
@@ -105,9 +48,9 @@ class CompanyManagement extends Component
         }
     }
 
-    public function openCompany(int $id): void
+    public function openCompany(string $id): void
     {
-        if ($this->findCompany($id)) {
+        if (Empresa::query()->whereKey($id)->exists()) {
             $this->selectedCompanyId = $id;
             $this->mode = 'detail';
             $this->feedback = null;
@@ -127,22 +70,22 @@ class CompanyManagement extends Component
         $this->mode = 'form';
     }
 
-    public function editCompany(int $id): void
+    public function editCompany(string $id): void
     {
-        $company = $this->findCompany($id);
+        $empresa = Empresa::query()->find($id);
 
-        if (! $company) {
+        if (! $empresa) {
             return;
         }
 
         $this->editingCompanyId = $id;
-        $this->cnpj = $company['cnpj'];
-        $this->name = $company['name'];
-        $this->tradeName = $company['tradeName'];
-        $this->category = $company['category'];
-        $this->phone = $company['phone'];
-        $this->email = $company['email'];
-        $this->companyStatus = $company['status'];
+        $this->cnpj = $empresa->cnpj;
+        $this->name = $empresa->razao_social;
+        $this->tradeName = $empresa->nome_fantasia ?? '';
+        $this->category = $empresa->categoria;
+        $this->phone = $empresa->telefone ?? '';
+        $this->email = $empresa->email ?? '';
+        $this->companyStatus = $empresa->status;
         $this->notes = '';
         $this->mode = 'form';
         $this->feedback = null;
@@ -166,31 +109,35 @@ class CompanyManagement extends Component
     {
         $this->validateCompany();
 
-        foreach ($this->companies as $company) {
-            if ($company['cnpj'] === $this->cnpj && $company['id'] !== $this->editingCompanyId) {
-                $this->addError('cnpj', 'Já existe uma empresa cadastrada com este CNPJ.');
+        $duplicate = Empresa::query()
+            ->where('cnpj', $this->cnpj)
+            ->when($this->editingCompanyId, fn ($query) => $query->where('id', '!=', $this->editingCompanyId))
+            ->exists();
 
-                return;
-            }
+        if ($duplicate) {
+            $this->addError('cnpj', 'Já existe uma empresa cadastrada com este CNPJ.');
+
+            return;
         }
+
+        $dados = [
+            'cnpj' => $this->cnpj,
+            'razao_social' => $this->name,
+            'nome_fantasia' => $this->tradeName !== '' ? $this->tradeName : null,
+            'categoria' => $this->category,
+            'telefone' => $this->phone,
+            'email' => $this->email,
+            'status' => $this->companyStatus,
+        ];
 
         if ($this->editingCompanyId) {
-            foreach ($this->companies as $index => $company) {
-                if ($company['id'] === $this->editingCompanyId) {
-                    $this->companies[$index] = array_merge($company, [
-                        'cnpj' => $this->cnpj, 'name' => $this->name, 'tradeName' => $this->tradeName, 'category' => $this->category, 'phone' => $this->phone, 'email' => $this->email, 'status' => $this->companyStatus, 'updated' => '10/08/2026 às 19:00',
-                    ]);
-                }
-            }
-            $id = $this->editingCompanyId;
+            $empresa = Empresa::query()->findOrFail($this->editingCompanyId);
+            $empresa->update([...$dados, 'versao' => $empresa->versao + 1]);
         } else {
-            $id = max(array_column($this->companies, 'id')) + 1;
-            $this->companies[] = [
-                'id' => $id, 'cnpj' => $this->cnpj, 'name' => $this->name, 'tradeName' => $this->tradeName, 'category' => $this->category, 'status' => $this->companyStatus, 'phone' => $this->phone, 'email' => $this->email, 'updated' => '10/08/2026 às 19:00', 'alert' => null, 'providers' => [], 'documents' => [], 'services' => [],
-            ];
+            $empresa = Empresa::query()->create([...$dados, 'versao' => 1]);
         }
 
-        $this->selectedCompanyId = $id;
+        $this->selectedCompanyId = $empresa->id;
         $this->mode = 'detail';
         $this->feedback = [
             'variant' => 'success',
@@ -205,18 +152,20 @@ class CompanyManagement extends Component
             return;
         }
 
-        foreach ($this->companies as $index => $company) {
-            if ($company['id'] === $this->selectedCompanyId) {
-                $newStatus = $company['status'] === 'inativo' ? 'ativo' : 'inativo';
-                $this->companies[$index]['status'] = $newStatus;
-                $this->companies[$index]['alert'] = $newStatus === 'inativo' ? 'Empresa inativa — sem novas autorizações' : null;
-                $this->feedback = [
-                    'variant' => $newStatus === 'inativo' ? 'warning' : 'success',
-                    'title' => $newStatus === 'inativo' ? 'Empresa inativada' : 'Empresa reativada',
-                    'message' => 'A situação da empresa mudou. Vínculos, documentos e histórico de prestadores continuam preservados.',
-                ];
-            }
+        $empresa = Empresa::query()->find($this->selectedCompanyId);
+
+        if (! $empresa) {
+            return;
         }
+
+        $newStatus = $empresa->status === 'inativo' ? 'ativo' : 'inativo';
+        $empresa->update(['status' => $newStatus, 'versao' => $empresa->versao + 1]);
+
+        $this->feedback = [
+            'variant' => $newStatus === 'inativo' ? 'warning' : 'success',
+            'title' => $newStatus === 'inativo' ? 'Empresa inativada' : 'Empresa reativada',
+            'message' => 'A situação da empresa mudou. Vínculos, documentos e histórico de prestadores continuam preservados.',
+        ];
     }
 
     /** @return list<array<string, mixed>> */
@@ -224,27 +173,95 @@ class CompanyManagement extends Component
     {
         $search = mb_strtolower(trim($this->search));
 
-        return array_values(array_filter($this->companies, function (array $company) use ($search): bool {
-            $matchesStatus = $this->statusFilter === 'todas' || $company['status'] === $this->statusFilter;
-            $matchesSearch = $search === '' || str_contains(mb_strtolower(implode(' ', [$company['name'], $company['tradeName'], $company['cnpj']])), $search);
+        $query = Empresa::query();
 
-            return $matchesStatus && $matchesSearch;
-        }));
+        if ($this->statusFilter !== 'todas') {
+            $query->where('status', $this->statusFilter);
+        }
+
+        $empresas = $query->orderBy('razao_social')->get();
+
+        if ($search !== '') {
+            $empresas = $empresas->filter(fn (Empresa $empresa) => str_contains(
+                mb_strtolower(implode(' ', array_filter([$empresa->razao_social, $empresa->nome_fantasia, $empresa->cnpj]))),
+                $search
+            ));
+        }
+
+        return $empresas->map(fn (Empresa $empresa) => $this->toArray($empresa))->values()->all();
     }
 
     /** @return array<string, mixed>|null */
     public function selectedCompany(): ?array
     {
-        return $this->selectedCompanyId ? $this->findCompany($this->selectedCompanyId) : null;
+        if ($this->selectedCompanyId === null) {
+            return null;
+        }
+
+        $empresa = Empresa::query()->find($this->selectedCompanyId);
+
+        return $empresa ? $this->toArray($empresa) : null;
     }
 
-    /** @return array<string, mixed>|null */
-    private function findCompany(int $id): ?array
+    /** @return array{active: int, inactive: int, providers: int, expiringDocuments: int} */
+    public function companyCounts(): array
     {
-        foreach ($this->companies as $company) {
-            if ($company['id'] === $id) {
-                return $company;
-            }
+        return [
+            'active' => Empresa::query()->where('status', 'ativo')->count(),
+            'inactive' => Empresa::query()->where('status', 'inativo')->count(),
+            'providers' => EmpresaPrestador::query()->count(),
+            'expiringDocuments' => EmpresaDocumento::query()->whereIn('status', ['vencendo', 'expirado'])->count(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function toArray(Empresa $empresa): array
+    {
+        $prestadores = $empresa->prestadores()->with('pessoa.documentos')->get();
+        $documentos = $empresa->documentos()->get();
+        $servicos = $empresa->servicos()->get();
+
+        return [
+            'id' => $empresa->id,
+            'cnpj' => $empresa->cnpj,
+            'name' => $empresa->razao_social,
+            'tradeName' => $empresa->nome_fantasia ?? $empresa->razao_social,
+            'category' => $empresa->categoria,
+            'status' => $empresa->status,
+            'phone' => $empresa->telefone ?? '—',
+            'email' => $empresa->email ?? '—',
+            'updated' => $empresa->updated_at->format('d/m/Y').' às '.$empresa->updated_at->format('H:i'),
+            'alert' => $this->alertFor($empresa, $documentos),
+            'providers' => $prestadores->map(fn (EmpresaPrestador $prestador) => [
+                'name' => $prestador->pessoa->nomeExibicao(),
+                'document' => $prestador->pessoa->documentos->first()?->valor_apresentacao ?? '—',
+                'role' => $prestador->atividade,
+                'validity' => $prestador->ended_at !== null ? 'Encerrado em '.$prestador->ended_at->format('d/m/Y') : 'Prazo indeterminado',
+                'status' => $prestador->status,
+            ])->values()->all(),
+            'documents' => $documentos->map(fn ($documento) => [
+                'label' => $documento->tipo,
+                'state' => $documento->status,
+            ])->values()->all(),
+            'services' => $servicos->map(fn ($servico) => [
+                'label' => $servico->atividade,
+                'status' => $servico->status,
+            ])->values()->all(),
+        ];
+    }
+
+    private function alertFor(Empresa $empresa, Collection $documentos): ?string
+    {
+        if ($empresa->status === 'inativo') {
+            return 'Empresa inativa — sem novas autorizações';
+        }
+
+        if ($documentos->contains(fn ($documento) => $documento->status === 'vencendo')) {
+            return 'Documento a vencer — revise a certidão';
+        }
+
+        if ($documentos->contains(fn ($documento) => $documento->status === 'expirado')) {
+            return 'Documento expirado — revise a certidão';
         }
 
         return null;
@@ -286,6 +303,8 @@ class CompanyManagement extends Component
         return view('livewire.company-management', [
             'filteredCompanies' => $this->filteredCompanies(),
             'selectedCompany' => $this->selectedCompany(),
+            'companyCounts' => $this->companyCounts(),
+            'totalCompanies' => Empresa::query()->count(),
         ])->layout('components.layouts.app', [
             'title' => 'Empresas e prestadores',
             'heading' => $this->mode === 'form' ? ($this->editingCompanyId ? 'Editar empresa' : 'Cadastrar empresa') : ($this->mode === 'detail' ? 'Detalhe da empresa' : 'Empresas e prestadores'),

@@ -15,6 +15,10 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\VehicleManagement;
+use App\Models\Empresa;
+use App\Models\EmpresaDocumento;
+use App\Models\EmpresaPrestador;
+use App\Models\EmpresaServico;
 use App\Models\EnderecoImovel;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
@@ -1293,6 +1297,12 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('empresas.consultar'));
 
+        $empresa = Empresa::factory()->create([
+            'cnpj' => '12.345.678/0001-90',
+            'razao_social' => 'Manutenção Predial Vale Ltda',
+            'nome_fantasia' => 'ValeManutenção',
+        ]);
+
         $response = $this->get('/empresas');
 
         $response
@@ -1301,22 +1311,31 @@ class ExampleTest extends TestCase
             ->assertSee('ValeManutenção')
             ->assertSee('12.345.678/0001-90')
             ->assertSee('Prestadores vinculados')
-            ->assertSee('Cadastrar empresa');
+            ->assertSee('Cadastrar empresa')
+            ->assertSee("openCompany('{$empresa->id}')", false);
     }
 
     public function test_the_company_detail_preserves_providers_documents_and_services(): void
     {
+        $empresa = Empresa::factory()->create(['status' => 'ativo']);
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Sérgio Aparecido Luz']);
+        EmpresaPrestador::factory()->for($empresa, 'empresa')->for($pessoa, 'pessoa')->create(['atividade' => 'Técnico eletricista']);
+        EmpresaDocumento::factory()->for($empresa, 'empresa')->create(['tipo' => 'Comprovante de CNPJ']);
+        EmpresaServico::factory()->for($empresa, 'empresa')->create(['atividade' => 'Manutenção elétrica']);
+
         Livewire::test(CompanyManagement::class)
-            ->call('openCompany', 1)
+            ->call('openCompany', $empresa->id)
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedCompanyId', 1)
+            ->assertSet('selectedCompanyId', $empresa->id)
             ->assertSee('Prestadores vinculados')
             ->assertSee('Sérgio Aparecido Luz')
             ->assertSee('Manutenção elétrica')
             ->call('toggleCompanyStatus')
-            ->assertSet('companies.0.status', 'inativo')
             ->assertSet('feedback.variant', 'warning')
             ->assertSee('impede novas autorizações');
+
+        $this->assertDatabaseHas('empresas', ['id' => $empresa->id, 'status' => 'inativo']);
     }
 
     public function test_the_company_form_creates_a_demo_company_without_implicit_providers(): void
@@ -1333,10 +1352,26 @@ class ExampleTest extends TestCase
             ->call('saveCompany')
             ->assertHasNoErrors()
             ->assertSet('mode', 'detail')
-            ->assertSet('selectedCompanyId', 5)
-            ->assertSet('companies.4.tradeName', 'Entrega Rápida')
-            ->assertSet('companies.4.providers', [])
             ->assertSee('Prestadores, documentos e autorizações permanecem separados.');
+
+        $this->assertDatabaseHas('empresas', ['cnpj' => '56.789.012/0001-44', 'nome_fantasia' => 'Entrega Rápida']);
+        $this->assertDatabaseCount('empresa_prestadores', 0);
+    }
+
+    public function test_the_company_form_rejects_a_duplicate_cnpj(): void
+    {
+        Empresa::factory()->create(['cnpj' => '12.345.678/0001-90']);
+
+        Livewire::test(CompanyManagement::class)
+            ->call('createCompany')
+            ->set('cnpj', '12.345.678/0001-90')
+            ->set('name', 'Outra Empresa Ltda')
+            ->set('category', 'outro')
+            ->set('phone', '(24) 3000-0000')
+            ->set('email', 'contato@outra.com.br')
+            ->call('saveCompany')
+            ->assertHasErrors(['cnpj'])
+            ->assertSee('Já existe uma empresa cadastrada com este CNPJ.');
     }
 
     public function test_the_access_history_renders_the_p09_list(): void

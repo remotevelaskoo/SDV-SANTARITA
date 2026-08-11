@@ -7,12 +7,6 @@
 
     @if ($mode === 'list')
         @php
-            $companyCounts = [
-                'active' => collect($companies)->where('status', 'ativo')->count(),
-                'inactive' => collect($companies)->where('status', 'inativo')->count(),
-                'providers' => collect($companies)->flatMap(fn ($company) => $company['providers'])->count(),
-                'expiringDocuments' => collect($companies)->flatMap(fn ($company) => $company['documents'])->whereIn('state', ['vencendo', 'expirado'])->count(),
-            ];
             $categoryLabels = ['manutencao' => 'Manutenção', 'limpeza' => 'Limpeza', 'seguranca' => 'Segurança', 'jardinagem' => 'Jardinagem', 'entregas' => 'Entregas', 'outro' => 'Outro'];
         @endphp
 
@@ -59,7 +53,7 @@
                                 <td><x-ui.badge :variant="$company['status'] === 'ativo' ? 'success' : 'neutral'">{{ $company['status'] === 'ativo' ? 'Ativa' : 'Inativa' }}</x-ui.badge></td>
                                 <td class="numeric">{{ count($company['providers']) }}</td>
                                 <td>{{ $company['updated'] }}</td>
-                                <td><div class="company-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openCompany({{ $company['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editCompany({{ $company['id'] }})">Editar</x-ui.button></div></td>
+                                <td><div class="company-row-actions"><x-ui.button variant="secondary" size="sm" wire:click="openCompany('{{ $company['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editCompany('{{ $company['id'] }}')">Editar</x-ui.button></div></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -73,14 +67,14 @@
                                 <p>{{ $company['name'] }} · {{ $categoryLabels[$company['category']] }}</p>
                                 <dl><div><dt>Prestadores</dt><dd>{{ count($company['providers']) }}</dd></div><div><dt>Documentos</dt><dd>{{ count($company['documents']) }}</dd></div></dl>
                                 @if ($company['alert'])<x-ui.alert variant="warning">{{ $company['alert'] }}</x-ui.alert>@endif
-                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openCompany({{ $company['id'] }})">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editCompany({{ $company['id'] }})">Editar</x-ui.button></footer>
+                                <footer><x-ui.button variant="secondary" size="sm" wire:click="openCompany('{{ $company['id'] }}')">Visualizar</x-ui.button><x-ui.button variant="ghost" size="sm" wire:click="editCompany('{{ $company['id'] }}')">Editar</x-ui.button></footer>
                             </li>
                         @endforeach
                     </ul>
                 </x-slot:cards>
             </x-ui.responsive-table>
 
-            <footer class="company-list-footer"><span>Exibindo {{ count($filteredCompanies) }} de {{ count($companies) }} empresas</span><small>Dados demonstrativos da P13</small></footer>
+            <footer class="company-list-footer"><span>Exibindo {{ count($filteredCompanies) }} de {{ $totalCompanies }} empresas</span></footer>
         </section>
     @elseif ($mode === 'detail' && $selectedCompany)
         @php
@@ -94,7 +88,7 @@
             <div><span>Empresa</span><h2>{{ $selectedCompany['tradeName'] }}</h2><p>{{ $selectedCompany['name'] }} · {{ $selectedCompany['cnpj'] }} · {{ $categoryLabels[$selectedCompany['category']] }}</p></div>
             <div class="company-detail-hero__actions">
                 <x-ui.badge :variant="$selectedCompany['status'] === 'ativo' ? 'success' : 'neutral'">{{ $selectedCompany['status'] === 'ativo' ? 'Ativa' : 'Inativa' }}</x-ui.badge>
-                <x-ui.button variant="secondary" wire:click="editCompany({{ $selectedCompany['id'] }})">Editar dados</x-ui.button>
+                <x-ui.button variant="secondary" wire:click="editCompany('{{ $selectedCompany['id'] }}')">Editar dados</x-ui.button>
             </div>
         </section>
 
@@ -224,7 +218,7 @@
                         <li><x-icon name="badge-check" /><span><strong>Autorizações</strong><small>Nenhum serviço é autorizado automaticamente.</small></span></li>
                     </ul>
                 </x-ui.card>
-                <x-ui.alert variant="warning" title="Protótipo demonstrativo">Os dados ficam somente na memória desta tela e não são gravados em banco de dados nesta etapa.</x-ui.alert>
+                <x-ui.alert variant="info" title="Cadastro empresarial">Prestadores, documentos e autorizações são cadastrados em fluxos próprios e não são criados automaticamente aqui.</x-ui.alert>
             </aside>
         </section>
     @endif
