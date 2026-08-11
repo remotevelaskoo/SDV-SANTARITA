@@ -241,7 +241,18 @@ Uma parte somente estará pronta quando:
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 
-## 9. Documentos principais para consulta
+## 9. Correções e ajustes técnicos
+
+Registro leve de correções em partes já marcadas como concluídas — não criam uma nova linha no quadro principal, pois não são uma nova etapa, apenas um ajuste sobre o que já existia. Cada uma tem descrição completa no commit/PR correspondente.
+
+| Data | Parte afetada | O que foi corrigido | PR |
+|---|---|---|---|
+| 10/08/2026 | P08 / P11 | Cenário do pré-cadastro ajustado para turista (praia) e busca automática de endereço por CEP adicionada ao Cadastro de imóveis | [#17](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/17) |
+| 10/08/2026 | P08 | Busca automática de endereço por CEP também no Pré-cadastro | [#18](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/18) |
+| 10/08/2026 | P08 | Destino da visita reativo ao tipo de acesso (turista → praia automático; visitante → escolhe o imóvel) | [#19](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/19) |
+| 11/08/2026 | P08 | Painel de edição da fila de pré-cadastros fechava sozinho ao abrir, por um detalhe de ordem dos hooks do Livewire (`dehydrate()` roda depois de o framework já ter processado os eventos despachados) | [#25](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/25) |
+
+## 10. Documentos principais para consulta
 
 - [Diretrizes do projeto](000_DIRETRIZES_DO_PROJETO.md)
 - [Product Book — Parte 1](001_VOLUME_01_PRODUCT_BOOK_PARTE_01.md)
