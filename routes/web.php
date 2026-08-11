@@ -29,18 +29,19 @@ Route::post('/sair', function (Request $request) {
 
     return redirect()->route('login');
 })->name('logout');
-Route::get('/dashboard', Dashboard::class)->name('dashboard');
-Route::get('/portaria', Portaria::class)->name('portaria');
-Route::get('/validacao', AccessValidation::class)->name('validation');
-Route::get('/entradas-saidas', AccessHistory::class)->name('access-history');
-Route::get('/pre-cadastros', PreRegistrationQueue::class)->name('pre-registrations');
 Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->name('pre-registration.public');
-Route::get('/imoveis', PropertyManagement::class)->name('properties');
-Route::get('/veiculos', VehicleManagement::class)->name('vehicles');
-Route::get('/pessoas/nova', PersonRegistration::class)->name('people.create');
-Route::get('/empresas', CompanyManagement::class)->name('companies');
-Route::get('/caixa', CashRegister::class)->name('cash-register');
-Route::get('/encomendas', PackageManagement::class)->name('packages');
+
+Route::get('/dashboard', Dashboard::class)->middleware('auth')->name('dashboard');
+Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria');
+Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
+Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');
+Route::get('/pre-cadastros', PreRegistrationQueue::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations');
+Route::get('/imoveis', PropertyManagement::class)->middleware(['auth', 'permissao:imoveis.consultar'])->name('properties');
+Route::get('/veiculos', VehicleManagement::class)->middleware(['auth', 'permissao:veiculos.consultar'])->name('vehicles');
+Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'permissao:pessoas.gerenciar'])->name('people.create');
+Route::get('/empresas', CompanyManagement::class)->middleware(['auth', 'permissao:empresas.consultar'])->name('companies');
+Route::get('/caixa', CashRegister::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar'])->name('cash-register');
+Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permissao:encomendas.registrar'])->name('packages');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');
