@@ -313,8 +313,37 @@ class ExampleTest extends TestCase
             ->assertSee('Aguardando análise')
             ->assertSee('Camila Andrade')
             ->assertSee('PRE-SRA-X7K9M2')
+            ->assertSee('Dados preenchidos')
+            ->assertSee('camila.andrade@example.com')
+            ->assertSee('Editar dados preenchidos')
             ->assertSee('Aprovar pré-cadastro')
             ->assertSee('Aprovação não garante entrada');
+    }
+
+    public function test_the_gate_operator_can_edit_submitted_data_with_an_audit_reason_before_approval(): void
+    {
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', 1)
+            ->assertSet('editingId', 1)
+            ->assertSet('editPhone', '(12) 99876-4321')
+            ->set('editPhone', '(12) 99999-0000')
+            ->set('editReason', 'Telefone confirmado com a visitante.')
+            ->call('saveEdit', 1)
+            ->assertHasNoErrors()
+            ->assertSet('editingId', null)
+            ->assertSet('detailOverrides.1.phone', '(12) 99999-0000')
+            ->assertSet('auditLog.0.operator', 'Tatiane Souza')
+            ->assertSee('Correção salva com auditoria')
+            ->assertSee('Telefone confirmado com a visitante.');
+    }
+
+    public function test_the_gate_operator_cannot_approve_while_an_edit_is_open(): void
+    {
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('beginEdit', 1)
+            ->call('approve', 1)
+            ->assertHasErrors('editReason')
+            ->assertSet('records.0.status', 'aguardando');
     }
 
     public function test_the_pre_registration_queue_records_each_demo_decision(): void

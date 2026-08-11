@@ -8,6 +8,43 @@ use Livewire\Component;
 
 class PreRegistrationQueue extends Component
 {
+    public ?int $editingId = null;
+
+    public string $editName = '';
+
+    public string $editPhone = '';
+
+    public string $editEmail = '';
+
+    public string $editBirthDate = '';
+
+    public string $editAddress = '';
+
+    public string $editDestination = '';
+
+    public string $editResponsible = '';
+
+    public string $editPeriod = '';
+
+    public string $editVehicle = '';
+
+    public string $editReason = '';
+
+    /** @var array<int, array<string, string>> */
+    public array $detailOverrides = [];
+
+    /** @var list<array{recordId: int, operator: string, at: string, reason: string, changes: string}> */
+    public array $auditLog = [];
+
+    /** @var array<int, array<string, string>> */
+    private const DETAILS = [
+        1 => ['phone' => '(12) 99876-4321', 'email' => 'camila.andrade@example.com', 'birthDate' => '14/03/1993', 'address' => 'Rua das Palmeiras, 125 · Centro · Taubaté/SP', 'documentStatus' => 'Documento enviado e legível', 'selfieStatus' => 'Selfie enviada e adequada'],
+        2 => ['phone' => '(12) 99720-1144', 'email' => 'paulo.lima@example.com', 'birthDate' => '22/08/1987', 'address' => 'Av. Independência, 840 · Taubaté/SP', 'documentStatus' => 'Documento enviado e legível', 'selfieStatus' => 'Selfie enviada e adequada'],
+        3 => ['phone' => '(11) 99654-7788', 'email' => 'renata.alves@example.com', 'birthDate' => '05/12/1990', 'address' => 'Rua Bela Cintra, 312 · São Paulo/SP', 'documentStatus' => 'Documento enviado e legível', 'selfieStatus' => 'Reenvio solicitado'],
+        4 => ['phone' => '(12) 99118-2020', 'email' => 'felipe.martins@example.com', 'birthDate' => '19/06/1985', 'address' => 'Rua das Acácias, 42 · Taubaté/SP', 'documentStatus' => 'Documento conferido', 'selfieStatus' => 'Selfie conferida'],
+        5 => ['phone' => '(12) 98876-1004', 'email' => 'sergio.luz@example.com', 'birthDate' => '30/01/1979', 'address' => 'Rua Projetada, 91 · Pindamonhangaba/SP', 'documentStatus' => 'Documento incompleto', 'selfieStatus' => 'Selfie enviada'],
+    ];
+
     public string $statusFilter = 'aguardando';
 
     public string $search = '';
@@ -37,12 +74,118 @@ class PreRegistrationQueue extends Component
 
     public function approve(int $id): void
     {
+        if ($this->editingId === $id) {
+            $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
+
+            return;
+        }
+
         $this->updateStatus($id, 'aprovado');
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Pré-cadastro aprovado',
             'message' => 'A entrada ainda será validada pela portaria conforme as regras vigentes.',
         ];
+    }
+
+    public function beginEdit(int $id): void
+    {
+        $record = collect($this->records)->firstWhere('id', $id);
+
+        if (! $record || $record['status'] !== 'aguardando') {
+            return;
+        }
+
+        $details = $this->detailsFor($id);
+        $this->editingId = $id;
+        $this->editName = $record['name'];
+        $this->editPhone = $details['phone'];
+        $this->editEmail = $details['email'];
+        $this->editBirthDate = $details['birthDate'];
+        $this->editAddress = $details['address'];
+        $this->editDestination = $record['destination'];
+        $this->editResponsible = $record['responsible'];
+        $this->editPeriod = $record['period'];
+        $this->editVehicle = $record['vehicle'];
+        $this->editReason = '';
+        $this->resetErrorBag();
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editingId = null;
+        $this->editReason = '';
+        $this->resetErrorBag();
+    }
+
+    public function saveEdit(int $id): void
+    {
+        if ($this->editingId !== $id) {
+            return;
+        }
+
+        $this->validate([
+            'editName' => ['required', 'string', 'min:3', 'max:120'],
+            'editPhone' => ['required', 'string', 'min:8', 'max:20'],
+            'editEmail' => ['required', 'email', 'max:120'],
+            'editBirthDate' => ['required', 'date_format:d/m/Y'],
+            'editAddress' => ['required', 'string', 'max:200'],
+            'editDestination' => ['required', 'string', 'max:120'],
+            'editResponsible' => ['required', 'string', 'max:120'],
+            'editPeriod' => ['required', 'string', 'max:120'],
+            'editVehicle' => ['required', 'string', 'max:80'],
+            'editReason' => ['required', 'string', 'min:5', 'max:200'],
+        ], ['required' => 'Preencha este campo antes de salvar.', 'email' => 'Informe um e-mail válido.']);
+
+        foreach ($this->records as $index => $record) {
+            if ($record['id'] !== $id) {
+                continue;
+            }
+
+            $changes = [];
+            foreach (['name' => 'editName', 'destination' => 'editDestination', 'responsible' => 'editResponsible', 'period' => 'editPeriod', 'vehicle' => 'editVehicle'] as $field => $property) {
+                if ($record[$field] !== $this->{$property}) {
+                    $changes[] = "{$field}: {$record[$field]} → {$this->{$property}}";
+                    $this->records[$index][$field] = $this->{$property};
+                }
+            }
+
+            $details = $this->detailsFor($id);
+            foreach (['phone' => 'editPhone', 'email' => 'editEmail', 'birthDate' => 'editBirthDate', 'address' => 'editAddress'] as $field => $property) {
+                if ($details[$field] !== $this->{$property}) {
+                    $changes[] = "{$field}: {$details[$field]} → {$this->{$property}}";
+                }
+                $this->detailOverrides[$id][$field] = $this->{$property};
+            }
+
+            $this->auditLog[] = [
+                'recordId' => $id,
+                'operator' => 'Tatiane Souza',
+                'at' => '11/08/2026 às 10:30',
+                'reason' => $this->editReason,
+                'changes' => $changes === [] ? 'Dados revisados sem alteração de valor.' : implode(' | ', $changes),
+            ];
+            break;
+        }
+
+        $this->editingId = null;
+        $this->feedback = [
+            'variant' => 'success',
+            'title' => 'Correção salva com auditoria',
+            'message' => 'A versão original foi preservada e as alterações estão prontas para nova conferência antes da aprovação.',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function detailsFor(int $id): array
+    {
+        return array_merge(self::DETAILS[$id] ?? self::DETAILS[1], $this->detailOverrides[$id] ?? []);
+    }
+
+    /** @return list<array{recordId: int, operator: string, at: string, reason: string, changes: string}> */
+    public function auditEntriesFor(int $id): array
+    {
+        return array_values(array_filter($this->auditLog, fn (array $entry): bool => $entry['recordId'] === $id));
     }
 
     public function reject(int $id): void

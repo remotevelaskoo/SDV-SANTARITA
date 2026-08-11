@@ -85,11 +85,14 @@
                             </td>
                             <td>
                                 <x-ui.drawer id="pre-registration-{{ $record['id'] }}" title="Analisar pré-cadastro" description="{{ $record['protocol'] }}" trigger-label="Analisar">
-                                    <x-pre-registration-detail :record="$record" />
+                                    <x-pre-registration-detail :record="$record" :details="$this->detailsFor($record['id'])" :editing="$editingId === $record['id']" :audit-entries="$this->auditEntriesFor($record['id'])" />
 
                                     <x-slot:footer>
                                         @if ($record['status'] === 'aguardando')
                                             <div class="pre-registration-review-actions">
+                                                @if ($editingId !== $record['id'])
+                                                    <x-ui.button variant="secondary" wire:click="beginEdit({{ $record['id'] }})">Editar dados preenchidos</x-ui.button>
+                                                @endif
                                                 <x-ui.select id="correction-item-{{ $record['id'] }}" label="Pedir correção de" wire:model="correctionItems">
                                                     <option value="dados_pessoais">Dados pessoais</option>
                                                     <option value="documento">Documento</option>
@@ -104,7 +107,7 @@
                                                     <option value="solicitacao_nao_confirmada">Solicitação não confirmada</option>
                                                 </x-ui.select>
                                                 <x-ui.button variant="danger" wire:click="reject({{ $record['id'] }})">Rejeitar</x-ui.button>
-                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})">Aprovar pré-cadastro</x-ui.button>
+                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})" :disabled="$editingId === $record['id']">Aprovar pré-cadastro</x-ui.button>
                                             </div>
                                         @else
                                             <x-ui.alert variant="info" title="Decisão já registrada">
@@ -130,10 +133,13 @@
                                     {{ match ($record['status']) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
                                 </x-ui.badge>
                                 <x-ui.drawer id="pre-registration-mobile-{{ $record['id'] }}" title="Analisar pré-cadastro" description="{{ $record['protocol'] }}" trigger-label="Analisar">
-                                    <x-pre-registration-detail :record="$record" />
+                                    <x-pre-registration-detail :record="$record" :details="$this->detailsFor($record['id'])" :editing="$editingId === $record['id']" :audit-entries="$this->auditEntriesFor($record['id'])" />
                                     <x-slot:footer>
                                         @if ($record['status'] === 'aguardando')
                                             <div class="pre-registration-review-actions">
+                                                @if ($editingId !== $record['id'])
+                                                    <x-ui.button variant="secondary" wire:click="beginEdit({{ $record['id'] }})">Editar dados preenchidos</x-ui.button>
+                                                @endif
                                                 <x-ui.select id="mobile-correction-item-{{ $record['id'] }}" label="Pedir correção de" wire:model="correctionItems">
                                                     <option value="dados_pessoais">Dados pessoais</option>
                                                     <option value="documento">Documento</option>
@@ -148,7 +154,7 @@
                                                     <option value="solicitacao_nao_confirmada">Solicitação não confirmada</option>
                                                 </x-ui.select>
                                                 <x-ui.button variant="danger" wire:click="reject({{ $record['id'] }})">Rejeitar</x-ui.button>
-                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})">Aprovar pré-cadastro</x-ui.button>
+                                                <x-ui.button variant="success" wire:click="approve({{ $record['id'] }})" :disabled="$editingId === $record['id']">Aprovar pré-cadastro</x-ui.button>
                                             </div>
                                         @endif
                                     </x-slot:footer>
