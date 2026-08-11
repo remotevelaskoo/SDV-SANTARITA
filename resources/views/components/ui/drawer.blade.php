@@ -3,12 +3,21 @@
     'title',
     'description' => null,
     'triggerLabel' => 'Abrir painel',
+    'reopenOn' => null,
 ])
 
 <div x-data class="ui-overlay-trigger">
     <x-ui.button variant="secondary" x-on:click="$refs['{{ $id }}'].showModal()">{{ $triggerLabel }}</x-ui.button>
 
-    <dialog x-ref="{{ $id }}" class="ui-drawer" aria-labelledby="{{ $id }}-title" @click.self="$el.close()">
+    <dialog
+        x-ref="{{ $id }}"
+        class="ui-drawer"
+        aria-labelledby="{{ $id }}-title"
+        @click.self="$el.close()"
+        @if ($reopenOn)
+            x-on:{{ $reopenOn }}.window="if (! $refs['{{ $id }}'].open) { $refs['{{ $id }}'].showModal() }"
+        @endif
+    >
         <div class="ui-drawer__surface">
             <header>
                 <div>

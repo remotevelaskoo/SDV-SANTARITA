@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
@@ -44,15 +45,6 @@ class PublicPreRegistration extends Component
     public string $state = '';
 
     public string $destinationProperty = 'Bloco B — Apto 304';
-
-    /** @var array<string, string> Imóvel de destino → responsável, usado quando o tipo de acesso exige um imóvel específico. */
-    private const DESTINATION_RESPONSIBLES = [
-        'Bloco A — Apto 102' => 'Marcos Vinicius da Silva',
-        'Bloco A — Apto 112' => 'Eduardo Nogueira',
-        'Bloco A — Apto 208' => 'Bianca Moretti',
-        'Bloco B — Apto 304' => 'Mariana Souza',
-        'Bloco C — Apto 501' => 'Rafael Domingues',
-    ];
 
     public bool $documentReady = false;
 
@@ -145,13 +137,13 @@ class PublicPreRegistration extends Component
 
     public function destinationResponsible(): string
     {
-        return self::DESTINATION_RESPONSIBLES[$this->destinationProperty] ?? 'Não definido';
+        return DestinationDirectory::responsibleFor($this->destinationProperty) ?? 'Não definido';
     }
 
     /** @return list<string> */
     public function destinationOptions(): array
     {
-        return array_keys(self::DESTINATION_RESPONSIBLES);
+        return DestinationDirectory::options();
     }
 
     public function markDocumentReady(): void

@@ -391,7 +391,7 @@ O pré-cadastro deverá seguir estados e transições definidos, preservando ato
 A aprovação do pré-cadastro somente habilita a solicitação para as próximas validações e não garante entrada ou comando físico.
 
 **RN-072 — Correção versionada**  
-Solicitação de correção e reenvio deverão preservar a submissão anterior e identificar os campos alterados.
+Solicitação de correção, reenvio e edição autorizada pela portaria deverão preservar a submissão anterior e identificar os campos alterados. A edição pelo operador exige permissão específica e justificativa, é permitida somente enquanto o pré-cadastro estiver em estado compatível com análise, registra valor anterior, valor novo, operador e instante em trilha de auditoria persistente, é bloqueada por controle de concorrência quando a versão em edição estiver desatualizada, e não altera silenciosamente cadastros, vínculos, autorizações ou credenciais relacionados.
 
 **RN-073 — Mensagem pública separada**  
 Motivo e observação internos não deverão ser enviados automaticamente ao solicitante; a mensagem pública deverá ser controlada separadamente.
