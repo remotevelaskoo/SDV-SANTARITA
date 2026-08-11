@@ -52,6 +52,29 @@ class Imovel extends Model
         return $this->enderecos()->whereNull('ended_at')->first();
     }
 
+    /** @return HasMany<Vinculo, $this> */
+    public function vinculos(): HasMany
+    {
+        return $this->hasMany(Vinculo::class);
+    }
+
+    /** @return HasMany<ImovelResponsabilidade, $this> */
+    public function responsabilidades(): HasMany
+    {
+        return $this->hasMany(ImovelResponsabilidade::class);
+    }
+
+    public function responsavelPrincipal(): ?Pessoa
+    {
+        $responsabilidade = $this->responsabilidades()
+            ->where('tipo', 'responsavel_principal')
+            ->whereNull('ended_at')
+            ->with('vinculo.pessoa')
+            ->first();
+
+        return $responsabilidade?->vinculo?->pessoa;
+    }
+
     public function label(): string
     {
         return $this->bloco !== null

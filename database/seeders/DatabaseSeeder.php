@@ -25,5 +25,6 @@ class DatabaseSeeder extends Seeder
         $this->call(PortariaDemoSeeder::class);
         $this->call(ImovelDemoSeeder::class);
         $this->call(PessoaDemoSeeder::class);
+        $this->call(VinculoDemoSeeder::class);
     }
 }

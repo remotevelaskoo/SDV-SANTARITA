@@ -46,6 +46,12 @@ class Pessoa extends Model
         return $this->hasMany(PessoaEndereco::class);
     }
 
+    /** @return HasMany<Vinculo, $this> */
+    public function vinculos(): HasMany
+    {
+        return $this->hasMany(Vinculo::class);
+    }
+
     public function nomeExibicao(): string
     {
         return $this->nome_social ?: $this->nome;
