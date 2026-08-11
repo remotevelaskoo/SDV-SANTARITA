@@ -69,7 +69,7 @@
                             <option value="outro">Outro</option>
                         </x-ui.select>
                         <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante ou prestador." :error="$errors->first('quickResponsible')" />
-                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório para visitante ou morador." :error="$errors->first('quickPropertyCode')" />
+                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório — o vínculo desta pessoa precisa de um imóvel." :error="$errors->first('quickPropertyCode')" required />
                     </div>
 
                     @if ($quickDuplicateFound)
@@ -139,8 +139,8 @@
                 A pessoa foi anexada com cadastro mínimo. Contribuição, observações e demais dados deste atendimento não foram apagados.
             </x-ui.alert>
         @else
-            <x-ui.alert variant="info" title="Dados demonstrativos">
-                Esta pessoa e estes documentos são exemplos usados para validar o funcionamento e o visual da P06.
+            <x-ui.alert variant="info" title="Cadastro localizado">
+                Estes dados vêm do cadastro real da pessoa e do imóvel vinculado.
             </x-ui.alert>
         @endif
     </section>

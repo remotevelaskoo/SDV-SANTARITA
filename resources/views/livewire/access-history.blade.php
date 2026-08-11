@@ -1,12 +1,6 @@
 <div class="access-history">
     @if ($mode === 'list')
         @php
-            $entryCounts = [
-                'total' => count($entries),
-                'liberado' => collect($entries)->where('result', 'liberado')->count(),
-                'negado' => collect($entries)->where('result', 'negado')->count(),
-                'pendente' => collect($entries)->where('result', 'pendente')->count(),
-            ];
             $resultVariant = fn ($result) => match ($result) { 'liberado' => 'success', 'negado' => 'danger', default => 'warning' };
             $resultLabel = fn ($result) => match ($result) { 'liberado' => 'Liberado', 'negado' => 'Negado', default => 'Pendente' };
         @endphp
@@ -66,7 +60,7 @@
                                 <td>{{ $entry['point'] }}@if ($entry['plate'])<small>🚙 {{ $entry['plate'] }}</small>@endif</td>
                                 <td><span class="access-history-type access-history-type--{{ $entry['type'] }}"><x-icon :name="$entry['type'] === 'entrada' ? 'arrow-down-left' : 'arrow-up-right'" />{{ $entry['type'] === 'entrada' ? 'Entrada' : 'Saída' }}</span></td>
                                 <td><x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge></td>
-                                <td><x-ui.button variant="secondary" size="sm" wire:click="openEntry({{ $entry['id'] }})">Detalhes</x-ui.button></td>
+                                <td><x-ui.button variant="secondary" size="sm" wire:click="openEntry('{{ $entry['id'] }}')">Detalhes</x-ui.button></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -82,14 +76,14 @@
                                 </div>
                                 <time>{{ $entry['datetime'] }}</time>
                                 <x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge>
-                                <x-ui.button variant="ghost" size="sm" wire:click="openEntry({{ $entry['id'] }})">Detalhes</x-ui.button>
+                                <x-ui.button variant="ghost" size="sm" wire:click="openEntry('{{ $entry['id'] }}')">Detalhes</x-ui.button>
                             </li>
                         @endforeach
                     </ul>
                 </x-slot:cards>
             </x-ui.responsive-table>
 
-            <footer class="access-history-list-footer"><span>Exibindo {{ count($filteredEntries) }} de {{ count($entries) }} registros</span><small>Dados demonstrativos da P09</small></footer>
+            <footer class="access-history-list-footer"><span>Exibindo {{ count($filteredEntries) }} de {{ $entryCounts['total'] }} registros</span></footer>
         </section>
     @elseif ($mode === 'detail' && $selectedEntry)
         @php

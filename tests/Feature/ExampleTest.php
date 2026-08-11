@@ -23,6 +23,7 @@ use App\Models\EmpresaPrestador;
 use App\Models\EmpresaServico;
 use App\Models\Encomenda;
 use App\Models\EnderecoImovel;
+use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
 use App\Models\Implantacao;
@@ -249,6 +250,10 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
 
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
+        Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
         $response = $this->get('/validacao');
 
         $response
@@ -268,25 +273,48 @@ class ExampleTest extends TestCase
 
     public function test_the_access_validation_decisions_produce_safe_demo_feedback(): void
     {
-        Livewire::test(AccessValidation::class)
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
+        Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
+        $test = Livewire::test(AccessValidation::class)
             ->assertSet('contribution', 'yes')
             ->set('notes', 'Visitante conferido pela portaria.')
             ->call('savePending')
-            ->assertSet('feedback.variant', 'warning')
-            ->assertSet('protocol', 'SRA-20260810-004184')
+            ->assertSet('feedback.variant', 'warning');
+
+        $this->assertMatchesRegularExpression('/^SRA-\d{8}-[A-Z0-9]{6}$/', $test->get('protocol'));
+        $this->assertDatabaseHas('historico_acessos', [
+            'pessoa_id' => $pessoa->id,
+            'resultado' => 'pendente',
+            'notes' => 'Visitante conferido pela portaria.',
+        ]);
+
+        $test
             ->call('release')
             ->assertSet('feedback.variant', 'success')
-            ->assertSee('Nenhum portão ou equipamento real foi acionado.')
+            ->assertSee('Nenhum portão ou equipamento real foi acionado.');
+
+        $this->assertDatabaseHas('historico_acessos', ['pessoa_id' => $pessoa->id, 'resultado' => 'liberado']);
+
+        $test
             ->set('denialReason', 'documento_invalido')
             ->set('denialDetails', 'Documento apresentado não confere.')
             ->call('deny')
             ->assertSet('feedback.variant', 'danger')
-            ->assertSet('protocol', 'SRA-20260810-004183')
             ->assertSee('Nenhum comando de abertura foi enviado.');
+
+        $this->assertDatabaseHas('historico_acessos', [
+            'pessoa_id' => $pessoa->id,
+            'resultado' => 'negado',
+            'motivo_negacao' => 'Documento inválido',
+        ]);
     }
 
     public function test_the_quick_registration_preserves_the_validation_in_progress(): void
     {
+        Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+
         Livewire::test(AccessValidation::class)
             ->set('contribution', 'no')
             ->set('notes', 'Atendimento iniciado antes do cadastro rápido.')
@@ -309,10 +337,21 @@ class ExampleTest extends TestCase
             ->assertSet('notes', 'Atendimento iniciado antes do cadastro rápido.')
             ->assertSet('feedback.variant', 'warning')
             ->assertSee('O cadastro ainda não autoriza a entrada');
+
+        $this->assertDatabaseHas('pessoas', ['nome' => 'Carlos Eduardo Lima']);
+        $this->assertDatabaseHas('pessoa_documentos', ['valor_normalizado' => '98765432100']);
+        $this->assertDatabaseHas('vinculos', ['tipo' => 'visitante']);
     }
 
     public function test_the_quick_registration_prevents_duplicate_people(): void
     {
+        Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        $pessoaExistente = Pessoa::factory()->create();
+        PessoaDocumento::factory()->for($pessoaExistente, 'pessoa')->create([
+            'tipo' => 'cpf',
+            'valor_normalizado' => '11111111111',
+        ]);
+
         Livewire::test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickName', 'Pessoa já cadastrada')
@@ -344,7 +383,9 @@ class ExampleTest extends TestCase
 
     public function test_a_quick_registration_does_not_release_an_entry(): void
     {
-        Livewire::test(AccessValidation::class)
+        Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+
+        $test = Livewire::test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickName', 'Ana Paula Ribeiro')
             ->set('quickDocument', '456.789.123-00')
@@ -356,8 +397,10 @@ class ExampleTest extends TestCase
             ->call('release')
             ->assertSet('feedback.variant', 'warning')
             ->assertSet('feedback.title', 'Liberação não realizada')
-            ->assertSet('protocol', 'SRA-20260810-004186')
             ->assertSee('O cadastro rápido não possui autorização válida.');
+
+        $this->assertMatchesRegularExpression('/^SRA-\d{8}-[A-Z0-9]{6}$/', $test->get('protocol'));
+        $this->assertDatabaseHas('historico_acessos', ['resultado' => 'pendente']);
     }
 
     public function test_the_public_pre_registration_renders_the_secure_invitation(): void
@@ -1382,18 +1425,34 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->actingAs($this->operatorWithPermissions('validacao.registrar'));
 
+        $pessoa = Pessoa::factory()->create(['nome' => 'Luciana Ferraz']);
+        HistoricoAcesso::factory()->for($pessoa, 'pessoa')->create([
+            'resultado' => 'pendente',
+            'protocol' => 'SRA-20260810-004181',
+        ]);
+
         $response = $this->get('/entradas-saidas');
 
         $response
             ->assertOk()
             ->assertSee('Entradas e saídas')
             ->assertSee('Luciana Ferraz')
-            ->assertSee('SRA-20260810-004181')
+            ->assertSee('Pendente')
             ->assertSee('Registros no filtro');
+
+        $this->assertDatabaseHas('historico_acessos', ['protocol' => 'SRA-20260810-004181']);
     }
 
     public function test_the_access_history_filters_by_type_and_result(): void
     {
+        $eduardo = Pessoa::factory()->create(['nome' => 'Eduardo Nogueira']);
+        $sergio = Pessoa::factory()->create(['nome' => 'Sérgio Aparecido Luz']);
+        $bianca = Pessoa::factory()->create(['nome' => 'Bianca Moretti']);
+
+        HistoricoAcesso::factory()->for($eduardo, 'pessoa')->create(['tipo' => 'saida', 'resultado' => 'liberado']);
+        HistoricoAcesso::factory()->for($sergio, 'pessoa')->create(['tipo' => 'entrada', 'resultado' => 'liberado']);
+        HistoricoAcesso::factory()->for($bianca, 'pessoa')->create(['tipo' => 'entrada', 'resultado' => 'negado']);
+
         Livewire::test(AccessHistory::class)
             ->assertSee('Eduardo Nogueira')
             ->assertSee('Sérgio Aparecido Luz')
@@ -1412,8 +1471,17 @@ class ExampleTest extends TestCase
 
     public function test_the_access_history_detail_explains_denied_and_pending_results(): void
     {
+        $bianca = Pessoa::factory()->create(['nome' => 'Bianca Moretti']);
+        $entryNegado = HistoricoAcesso::factory()->for($bianca, 'pessoa')->create([
+            'resultado' => 'negado',
+            'motivo_negacao' => 'Responsável não localizado para confirmar a visita.',
+        ]);
+
+        $luciana = Pessoa::factory()->create(['nome' => 'Luciana Ferraz']);
+        $entryPendente = HistoricoAcesso::factory()->for($luciana, 'pessoa')->create(['resultado' => 'pendente']);
+
         Livewire::test(AccessHistory::class)
-            ->call('openEntry', 3)
+            ->call('openEntry', $entryNegado->id)
             ->assertSet('mode', 'detail')
             ->assertSee('Bianca Moretti')
             ->assertSee('Motivo da negação')
@@ -1421,7 +1489,7 @@ class ExampleTest extends TestCase
             ->assertSee('não pode ser editado')
             ->call('backToList')
             ->assertSet('mode', 'list')
-            ->call('openEntry', 1)
+            ->call('openEntry', $entryPendente->id)
             ->assertSee('Aguardando conferência');
     }
 
