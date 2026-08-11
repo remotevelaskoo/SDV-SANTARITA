@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
         $this->call(EmpresaDemoSeeder::class);
         $this->call(EncomendaDemoSeeder::class);
         $this->call(CaixaDemoSeeder::class);
+        $this->call(HistoricoAcessoDemoSeeder::class);
         $this->call(UsuarioDemoSeeder::class);
     }
 }
