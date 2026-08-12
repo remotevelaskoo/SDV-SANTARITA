@@ -1,7 +1,7 @@
 # ADR-013 — BIOMETRIA E REFERÊNCIAS EXTERNAS
 
 **Identificador:** ADR-013
-**Versão:** 1.0.0
+**Versão:** 1.0.1
 **Status:** Adiado
 **Prioridade:** P2 — Condicional
 **Produto:** SDV Access — Implantação Santa Rita
@@ -15,6 +15,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | 30/07/2026 | Product Owner | Registro e aprovação do adiamento da biometria |
+| 1.0.1 | 12/08/2026 | Product Owner | Esclarecimento entre conferência humana da selfie e sincronização com controladora |
 
 # 1. Contexto
 
@@ -36,6 +37,8 @@ Enquanto adiado:
 - nenhum template é persistido;
 - nenhum fornecedor recebe imagem;
 - validação de entrada usa caminhos não biométricos aprovados.
+
+A exibição protegida da selfie submetida a operador autorizado, exclusivamente para conferência humana do pré-cadastro ou da identidade, não ativa biometria e não altera o status deste ADR. Permanecem proibidos o envio da imagem, a geração de template e a sincronização com qualquer controladora enquanto esta decisão estiver adiada.
 
 # 4. Condições de retomada
 
@@ -206,6 +209,7 @@ Negativas:
 | PEN-ADR-013-004 | Retenção e descarte |
 | PEN-ADR-013-005 | Acurácia e limiares |
 | PEN-ADR-013-006 | Alternativa operacional |
+| PEN-ADR-013-007 | Inventário, API, capacidades, contrato e homologação do equipamento BRAVAS considerado pela implantação |
 
 # 18. Aprovação
 

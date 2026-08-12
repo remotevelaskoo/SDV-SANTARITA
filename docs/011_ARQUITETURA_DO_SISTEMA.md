@@ -2,7 +2,7 @@
 ## Arquitetura lógica, modular, operacional e de implantação
 
 **Documento:** SDV-ARQ-011
-**Versão:** 1.0.1
+**Versão:** 1.1.0
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Definição inicial da arquitetura do sistema |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da arquitetura do sistema |
+| 1.1.0 | 12/08/2026 | Product Owner | Fluxos protegidos de conferência, importação assistida e limite da integração biométrica |
 
 ---
 
@@ -456,6 +457,9 @@ Solicitação autorizada
 - falha parcial será reconciliada;
 - provedor será acessado por abstração do framework;
 - retenção definitiva depende de política aprovada.
+- leitura operacional ocorrerá por autorização no backend e proxy autenticado ou URL assinada de curta duração;
+- abertura de foto, selfie ou documento sensível produzirá evento de auditoria sem registrar conteúdo ou URL;
+- a interface tratará indisponibilidade, quarentena e expiração da autorização de leitura sem tornar o objeto público.
 
 ---
 
@@ -555,6 +559,8 @@ Cada adaptador deverá declarar:
 - simulador deverá cobrir sucesso, recusa, timeout e duplicidade;
 - integração específica só será implementada após inventário técnico.
 
+O equipamento BRAVAS atualmente considerado pela implantação será tratado como adaptador externo, sem dependência do núcleo. A visualização humana de uma selfie no pré-cadastro não cria uma operação de sincronização. O eventual envio de foto ou template exigirá fluxo próprio, fila, idempotência, confirmação, revogação e reconciliação, e permanece bloqueado enquanto a ADR-013 estiver adiada.
+
 ---
 
 # 21. Decisão de acesso
@@ -621,6 +627,25 @@ O serviço Python somente será introduzido quando:
 - descarte do material temporário.
 
 OCR será assistivo. Selfie não criará credencial biométrica automaticamente.
+
+## 23.3 Importação assistida de fontes legadas
+
+A capacidade futura poderá receber documentos, imagens, planilhas ou exportações legadas em lote. O Laravel continuará responsável por autenticação, autorização, orquestração, área de preparação, validação canônica e decisão humana. Python/FastAPI somente será introduzido se a ADR-011 for retomada e os critérios de ativação forem atendidos.
+
+O fluxo arquitetural será:
+
+```text
+fonte autorizada
+  → armazenamento privado e validação do arquivo
+  → extração assistida e resultado com confiança
+  → normalização e candidatos a duplicidade
+  → revisão humana obrigatória
+  → validação de domínio no Laravel
+  → importação transacional auditada
+  → reconciliação do lote
+```
+
+Nenhum resultado de IA poderá conceder acesso, criar credencial, formar vínculo ou alterar cadastro canônico sem revisão e aprovação explícitas.
 
 ---
 
