@@ -6,6 +6,7 @@ use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
+use App\Livewire\ForgotPassword;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PersonRegistration;
@@ -13,6 +14,7 @@ use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
+use App\Livewire\ResetPassword;
 use App\Livewire\VehicleManagement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +33,8 @@ Route::post('/sair', function (Request $request) {
     return redirect()->route('login');
 })->name('logout');
 Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->name('pre-registration.public');
+Route::get('/esqueci-minha-senha', ForgotPassword::class)->name('password.request');
+Route::get('/redefinir-senha/{token}', ResetPassword::class)->name('password.reset');
 
 Route::get('/dashboard', Dashboard::class)->middleware('auth')->name('dashboard');
 Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria');

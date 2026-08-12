@@ -9,6 +9,7 @@ use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
+use App\Livewire\ForgotPassword;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PersonRegistration;
@@ -16,6 +17,7 @@ use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
+use App\Livewire\ResetPassword;
 use App\Livewire\VehicleManagement;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
@@ -43,10 +45,14 @@ use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Support\ImplantacaoContext;
 use Database\Seeders\UsuarioDemoSeeder;
+use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -1951,5 +1957,78 @@ class ExampleTest extends TestCase
             'sessions',
             ['id' => $otherSessionId, 'user_id' => $otherUser->id]
         );
+    }
+
+    public function test_requesting_recovery_with_an_existing_username_sends_the_notification(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['username' => 'portaria', 'email' => 'portaria@sdv-santarita.local']);
+
+        Livewire::test(ForgotPassword::class)
+            ->set('identification', 'portaria')
+            ->call('sendResetLink')
+            ->assertSet('linkSent', true);
+
+        Notification::assertSentTo($user, ResetPasswordNotification::class);
+    }
+
+    public function test_requesting_recovery_with_an_unknown_username_shows_the_same_generic_message(): void
+    {
+        Notification::fake();
+
+        Livewire::test(ForgotPassword::class)
+            ->set('identification', 'pessoa-desconhecida')
+            ->call('sendResetLink')
+            ->assertSet('linkSent', true)
+            ->assertHasNoErrors();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_a_valid_token_and_a_valid_new_password_actually_change_the_password(): void
+    {
+        $user = User::factory()->create(['username' => 'portaria', 'password' => 'senha-antiga']);
+        $token = Password::createToken($user);
+
+        Livewire::test(ResetPassword::class, ['token' => $token])
+            ->set('email', $user->email)
+            ->set('password', 'nova-senha-123')
+            ->set('password_confirmation', 'nova-senha-123')
+            ->call('resetPassword')
+            ->assertHasNoErrors()
+            ->assertSet('completed', true);
+
+        $this->assertFalse(Auth::attempt(['username' => 'portaria', 'password' => 'senha-antiga']));
+        $this->assertTrue(Auth::attempt(['username' => 'portaria', 'password' => 'nova-senha-123']));
+        Auth::logout();
+
+        Livewire::test(ResetPassword::class, ['token' => $token])
+            ->set('email', $user->email)
+            ->set('password', 'outra-senha-456')
+            ->set('password_confirmation', 'outra-senha-456')
+            ->call('resetPassword')
+            ->assertHasErrors('token');
+    }
+
+    public function test_an_invalid_or_expired_token_shows_a_clear_error(): void
+    {
+        $user = User::factory()->create();
+
+        Livewire::test(ResetPassword::class, ['token' => 'token-invalido'])
+            ->set('email', $user->email)
+            ->set('password', 'nova-senha-123')
+            ->set('password_confirmation', 'nova-senha-123')
+            ->call('resetPassword')
+            ->assertHasErrors('token')
+            ->assertSee('Link inválido ou expirado');
+    }
+
+    public function test_the_password_recovery_routes_do_not_require_authentication(): void
+    {
+        $this->withoutVite();
+
+        $this->get('/esqueci-minha-senha')->assertOk();
+        $this->get('/redefinir-senha/qualquer-token')->assertOk();
     }
 }
