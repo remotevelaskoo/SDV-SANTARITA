@@ -97,7 +97,7 @@
                 <button type="button" wire:click="useDemoAccount">Preencher portaria</button>
             </div>
 
-            <button class="forgot-password" type="button" disabled>Esqueci minha senha</button>
+            <a class="forgot-password" href="{{ route('password.request') }}">Esqueci minha senha</a>
             <p class="login-support">Problemas para acessar? Procure o administrador do sistema.</p>
         </div>
     </section>

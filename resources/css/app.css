@@ -149,6 +149,12 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .login-error strong { font-size: 0.75rem; }
 .login-error span { margin-top: 0.1rem; font-size: 0.7rem; }
 
+.login-success { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.65rem; margin-top: 1rem; padding: 0.7rem 0.8rem; border: 1px solid #b9dfc2; border-radius: var(--radius-md); background: var(--success-surface); color: var(--success); }
+.login-success .app-icon { margin-top: 0.15rem; }
+.login-success strong, .login-success span { display: block; }
+.login-success strong { font-size: 0.75rem; }
+.login-success span { margin-top: 0.1rem; font-size: 0.7rem; }
+
 .login-form { display: grid; gap: 1rem; margin-top: 1.5rem; }
 .form-field { display: grid; gap: 0.4rem; }
 .form-field > span:first-child { color: var(--neutral-800); font-size: 0.75rem; font-weight: 750; }
@@ -156,6 +162,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .form-field input::placeholder { color: var(--neutral-400); }
 .form-field input:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgb(23 136 232 / 0.14); }
 .field-error { color: var(--danger); font-size: 0.68rem; }
+.field-hint { color: var(--neutral-600); font-size: 0.68rem; }
 .password-control { position: relative; display: block; }
 .password-control input { padding-right: 4.5rem; }
 .password-control button { position: absolute; top: 50%; right: 0.65rem; padding: 0.25rem; border: 0; background: transparent; color: var(--blue-700); font-size: 0.68rem; font-weight: 750; transform: translateY(-50%); }
