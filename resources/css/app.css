@@ -658,6 +658,19 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .user-menu__panel small { color: var(--neutral-600); font-size: 0.7rem; }
 .user-menu__panel span { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--neutral-200); color: var(--neutral-600); font-size: 0.72rem; }
 .user-menu__panel form { margin: 0; }
+.user-menu__link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.65rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-md);
+    color: var(--neutral-700);
+    font-size: 0.78125rem;
+    text-decoration: none;
+}
+.user-menu__link:hover { background: var(--neutral-100); }
 .user-menu__logout {
     display: flex;
     align-items: center;

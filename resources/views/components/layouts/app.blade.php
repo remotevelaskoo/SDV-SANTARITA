@@ -110,6 +110,10 @@
                                         <strong>{{ auth()->user()->name }}</strong>
                                         <small>Operador de portaria · Portaria Principal</small>
                                         <span>Condomínio Santa Rita</span>
+                                        <a href="{{ route('sessions') }}" class="user-menu__link">
+                                            <x-icon name="shield" />
+                                            <span>Sessões ativas</span>
+                                        </a>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
                                             <button type="submit" class="user-menu__logout">

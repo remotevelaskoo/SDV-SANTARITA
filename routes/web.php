@@ -2,6 +2,7 @@
 
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
+use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
@@ -42,6 +43,7 @@ Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'per
 Route::get('/empresas', CompanyManagement::class)->middleware(['auth', 'permissao:empresas.consultar'])->name('companies');
 Route::get('/caixa', CashRegister::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar'])->name('cash-register');
 Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permissao:encomendas.registrar'])->name('packages');
+Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');

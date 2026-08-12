@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Exceptions\InvalidTemporalRangeException;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
+use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
@@ -44,6 +45,7 @@ use App\Support\ImplantacaoContext;
 use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -1841,5 +1843,113 @@ class ExampleTest extends TestCase
             ->assertSee('Responsável: Mariana Souza')
             ->set('destinationProperty', 'Bloco A — Apto 208')
             ->assertSee('Responsável: Bianca Moretti');
+    }
+
+    public function test_the_active_sessions_route_requires_authentication(): void
+    {
+        $response = $this->get('/sessoes');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_the_active_sessions_lists_real_sessions_from_the_database(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        DB::table('sessions')->insert([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'ip_address' => '10.0.0.5',
+            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'payload' => '',
+            'last_activity' => now()->subMinutes(5)->timestamp,
+        ]);
+
+        Livewire::test(ActiveSessions::class)
+            ->assertSee('10.0.0.5')
+            ->assertSee('Windows NT 10.0', false);
+    }
+
+    public function test_the_current_session_is_marked_and_has_no_revoke_button(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $currentId = session()->getId();
+
+        DB::table('sessions')->insert([
+            'id' => $currentId,
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Sessão atual do teste',
+            'payload' => '',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        Livewire::test(ActiveSessions::class)
+            ->assertSee('Sessão atual')
+            ->assertDontSee("revoke('{$currentId}')", false);
+    }
+
+    public function test_revoking_a_specific_session_removes_only_it(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $currentId = session()->getId();
+
+        DB::table('sessions')->insert(['id' => $currentId, 'user_id' => $user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'Atual', 'payload' => '', 'last_activity' => now()->timestamp]);
+        $otherSessionId = (string) Str::uuid();
+        DB::table('sessions')->insert(['id' => $otherSessionId, 'user_id' => $user->id, 'ip_address' => '200.0.0.1', 'user_agent' => 'Outro dispositivo', 'payload' => '', 'last_activity' => now()->subHour()->timestamp]);
+
+        Livewire::test(ActiveSessions::class)
+            ->call('revoke', $otherSessionId)
+            ->assertSet('feedback.variant', 'success');
+
+        $this->assertDatabaseMissing('sessions', ['id' => $otherSessionId]);
+        $this->assertDatabaseHas('sessions', ['id' => $currentId]);
+    }
+
+    public function test_revoking_all_other_sessions_keeps_only_the_current_one(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $currentId = session()->getId();
+
+        DB::table('sessions')->insert(['id' => $currentId, 'user_id' => $user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'Atual', 'payload' => '', 'last_activity' => now()->timestamp]);
+        DB::table('sessions')->insert(['id' => (string) Str::uuid(), 'user_id' => $user->id, 'ip_address' => '10.0.0.1', 'user_agent' => 'Outro 1', 'payload' => '', 'last_activity' => now()->subHour()->timestamp]);
+        DB::table('sessions')->insert(['id' => (string) Str::uuid(), 'user_id' => $user->id, 'ip_address' => '10.0.0.2', 'user_agent' => 'Outro 2', 'payload' => '', 'last_activity' => now()->subDay()->timestamp]);
+
+        Livewire::test(ActiveSessions::class)
+            ->call('revokeOthers')
+            ->assertSet('feedback.variant', 'success');
+
+        $this->assertSame(1, DB::table('sessions')->where('user_id', $user->id)->count());
+        $this->assertDatabaseHas('sessions', ['id' => $currentId]);
+    }
+
+    public function test_a_user_cannot_see_or_revoke_another_users_session(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $this->actingAs($user);
+
+        $otherSessionId = (string) Str::uuid();
+        DB::table('sessions')->insert([
+            'id' => $otherSessionId,
+            'user_id' => $otherUser->id,
+            'ip_address' => '8.8.8.8',
+            'user_agent' => 'Sessão de outro usuário',
+            'payload' => '',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        Livewire::test(ActiveSessions::class)
+            ->assertDontSee('8.8.8.8')
+            ->call('revoke', $otherSessionId);
+
+        $this->assertDatabaseHas(
+            'sessions',
+            ['id' => $otherSessionId, 'user_id' => $otherUser->id]
+        );
     }
 }
