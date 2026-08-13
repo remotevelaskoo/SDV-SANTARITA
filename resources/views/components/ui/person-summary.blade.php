@@ -8,10 +8,17 @@
     'status' => 'Cadastro ativo',
     'validity' => 'Acesso permanente',
     'tone' => 'success',
+    'photoUrl' => null,
 ])
 
 <article {{ $attributes->class('ui-person-summary') }}>
-    <header><span class="ui-person-summary__avatar" aria-hidden="true">{{ $initials }}</span><div><strong>{{ $name }}</strong><small>{{ $type }}</small></div><x-ui.badge :variant="$tone">{{ $status }}</x-ui.badge></header>
+    <header>
+        @if ($photoUrl)
+            <img src="{{ $photoUrl }}" alt="" class="ui-person-summary__photo">
+        @else
+            <span class="ui-person-summary__avatar" aria-hidden="true">{{ $initials }}</span>
+        @endif
+        <div><strong>{{ $name }}</strong><small>{{ $type }}</small></div><x-ui.badge :variant="$tone">{{ $status }}</x-ui.badge></header>
     <dl>
         <div><dt>Documento</dt><dd>{{ $document }}</dd></div>
         <div><dt>Imóvel</dt><dd>{{ $property }}</dd></div>

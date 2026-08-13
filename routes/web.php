@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArquivoController;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
@@ -14,8 +15,8 @@ use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
-use App\Livewire\ResetPassword;
 use App\Livewire\Reports;
+use App\Livewire\ResetPassword;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permis
 Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relatorios.proprio.consultar,relatorios.consolidado.consultar'])->name('reports');
 Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:usuarios.administrar'])->name('users');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
+Route::get('/arquivos/{arquivo}', ArquivoController::class)->middleware(['auth', 'permissao:validacao.visualizar-imagem'])->name('arquivos.mostrar');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 // implantacao_id é fillable pelo mesmo motivo documentado em PreRegistration.
 #[Fillable([
@@ -56,6 +57,12 @@ class Pessoa extends Model
     public function veiculoVinculos(): HasMany
     {
         return $this->hasMany(VeiculoVinculo::class);
+    }
+
+    /** @return MorphOne<Arquivo, $this> */
+    public function foto(): MorphOne
+    {
+        return $this->morphOne(Arquivo::class, 'fileable')->where('categoria', 'foto_pessoa')->latest();
     }
 
     public function nomeExibicao(): string

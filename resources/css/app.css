@@ -920,6 +920,9 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .ui-person-summary > header { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.7rem; padding: 0.85rem; border-bottom: 1px solid var(--neutral-200); }
 .ui-person-summary > header .ui-badge { grid-column: 1 / -1; }
 .ui-person-summary__avatar { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border-radius: 999px; background: #e9f4ff; color: var(--blue-700); font-size: 0.7rem; font-weight: 850; }
+.ui-person-summary__photo { width: 2.6rem; height: 2.6rem; border-radius: 999px; object-fit: cover; }
+.ui-person-summary__avatar--sm, .ui-person-summary__photo--sm { width: 1.9rem; height: 1.9rem; font-size: 0.6rem; }
+.ui-mobile-records__person { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .ui-person-summary header strong, .ui-person-summary header small { display: block; }
 .ui-person-summary header strong { font-size: 0.75rem; }
 .ui-person-summary header small { color: var(--neutral-600); font-size: 0.63rem; }

@@ -240,11 +240,11 @@ class AccessValidation extends Component
         $this->currentPessoaId = $this->findResidentWithActiveVinculo();
     }
 
-    /** @return array{name: string, initials: string, document: string, type: string, property: string, responsible: string, status: string, validity: string} */
+    /** @return array{name: string, initials: string, document: string, type: string, property: string, responsible: string, status: string, validity: string, photoUrl: string|null} */
     #[Computed]
     public function currentPerson(): array
     {
-        $pessoa = $this->currentPessoaId ? Pessoa::query()->with('documentos')->find($this->currentPessoaId) : null;
+        $pessoa = $this->currentPessoaId ? Pessoa::query()->with(['documentos', 'foto'])->find($this->currentPessoaId) : null;
 
         if (! $pessoa) {
             return [
@@ -256,6 +256,7 @@ class AccessValidation extends Component
                 'responsible' => 'A confirmar',
                 'status' => 'Sem cadastro',
                 'validity' => '—',
+                'photoUrl' => null,
             ];
         }
 
@@ -270,7 +271,13 @@ class AccessValidation extends Component
             'responsible' => $this->quickPersonRegistered && $this->quickResponsible !== '' ? $this->quickResponsible : 'Próprio morador',
             'status' => $this->quickPersonRegistered ? 'Cadastro mínimo' : 'Cadastro ativo',
             'validity' => $this->quickPersonRegistered ? 'Aguardando análise' : 'Acesso permanente',
+            'photoUrl' => $pessoa->foto && $this->canViewImage() ? $pessoa->foto->urlProtegida().'?contexto=validacao' : null,
         ];
+    }
+
+    private function canViewImage(): bool
+    {
+        return (bool) Auth::user()?->hasPermission('validacao.visualizar-imagem');
     }
 
     private function recordHistorico(string $resultado, ?string $motivo = null): HistoricoAcesso

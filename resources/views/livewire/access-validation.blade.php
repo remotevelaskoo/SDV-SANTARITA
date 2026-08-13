@@ -103,6 +103,7 @@
                 :status="$currentPerson['status']"
                 :validity="$currentPerson['validity']"
                 :tone="$quickPersonRegistered ? 'warning' : 'success'"
+                :photo-url="$currentPerson['photoUrl']"
             >
                 <x-slot:actions>
                     <x-ui.button variant="secondary" size="sm" disabled title="Consulta completa será conectada ao cadastro em uma próxima etapa">

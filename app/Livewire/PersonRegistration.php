@@ -2,18 +2,26 @@
 
 namespace App\Livewire;
 
+use App\Models\Arquivo;
 use App\Models\Imovel;
+use App\Models\Implantacao;
 use App\Models\Pessoa;
 use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class PersonRegistration extends Component
 {
+    use WithFileUploads;
+
     public string $accessType = 'resident';
 
     public int $currentStep = 1;
@@ -51,6 +59,8 @@ class PersonRegistration extends Component
     public string $documentType = 'rg';
 
     public string $documentState = 'nao_enviado';
+
+    public ?TemporaryUploadedFile $photo = null;
 
     // Etapa 4 — Informações de acesso
     public string $property = '';
@@ -241,6 +251,10 @@ class PersonRegistration extends Component
             'versao' => 1,
         ]);
 
+        if ($this->photo) {
+            $this->attachPhoto($pessoa);
+        }
+
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Pessoa e vínculo salvos',
@@ -288,6 +302,9 @@ class PersonRegistration extends Component
                 'email' => ['nullable', 'email'],
                 'phone' => ['required', 'string', 'min:8'],
             ],
+            2 => [
+                'photo' => ['nullable', 'image', 'max:5120'],
+            ],
             4 => [
                 'property' => ['required', 'string'],
                 'nature' => ['required', Rule::in(['proprietario', 'morador', 'inquilino', 'outro'])],
@@ -322,6 +339,40 @@ class PersonRegistration extends Component
     private function generateProtocol(): string
     {
         return 'SRP-'.now()->format('Ymd').'-'.random_int(100000, 999999);
+    }
+
+    private function attachPhoto(Pessoa $pessoa): void
+    {
+        // Chave opaca (ADR-006 §12.1): não leva o id da pessoa, nome ou
+        // documento — só implantação, categoria e um uuid novo.
+        $extensao = $this->photo->getClientOriginalExtension();
+        $caminho = sprintf(
+            '%s/pessoas-fotos/%s/%s.%s',
+            Implantacao::current()->id,
+            now()->format('Y/m'),
+            Str::uuid7(),
+            $extensao,
+        );
+
+        $checksum = hash_file('sha256', $this->photo->getRealPath());
+        $nomeOriginal = $this->photo->getClientOriginalName();
+        $mime = $this->photo->getMimeType();
+        $tamanho = $this->photo->getSize();
+
+        $this->photo->storeAs('', $caminho, ['disk' => 'local']);
+
+        Arquivo::query()->create([
+            'fileable_type' => Pessoa::class,
+            'fileable_id' => $pessoa->id,
+            'categoria' => 'foto_pessoa',
+            'disco' => 'local',
+            'caminho' => $caminho,
+            'nome_original' => $nomeOriginal,
+            'mime' => $mime,
+            'tamanho' => $tamanho,
+            'checksum' => $checksum,
+            'created_by' => Auth::id(),
+        ]);
     }
 
     public function render(): View

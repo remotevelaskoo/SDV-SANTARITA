@@ -20,6 +20,8 @@ use App\Livewire\PublicPreRegistration;
 use App\Livewire\ResetPassword;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
+use App\Models\Arquivo;
+use App\Models\ArquivoAcesso;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Empresa;
@@ -50,11 +52,13 @@ use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -2221,5 +2225,155 @@ class ExampleTest extends TestCase
 
         $admin = $this->operatorWithPermissions('usuarios.administrar');
         $this->actingAs($admin)->get('/usuarios')->assertOk();
+    }
+
+    /**
+     * Bytes de um PNG 1x1 válido — evita depender da extensão GD (não
+     * instalada neste container) para gerar uma imagem de teste real,
+     * já que a rule `image` inspeciona o conteúdo, não só a extensão.
+     */
+    private function fakePngUpload(string $name = 'foto.png'): UploadedFile
+    {
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAIAAAUAAen63NgAAAAASUVORK5CYII=');
+
+        return UploadedFile::fake()->createWithContent($name, $png);
+    }
+
+    public function test_activating_a_person_with_a_photo_creates_a_protected_arquivo(): void
+    {
+        Storage::fake('local');
+
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-201']);
+
+        Livewire::test(PersonRegistration::class)
+            ->set('fullName', 'Larissa Prado Nunes')
+            ->set('document', '333.444.555-66')
+            ->set('birthDate', '1988-02-20')
+            ->set('phone', '(24) 99911-2233')
+            ->set('photo', $this->fakePngUpload())
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('property', 'SRA-A-201')
+            ->call('nextStep')
+            ->set('startDate', '2026-08-10')
+            ->call('nextStep')
+            ->call('activate')
+            ->assertSet('feedback.variant', 'success');
+
+        $pessoa = Pessoa::query()->where('nome', 'Larissa Prado Nunes')->firstOrFail();
+        $arquivo = Arquivo::query()->where('fileable_id', $pessoa->id)->where('categoria', 'foto_pessoa')->first();
+
+        $this->assertNotNull($arquivo, 'a foto enviada deveria criar um Arquivo vinculado à pessoa');
+        $this->assertSame('local', $arquivo->disco);
+        $this->assertStringNotContainsString((string) $pessoa->id, $arquivo->caminho, 'a chave do arquivo não pode conter o id da pessoa (ADR-006 §12.1)');
+        Storage::disk('local')->assertExists($arquivo->caminho);
+    }
+
+    public function test_activating_a_person_without_a_photo_creates_no_arquivo(): void
+    {
+        Storage::fake('local');
+
+        Imovel::factory()->create(['codigo' => 'SRA-A-202']);
+
+        Livewire::test(PersonRegistration::class)
+            ->set('fullName', 'Eduardo Matias Ramos')
+            ->set('document', '444.555.666-77')
+            ->set('birthDate', '1979-11-02')
+            ->set('phone', '(24) 99922-3344')
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('property', 'SRA-A-202')
+            ->call('nextStep')
+            ->set('startDate', '2026-08-10')
+            ->call('nextStep')
+            ->call('activate')
+            ->assertSet('feedback.variant', 'success');
+
+        $pessoa = Pessoa::query()->where('nome', 'Eduardo Matias Ramos')->firstOrFail();
+
+        $this->assertSame(0, Arquivo::query()->where('fileable_id', $pessoa->id)->count());
+    }
+
+    private function arquivoDeTeste(Pessoa $pessoa, string $caminho = 'teste/foto.jpg'): Arquivo
+    {
+        Storage::disk('local')->put($caminho, 'conteudo-fake');
+
+        return Arquivo::query()->create([
+            'fileable_type' => Pessoa::class,
+            'fileable_id' => $pessoa->id,
+            'categoria' => 'foto_pessoa',
+            'disco' => 'local',
+            'caminho' => $caminho,
+            'nome_original' => 'foto.jpg',
+            'mime' => 'image/jpeg',
+            'tamanho' => 13,
+            'checksum' => hash('sha256', 'conteudo-fake'),
+        ]);
+    }
+
+    public function test_the_protected_file_route_requires_the_view_image_permission_and_audits_access(): void
+    {
+        Storage::fake('local');
+
+        $pessoa = Pessoa::factory()->create();
+        $arquivo = $this->arquivoDeTeste($pessoa);
+
+        $semPermissao = User::factory()->create();
+        $this->actingAs($semPermissao)->get(route('arquivos.mostrar', $arquivo))->assertRedirect(route('dashboard'));
+
+        $comPermissao = $this->operatorWithPermissions('validacao.visualizar-imagem');
+        $this->actingAs($comPermissao)->get(route('arquivos.mostrar', $arquivo))->assertOk();
+
+        $this->assertSame(1, ArquivoAcesso::query()->where('arquivo_id', $arquivo->id)->where('ator_id', $comPermissao->id)->count());
+    }
+
+    public function test_a_protected_file_from_another_implantacao_is_not_accessible(): void
+    {
+        Storage::fake('local');
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $pessoaB = Pessoa::factory()->create();
+        $arquivoB = $this->arquivoDeTeste($pessoaB, 'teste/foto-b.jpg');
+
+        ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
+        $operador = $this->operatorWithPermissions('validacao.visualizar-imagem');
+
+        $this->actingAs($operador)->get(route('arquivos.mostrar', $arquivoB))->assertNotFound();
+    }
+
+    public function test_the_validation_screen_only_exposes_the_photo_url_with_permission(): void
+    {
+        Storage::fake('local');
+
+        $imovel = Imovel::factory()->create();
+        $pessoa = Pessoa::factory()->create();
+        Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create(['tipo' => 'morador', 'ended_at' => null]);
+        $this->arquivoDeTeste($pessoa, 'teste/foto-validacao.jpg');
+
+        $this->actingAs(User::factory()->create());
+        Livewire::test(AccessValidation::class)->assertSet('currentPerson.photoUrl', null);
+
+        $this->actingAs($this->operatorWithPermissions('validacao.visualizar-imagem'));
+        Livewire::test(AccessValidation::class)
+            ->assertSet('currentPerson.photoUrl', fn (?string $url) => $url !== null && str_contains($url, 'contexto=validacao'));
+    }
+
+    public function test_the_portaria_shows_the_photo_of_a_recent_attendance_when_available(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar', 'validacao.visualizar-imagem'));
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Fernanda Alves Correia']);
+        $this->arquivoDeTeste($pessoa, 'teste/foto-portaria.jpg');
+        HistoricoAcesso::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'entrada',
+            'resultado' => 'liberado',
+            'ponto_acesso' => 'Portaria Principal',
+            'occurred_at' => now()->subMinutes(2),
+        ]);
+
+        Livewire::test(Portaria::class)
+            ->assertSee('Fernanda Alves Correia')
+            ->assertSee('contexto=portaria', false);
     }
 }

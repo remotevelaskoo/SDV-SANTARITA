@@ -36,7 +36,8 @@
             @if ($currentStep === 1)
                 <x-ui.card title="Dados pessoais" description="Identificação da pessoa">
                     <div class="registration-fields">
-                        <x-ui.upload id="photo" label="Foto da pessoa" accept=".jpg,.jpeg,.png" limit="Até 5 MB" />
+                        <x-ui.upload id="photo" label="Foto da pessoa" accept=".jpg,.jpeg,.png" limit="Até 5 MB" wire:model="photo" />
+                        @error('photo') <small class="ui-field__message ui-field__message--error">{{ $message }}</small> @enderror
                         <x-ui.field id="fullName" label="Nome completo" wire:model="fullName" required :error="$errors->first('fullName')" />
                         <x-ui.field id="socialName" label="Nome social" wire:model="socialName" />
                         <x-ui.field id="document" label="CPF" wire:model="document" wire:blur="checkDocument" required :error="$errors->first('document')" help="Use apenas números ou o formato 000.000.000-00" />

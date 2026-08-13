@@ -7,6 +7,7 @@ use App\Models\HistoricoAcesso;
 use App\Models\PreRegistration;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Portaria extends Component
@@ -69,15 +70,17 @@ class Portaria extends Component
         ];
     }
 
-    /** @return list<array{time: string, name: string, relation: string, subject: string, result: string}> */
+    /** @return list<array{time: string, name: string, initials: string, relation: string, subject: string, result: string, photoUrl: string|null}> */
     public function recentAttendances(): array
     {
+        $canViewImage = (bool) Auth::user()?->hasPermission('validacao.visualizar-imagem');
+
         return HistoricoAcesso::query()
-            ->with('pessoa')
+            ->with(['pessoa', 'pessoa.foto'])
             ->orderByDesc('occurred_at')
             ->limit(5)
             ->get()
-            ->map(function (HistoricoAcesso $entry) {
+            ->map(function (HistoricoAcesso $entry) use ($canViewImage) {
                 $vinculo = $entry->pessoa
                     ? Vinculo::query()->where('pessoa_id', $entry->pessoa->id)->whereNull('ended_at')->first()
                     : null;
@@ -85,11 +88,22 @@ class Portaria extends Component
                 return [
                     'time' => $entry->occurred_at->format('H:i'),
                     'name' => $entry->pessoa?->nomeExibicao() ?? 'Não identificado',
+                    'initials' => $this->initialsFromName($entry->pessoa?->nome ?? '—'),
                     'relation' => $this->relationLabel($vinculo?->tipo),
                     'subject' => 'Validação de '.($entry->tipo === 'entrada' ? 'entrada' : 'saída').' — '.$entry->ponto_acesso,
                     'result' => $entry->resultado,
+                    'photoUrl' => $entry->pessoa?->foto && $canViewImage ? $entry->pessoa->foto->urlProtegida().'?contexto=portaria' : null,
                 ];
             })->values()->all();
+    }
+
+    private function initialsFromName(string $name): string
+    {
+        return collect(explode(' ', trim($name)))
+            ->filter(fn (string $part): bool => ! in_array(mb_strtolower($part), ['da', 'de', 'do', 'das', 'dos'], true))
+            ->map(fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)))
+            ->take(2)
+            ->join('');
     }
 
     private function relationLabel(?string $tipo): string

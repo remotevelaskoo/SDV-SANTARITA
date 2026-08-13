@@ -72,6 +72,7 @@
                     <thead>
                         <tr>
                             <th>Hora</th>
+                            <th></th>
                             <th>Pessoa</th>
                             <th>Vínculo</th>
                             <th>Atendimento</th>
@@ -82,6 +83,13 @@
                         @foreach ($recentAttendances as $attendance)
                             <tr>
                                 <td class="numeric">{{ $attendance['time'] }}</td>
+                                <td>
+                                    @if ($attendance['photoUrl'])
+                                        <img src="{{ $attendance['photoUrl'] }}" alt="" class="ui-person-summary__photo ui-person-summary__photo--sm">
+                                    @else
+                                        <span class="ui-person-summary__avatar ui-person-summary__avatar--sm" aria-hidden="true">{{ $attendance['initials'] }}</span>
+                                    @endif
+                                </td>
                                 <td><strong>{{ $attendance['name'] }}</strong></td>
                                 <td>{{ $attendance['relation'] }}</td>
                                 <td>{{ $attendance['subject'] }}</td>
@@ -104,9 +112,16 @@
                     <ul class="ui-mobile-records">
                         @foreach ($recentAttendances as $attendance)
                             <li>
-                                <div>
-                                    <strong>{{ $attendance['name'] }}</strong>
-                                    <small>{{ $attendance['relation'] }} · {{ $attendance['subject'] }}</small>
+                                <div class="ui-mobile-records__person">
+                                    @if ($attendance['photoUrl'])
+                                        <img src="{{ $attendance['photoUrl'] }}" alt="" class="ui-person-summary__photo ui-person-summary__photo--sm">
+                                    @else
+                                        <span class="ui-person-summary__avatar ui-person-summary__avatar--sm" aria-hidden="true">{{ $attendance['initials'] }}</span>
+                                    @endif
+                                    <div>
+                                        <strong>{{ $attendance['name'] }}</strong>
+                                        <small>{{ $attendance['relation'] }} · {{ $attendance['subject'] }}</small>
+                                    </div>
                                 </div>
                                 <time>{{ $attendance['time'] }}</time>
                                 <x-ui.badge :variant="match ($attendance['result']) {
