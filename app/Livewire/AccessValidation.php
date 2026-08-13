@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\Catalogo;
+use App\Models\CatalogoItem;
 use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\Pessoa;
@@ -175,7 +177,7 @@ class AccessValidation extends Component
     public function deny(): void
     {
         $this->validate([
-            'denialReason' => ['required', Rule::in(['sem_autorizacao', 'documento_invalido', 'vinculo_irregular', 'decisao_operador'])],
+            'denialReason' => ['required', Rule::in($this->denialReasonCodigos())],
             'denialDetails' => ['nullable', 'string', 'max:200'],
         ]);
 
@@ -336,14 +338,32 @@ class AccessValidation extends Component
         return 'SRA-'.now()->format('Ymd').'-'.strtoupper(Str::random(6));
     }
 
+    /** @return list<string> */
+    private function denialReasonCodigos(): array
+    {
+        return collect($this->denialReasonOptions())->pluck('codigo')->all();
+    }
+
     private function denialReasonLabel(): string
     {
-        return match ($this->denialReason) {
-            'documento_invalido' => 'Documento inválido',
-            'vinculo_irregular' => 'Vínculo irregular',
-            'decisao_operador' => 'Decisão do operador',
-            default => 'Sem autorização',
-        };
+        return collect($this->denialReasonOptions())
+            ->firstWhere('codigo', $this->denialReason)['rotulo'] ?? 'Sem autorização';
+    }
+
+    /** @return list<array{codigo: string, rotulo: string}> */
+    #[Computed]
+    public function denialReasonOptions(): array
+    {
+        $catalogo = Catalogo::porChave('motivos_negativa');
+
+        if (! $catalogo) {
+            return [];
+        }
+
+        return $catalogo->itensAtivos()
+            ->map(fn (CatalogoItem $item) => ['codigo' => $item->codigo, 'rotulo' => $item->rotulo])
+            ->values()
+            ->all();
     }
 
     private function validateCommonFields(): void
@@ -396,6 +416,7 @@ class AccessValidation extends Component
     {
         return view('livewire.access-validation', [
             'currentPerson' => $this->currentPerson(),
+            'denialReasonOptions' => $this->denialReasonOptions(),
         ])->layout('components.layouts.app', [
             'title' => 'Validação de entrada',
             'heading' => 'Validação de entrada',

@@ -7,6 +7,7 @@ use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
+use App\Livewire\CatalogoManagement;
 use App\Livewire\CompanyManagement;
 use App\Livewire\ConfiguracaoManagement;
 use App\Livewire\Dashboard;
@@ -25,6 +26,8 @@ use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
+use App\Models\Catalogo;
+use App\Models\CatalogoItem;
 use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
@@ -52,6 +55,7 @@ use App\Models\Vinculo;
 use App\Notifications\UserInvited;
 use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
+use Database\Seeders\CatalogoSeeder;
 use Database\Seeders\ConfiguracaoSeeder;
 use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
@@ -417,6 +421,8 @@ class ExampleTest extends TestCase
 
     public function test_the_access_validation_decisions_produce_safe_demo_feedback(): void
     {
+        $this->seed(CatalogoSeeder::class);
+
         $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
         $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
         Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
@@ -2673,5 +2679,162 @@ class ExampleTest extends TestCase
     {
         Livewire::test(CashRegister::class)
             ->assertSet('openingBalanceInput', '200,00');
+    }
+
+    public function test_the_catalogo_list_shows_the_seeded_denial_reasons(): void
+    {
+        $this->seed(CatalogoSeeder::class);
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(CatalogoManagement::class)
+            ->assertSee('Sem autorização válida')
+            ->assertSee('Documento inválido')
+            ->assertSee('Vínculo irregular')
+            ->assertSee('Decisão justificada do operador');
+    }
+
+    public function test_creating_a_catalogo_item_persists_it_and_audits_it(): void
+    {
+        $catalogo = Catalogo::factory()->create(['chave' => 'motivos_negativa']);
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(CatalogoManagement::class)
+            ->call('createItem')
+            ->set('codigo', 'suspeita_fraude')
+            ->set('rotulo', 'Suspeita de fraude')
+            ->call('salvarItem')
+            ->assertHasNoErrors()
+            ->assertSee('Motivo criado');
+
+        $this->assertDatabaseHas('catalogo_itens', [
+            'catalogo_id' => $catalogo->id,
+            'codigo' => 'suspeita_fraude',
+            'rotulo' => 'Suspeita de fraude',
+            'status' => 'ativo',
+        ]);
+
+        $this->assertDatabaseHas('auditoria_eventos', [
+            'action' => 'catalogo_item_criado',
+            'module' => 'catalogos',
+        ]);
+    }
+
+    public function test_creating_a_catalogo_item_rejects_a_duplicate_codigo(): void
+    {
+        $catalogo = Catalogo::factory()->create(['chave' => 'motivos_negativa']);
+        CatalogoItem::factory()->for($catalogo)->create(['codigo' => 'ja_existe']);
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(CatalogoManagement::class)
+            ->call('createItem')
+            ->set('codigo', 'ja_existe')
+            ->set('rotulo', 'Duplicado')
+            ->call('salvarItem')
+            ->assertHasErrors('codigo');
+    }
+
+    public function test_editing_a_catalogo_item_updates_the_rotulo_and_audits_it(): void
+    {
+        $catalogo = Catalogo::factory()->create(['chave' => 'motivos_negativa']);
+        $item = CatalogoItem::factory()->for($catalogo)->create(['codigo' => 'sem_autorizacao', 'rotulo' => 'Antigo']);
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(CatalogoManagement::class)
+            ->call('editItem', $item->id)
+            ->set('rotulo', 'Sem autorização válida (revisado)')
+            ->call('salvarItem')
+            ->assertHasNoErrors()
+            ->assertSee('Motivo atualizado');
+
+        $this->assertDatabaseHas('catalogo_itens', [
+            'id' => $item->id,
+            'codigo' => 'sem_autorizacao',
+            'rotulo' => 'Sem autorização válida (revisado)',
+        ]);
+
+        $this->assertDatabaseHas('auditoria_eventos', ['action' => 'catalogo_item_alterado', 'module' => 'catalogos']);
+    }
+
+    public function test_inactivating_a_catalogo_item_removes_it_from_denial_reason_options(): void
+    {
+        $catalogo = Catalogo::factory()->create(['chave' => 'motivos_negativa']);
+        $item = CatalogoItem::factory()->for($catalogo)->create(['codigo' => 'decisao_operador']);
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(CatalogoManagement::class)
+            ->call('inativarItem', $item->id)
+            ->assertSee('Motivo inativado');
+
+        $this->assertDatabaseHas('catalogo_itens', ['id' => $item->id, 'status' => 'inativo']);
+        $this->assertSame([], $catalogo->fresh()->itensAtivos()->pluck('codigo')->all());
+
+        Livewire::test(CatalogoManagement::class)
+            ->call('reativarItem', $item->id)
+            ->assertSee('Motivo reativado');
+
+        $this->assertDatabaseHas('catalogo_itens', ['id' => $item->id, 'status' => 'ativo']);
+    }
+
+    public function test_the_catalogs_route_requires_the_gerenciar_permission(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/catalogos')->assertRedirect(route('dashboard'));
+
+        $admin = $this->operatorWithPermissions('catalogos.gerenciar');
+        $this->actingAs($admin)->get('/catalogos')->assertOk();
+    }
+
+    public function test_catalogo_itens_are_isolated_between_implantacoes(): void
+    {
+        $catalogo = Catalogo::factory()->create(['chave' => 'motivos_negativa']);
+
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        CatalogoItem::query()->create(['catalogo_id' => $catalogo->id, 'codigo' => 'motivo_a', 'rotulo' => 'Motivo A']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        CatalogoItem::query()->create(['catalogo_id' => $catalogo->id, 'codigo' => 'motivo_b', 'rotulo' => 'Motivo B']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $this->assertSame(['motivo_a'], $catalogo->itensAtivos()->pluck('codigo')->all());
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        $this->assertSame(['motivo_b'], $catalogo->itensAtivos()->pluck('codigo')->all());
+    }
+
+    public function test_denying_access_with_an_inactive_reason_is_rejected_and_a_valid_reason_records_the_correct_label(): void
+    {
+        $this->seed(CatalogoSeeder::class);
+
+        $catalogo = Catalogo::porChave('motivos_negativa');
+        CatalogoItem::query()->where('catalogo_id', $catalogo->id)->where('codigo', 'decisao_operador')->update(['status' => 'inativo']);
+
+        $imovel = Imovel::factory()->create();
+        $pessoa = Pessoa::factory()->create();
+        Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+
+        Livewire::test(AccessValidation::class)
+            ->set('denialReason', 'decisao_operador')
+            ->call('deny')
+            ->assertHasErrors('denialReason');
+
+        Livewire::test(AccessValidation::class)
+            ->set('denialReason', 'vinculo_irregular')
+            ->call('deny')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('historico_acessos', [
+            'pessoa_id' => $pessoa->id,
+            'resultado' => 'negado',
+            'motivo_negacao' => 'Vínculo irregular',
+        ]);
     }
 }
