@@ -225,7 +225,12 @@ class UserManagement extends Component
             ->where('user_id', $user->id)
             ->whereNull('ended_at')
             ->get()
-            ->each(fn (UsuarioPerfil $vinculo) => $vinculo->update(['ended_at' => now()]));
+            ->each(fn (UsuarioPerfil $vinculo) => $vinculo->update([
+                // started_at tem precisão de segundo (dateTime); garante
+                // ended_at estritamente posterior mesmo se ambos caírem
+                // no mesmo segundo (ex.: perfil recém-atribuído).
+                'ended_at' => now()->max($vinculo->started_at->copy()->addSecond()),
+            ]));
 
         $this->inactivateReason = '';
         $this->feedback = [
