@@ -15,6 +15,7 @@
         ],
         'Gestão' => [
             ['label' => 'Administração', 'icon' => 'settings', 'route' => 'users'],
+            ['label' => 'Perfis e permissões', 'icon' => 'key', 'route' => 'profiles'],
             ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],

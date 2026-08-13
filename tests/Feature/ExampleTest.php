@@ -12,6 +12,7 @@ use App\Livewire\Dashboard;
 use App\Livewire\ForgotPassword;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
+use App\Livewire\PerfilManagement;
 use App\Livewire\PersonRegistration;
 use App\Livewire\Portaria;
 use App\Livewire\PreRegistrationQueue;
@@ -2279,5 +2280,154 @@ class ExampleTest extends TestCase
 
         $admin = $this->operatorWithPermissions('usuarios.administrar');
         $this->actingAs($admin)->get('/usuarios')->assertOk();
+    }
+
+    public function test_creating_a_perfil_persists_it_with_the_selected_permissions(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('perfis.administrar'));
+
+        $permissaoA = Permissao::factory()->create(['chave' => 'teste.consultar']);
+        $permissaoB = Permissao::factory()->create(['chave' => 'teste.gerenciar']);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('createPerfil')
+            ->set('nome', 'Financeiro')
+            ->set('permissaoIds', [$permissaoA->id, $permissaoB->id])
+            ->call('savePerfil')
+            ->assertHasNoErrors()
+            ->assertSet('feedback.variant', 'success');
+
+        $this->assertDatabaseHas('perfis', ['nome' => 'Financeiro', 'status' => 'ativo']);
+        $perfil = Perfil::query()->where('nome', 'Financeiro')->firstOrFail();
+        $this->assertDatabaseHas('perfil_permissoes', ['perfil_id' => $perfil->id, 'permissao_id' => $permissaoA->id]);
+        $this->assertDatabaseHas('perfil_permissoes', ['perfil_id' => $perfil->id, 'permissao_id' => $permissaoB->id]);
+        $this->assertDatabaseHas('auditoria_eventos', ['action' => 'perfil_criado', 'entity_id' => $perfil->id]);
+    }
+
+    public function test_creating_a_perfil_rejects_a_duplicate_name(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('perfis.administrar'));
+        Perfil::factory()->create(['nome' => 'Financeiro']);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('createPerfil')
+            ->set('nome', 'Financeiro')
+            ->call('savePerfil')
+            ->assertHasErrors('nome');
+
+        $this->assertSame(1, Perfil::query()->where('nome', 'Financeiro')->count());
+    }
+
+    public function test_editing_a_perfil_renames_it_and_syncs_permissions(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('perfis.administrar'));
+
+        $perfil = Perfil::factory()->create(['nome' => 'Financeiro']);
+        $permissaoAntiga = Permissao::factory()->create();
+        $permissaoNova = Permissao::factory()->create();
+        $perfil->permissoes()->attach($permissaoAntiga->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('editPerfil', $perfil->id)
+            ->assertSet('nome', 'Financeiro')
+            ->set('nome', 'Financeiro e Contábil')
+            ->set('permissaoIds', [$permissaoNova->id])
+            ->call('savePerfil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('perfis', ['id' => $perfil->id, 'nome' => 'Financeiro e Contábil']);
+        $this->assertDatabaseHas('perfil_permissoes', ['perfil_id' => $perfil->id, 'permissao_id' => $permissaoNova->id]);
+        $this->assertDatabaseMissing('perfil_permissoes', ['perfil_id' => $perfil->id, 'permissao_id' => $permissaoAntiga->id]);
+        $this->assertDatabaseHas('auditoria_eventos', ['action' => 'perfil_alterado', 'entity_id' => $perfil->id]);
+    }
+
+    public function test_inactivating_a_perfil_requires_a_reason_and_can_be_reversed(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('perfis.administrar'));
+        $perfil = Perfil::factory()->create();
+
+        Livewire::test(PerfilManagement::class)
+            ->call('openPerfil', $perfil->id)
+            ->call('inactivatePerfil')
+            ->assertHasErrors('inactivateReason');
+
+        $this->assertDatabaseHas('perfis', ['id' => $perfil->id, 'status' => 'ativo']);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('openPerfil', $perfil->id)
+            ->set('inactivateReason', 'Perfil substituído por outro')
+            ->call('inactivatePerfil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('perfis', ['id' => $perfil->id, 'status' => 'inativo']);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('openPerfil', $perfil->id)
+            ->call('reactivatePerfil');
+
+        $this->assertDatabaseHas('perfis', ['id' => $perfil->id, 'status' => 'ativo']);
+    }
+
+    public function test_the_last_active_grantor_of_a_critical_permission_cannot_lose_it(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('perfis.administrar'));
+
+        $adminPermissao = Permissao::query()->firstOrCreate(['chave' => 'usuarios.administrar'], ['modulo' => 'usuarios', 'descricao' => 'Administrar usuários do sistema']);
+        $perfilAdmin = Perfil::factory()->create(['nome' => 'Administrador Único']);
+        $perfilAdmin->permissoes()->attach($adminPermissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        UsuarioPerfil::factory()->for(User::factory()->create(['status' => 'ativo']))->for($perfilAdmin)->create();
+
+        Livewire::test(PerfilManagement::class)
+            ->call('editPerfil', $perfilAdmin->id)
+            ->set('permissaoIds', [])
+            ->call('savePerfil')
+            ->assertHasErrors('permissaoIds');
+
+        $this->assertDatabaseHas('perfil_permissoes', ['perfil_id' => $perfilAdmin->id, 'permissao_id' => $adminPermissao->id]);
+
+        Livewire::test(PerfilManagement::class)
+            ->call('openPerfil', $perfilAdmin->id)
+            ->set('inactivateReason', 'Teste')
+            ->call('inactivatePerfil')
+            ->assertHasErrors('inactivateReason');
+
+        $this->assertDatabaseHas('perfis', ['id' => $perfilAdmin->id, 'status' => 'ativo']);
+
+        $perfilAdminBackup = Perfil::factory()->create(['nome' => 'Administrador Backup']);
+        $perfilAdminBackup->permissoes()->attach($adminPermissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        UsuarioPerfil::factory()->for(User::factory()->create(['status' => 'ativo']))->for($perfilAdminBackup)->create();
+
+        Livewire::test(PerfilManagement::class)
+            ->call('editPerfil', $perfilAdmin->id)
+            ->set('permissaoIds', [])
+            ->call('savePerfil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('perfil_permissoes', ['perfil_id' => $perfilAdmin->id, 'permissao_id' => $adminPermissao->id]);
+    }
+
+    public function test_the_profiles_route_requires_the_administrar_permission(): void
+    {
+        $this->withoutVite();
+
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/perfis')->assertRedirect(route('dashboard'));
+
+        $admin = $this->operatorWithPermissions('perfis.administrar');
+        $this->actingAs($admin)->get('/perfis')->assertOk();
+    }
+
+    public function test_the_perfil_detail_lists_its_linked_users(): void
+    {
+        $admin = $this->operatorWithPermissions('perfis.administrar');
+        $this->actingAs($admin);
+
+        $perfil = Perfil::factory()->create();
+        $vinculado = User::factory()->create(['name' => 'Priscila Andrade']);
+        UsuarioPerfil::factory()->for($vinculado)->for($perfil)->create();
+
+        Livewire::test(PerfilManagement::class)
+            ->call('openPerfil', $perfil->id)
+            ->assertSee('Priscila Andrade');
     }
 }
