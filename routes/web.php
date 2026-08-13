@@ -7,6 +7,7 @@ use App\Livewire\ActiveSessions;
 use App\Livewire\AuditLog;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
+use App\Livewire\ConfiguracaoManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\ForgotPassword;
 use App\Livewire\ImplantacaoSelection;
@@ -66,6 +67,7 @@ Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permis
 Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relatorios.proprio.consultar,relatorios.consolidado.consultar'])->name('reports');
 Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:usuarios.administrar'])->name('users');
 Route::get('/perfis', PerfilManagement::class)->middleware(['auth', 'permissao:perfis.administrar'])->name('profiles');
+Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth', 'permissao:configuracoes.gerenciar'])->name('settings');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 Route::get('/auditoria', AuditLog::class)->middleware(['auth', 'permissao:auditoria.consultar'])->name('audit-log');
 Route::get('/arquivos/{arquivo}/visualizar', ProtectedFileController::class)

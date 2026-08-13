@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
+use App\Models\Configuracao;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ class CashRegister extends Component
     public ?string $currentTurnoId = null;
 
     // Formulário de abertura
-    public string $openingBalanceInput = '200,00';
+    public string $openingBalanceInput = '';
 
     /** Regra reutilizada pelos três campos de valor (aceita vírgula decimal, ex.: 25,00). */
     private const MONEY_REGEX = '/^\d+([.,]\d{1,2})?$/';
@@ -48,6 +49,9 @@ class CashRegister extends Component
 
     public function mount(): void
     {
+        $sugerido = Configuracao::obter('caixa.saldo_sugerido_abertura');
+        $this->openingBalanceInput = $sugerido !== null ? number_format((float) $sugerido, 2, ',', '') : '200,00';
+
         $this->syncCurrentTurno();
     }
 

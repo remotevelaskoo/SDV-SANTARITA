@@ -1811,6 +1811,18 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .implantacao-selection__list small { margin-top: 0.1rem; color: var(--neutral-600); font-size: 0.68rem; }
 .implantacao-selection__logout { padding: 0; border: 0; background: transparent; color: var(--neutral-600); font-size: 0.7rem; text-decoration: underline; cursor: pointer; }
 
+/* P17 fatia 3 — configurações da implantação */
+.configuracao-management { display: grid; gap: 1rem; }
+.configuracao-management-list { display: grid; gap: 0; padding: 0; margin: 0; list-style: none; }
+.configuracao-management-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--neutral-200); }
+.configuracao-management-list li:last-child { border-bottom: 0; }
+.configuracao-management-list__info { display: grid; gap: 0.25rem; }
+.configuracao-management-list__info small { color: var(--neutral-600); font-size: 0.65rem; }
+.configuracao-management-list__valor { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 700; }
+.configuracao-management-form { display: grid; gap: 0.6rem; padding: 1rem; }
+.configuracao-management-form footer { display: flex; justify-content: flex-end; gap: 0.6rem; }
+.configuracao-management-form__hint { margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
+
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 @media (min-width: 40rem) {
