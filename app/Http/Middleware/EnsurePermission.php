@@ -8,9 +8,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsurePermission
 {
-    public function handle(Request $request, Closure $next, string $permissao): Response
+    public function handle(Request $request, Closure $next, string ...$permissoes): Response
     {
-        if (! $request->user()?->hasPermission($permissao)) {
+        $autorizado = collect($permissoes)->contains(
+            fn (string $permissao) => $request->user()?->hasPermission($permissao)
+        );
+
+        if (! $autorizado) {
             return redirect()->route('dashboard')->with('erro', 'Sem permissão para acessar esta área.');
         }
 
