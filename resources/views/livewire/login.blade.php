@@ -92,6 +92,7 @@
                     <p><b>portaria.leitura</b> — Auditor</p>
                     <p><b>gestor</b> — Gestor</p>
                     <p><b>administrador</b> — Administrador</p>
+                    <p><b>administrador.multi</b> — Administrador em 2 implantações</p>
                     <p>Senha para todas: <b>sdv2026</b></p>
                 </div>
                 <button type="button" wire:click="useDemoAccount">Preencher portaria</button>

@@ -32,5 +32,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CaixaDemoSeeder::class);
         $this->call(HistoricoAcessoDemoSeeder::class);
         $this->call(UsuarioDemoSeeder::class);
+        $this->call(MultiImplantacaoDemoSeeder::class);
     }
 }

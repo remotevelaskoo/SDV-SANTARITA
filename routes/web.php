@@ -9,6 +9,7 @@ use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\ForgotPassword;
+use App\Livewire\ImplantacaoSelection;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PerfilManagement;
@@ -51,6 +52,7 @@ Route::get('/esqueci-minha-senha', ForgotPassword::class)->name('password.reques
 Route::get('/redefinir-senha/{token}', ResetPassword::class)->name('password.reset');
 
 Route::get('/dashboard', Dashboard::class)->middleware('auth')->name('dashboard');
+Route::get('/selecionar-implantacao', ImplantacaoSelection::class)->middleware('auth')->name('implantacao.selecionar');
 Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria');
 Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
 Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');

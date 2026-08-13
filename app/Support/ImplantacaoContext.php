@@ -3,17 +3,22 @@
 namespace App\Support;
 
 use App\Models\Implantacao;
+use App\Models\Scopes\ImplantacaoScope;
+use App\Models\UsuarioImplantacao;
+use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
 /**
  * Resolve a implantação ativa do processo atual.
  *
- * Hoje o SDV Access tem uma única implantação real (Santa Rita), então a
- * resolução é simples: a implantação semeada no banco. A resolução por
- * subdomínio, sessão ou seleção do usuário (ADR-002, seção 11) pertence a
- * P19/P20/P21, que ainda não existem — este helper só garante que o modelo
- * de dados já seja implantação-aware desde já, sem inventar um pipeline de
- * contexto que não tem onde se conectar ainda.
+ * Fora de uma requisição autenticada (artisan, seeders, testes sem
+ * override, rotas públicas como o pré-cadastro), a resolução continua
+ * sendo a única implantação `ativa` — resolução por subdomínio para
+ * rotas públicas é a pendência ADR-002 PEN-ADR-002-004, fora de escopo.
+ * Dentro de uma requisição autenticada, a implantação ativa vem da sessão
+ * (gravada por App\Http\Middleware\EnsureImplantacaoSelected após o
+ * usuário escolher, quando tem mais de uma) e é revalidada a cada
+ * chamada — nunca confia apenas no valor guardado (ADR-002 §11.3).
  */
 class ImplantacaoContext
 {
@@ -31,10 +36,39 @@ class ImplantacaoContext
             return self::$override;
         }
 
+        if (Auth::check() && session()->has('implantacao_atual_id')) {
+            return self::currentFromSession();
+        }
+
         $implantacao = Implantacao::query()->where('status', 'ativa')->first();
 
         if ($implantacao === null) {
             throw new RuntimeException('Nenhuma implantação ativa encontrada. Rode o seeder de fundação antes de usar entidades operacionais.');
+        }
+
+        return $implantacao;
+    }
+
+    private static function currentFromSession(): Implantacao
+    {
+        $implantacaoId = session('implantacao_atual_id');
+
+        // UsuarioImplantacao usa BelongsToImplantacao (ImplantacaoScope), que
+        // por sua vez chama current() — resolver o contexto a partir da
+        // própria sessão exige consultar sem esse escopo, como o próprio
+        // ImplantacaoScope documenta ("acesso global excepcional").
+        $temAcesso = UsuarioImplantacao::withoutGlobalScope(ImplantacaoScope::class)
+            ->where('user_id', Auth::id())
+            ->where('implantacao_id', $implantacaoId)
+            ->where('status', 'ativa')
+            ->exists();
+
+        $implantacao = $temAcesso
+            ? Implantacao::query()->where('id', $implantacaoId)->where('status', 'ativa')->first()
+            : null;
+
+        if ($implantacao === null) {
+            throw new RuntimeException('A implantação selecionada não está mais disponível para este usuário.');
         }
 
         return $implantacao;
