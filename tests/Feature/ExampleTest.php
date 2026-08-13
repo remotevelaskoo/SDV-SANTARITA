@@ -8,6 +8,7 @@ use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
+use App\Livewire\ConfiguracaoManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\ForgotPassword;
 use App\Livewire\ImplantacaoSelection;
@@ -24,6 +25,7 @@ use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
+use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
@@ -34,6 +36,7 @@ use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\ImovelResponsabilidade;
 use App\Models\Implantacao;
+use App\Models\ImplantacaoConfiguracao;
 use App\Models\Perfil;
 use App\Models\Permissao;
 use App\Models\Pessoa;
@@ -49,6 +52,7 @@ use App\Models\Vinculo;
 use App\Notifications\UserInvited;
 use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
+use Database\Seeders\ConfiguracaoSeeder;
 use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Database\QueryException;
@@ -2526,5 +2530,148 @@ class ExampleTest extends TestCase
         Livewire::test(UserManagement::class)
             ->assertSee('Usuário da Implantação A')
             ->assertDontSee('Usuário da Implantação B');
+    }
+
+    public function test_the_configuracoes_list_shows_default_values_when_not_customized(): void
+    {
+        $this->seed(ConfiguracaoSeeder::class);
+        $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(ConfiguracaoManagement::class)
+            ->assertSee('Valor sugerido para abertura de caixa')
+            ->assertSee('200.00')
+            ->assertSee('Padrão');
+    }
+
+    public function test_editing_a_text_configuracao_persists_the_override_and_audits_it(): void
+    {
+        $configuracao = Configuracao::factory()->create([
+            'chave' => 'geral.telefone_contato',
+            'categoria' => 'dados gerais',
+            'tipo' => 'texto',
+            'rotulo' => 'Telefone de contato',
+        ]);
+        $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(ConfiguracaoManagement::class)
+            ->call('editConfiguracao', 'geral.telefone_contato')
+            ->set('valorInput', '(11) 4000-0000')
+            ->call('salvarConfiguracao')
+            ->assertHasNoErrors()
+            ->assertSee('Configuração atualizada');
+
+        $this->assertDatabaseHas('implantacao_configuracoes', [
+            'configuracao_id' => $configuracao->id,
+            'valor' => '(11) 4000-0000',
+        ]);
+
+        $this->assertDatabaseHas('auditoria_eventos', [
+            'action' => 'configuracao_alterada',
+            'module' => 'configuracoes',
+            'entity_id' => $configuracao->id,
+        ]);
+    }
+
+    public function test_editing_a_numeric_configuracao_rejects_a_non_numeric_value(): void
+    {
+        Configuracao::factory()->create([
+            'chave' => 'caixa.saldo_sugerido_abertura',
+            'categoria' => 'contribuição e caixa',
+            'tipo' => 'numero',
+            'rotulo' => 'Valor sugerido',
+        ]);
+        $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
+        $this->actingAs($admin);
+
+        Livewire::test(ConfiguracaoManagement::class)
+            ->call('editConfiguracao', 'caixa.saldo_sugerido_abertura')
+            ->set('valorInput', 'abc')
+            ->call('salvarConfiguracao')
+            ->assertHasErrors('valorInput');
+
+        $this->assertDatabaseMissing('implantacao_configuracoes', ['valor' => 'abc']);
+    }
+
+    public function test_restoring_default_removes_the_override(): void
+    {
+        $configuracao = Configuracao::factory()->create([
+            'chave' => 'geral.email_contato',
+            'tipo' => 'texto',
+            'valor_padrao' => null,
+        ]);
+        $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
+        $this->actingAs($admin);
+
+        $component = Livewire::test(ConfiguracaoManagement::class)
+            ->call('editConfiguracao', 'geral.email_contato')
+            ->set('valorInput', 'contato@santarita.com.br')
+            ->call('salvarConfiguracao');
+
+        $this->assertDatabaseHas('implantacao_configuracoes', ['configuracao_id' => $configuracao->id]);
+
+        $component
+            ->call('editConfiguracao', 'geral.email_contato')
+            ->call('restaurarPadrao')
+            ->assertSee('Padrão restaurado');
+
+        $this->assertDatabaseMissing('implantacao_configuracoes', ['configuracao_id' => $configuracao->id]);
+
+        $this->assertDatabaseHas('auditoria_eventos', [
+            'action' => 'configuracao_restaurada_padrao',
+            'entity_id' => $configuracao->id,
+        ]);
+    }
+
+    public function test_the_settings_route_requires_the_gerenciar_permission(): void
+    {
+        $this->seed(ConfiguracaoSeeder::class);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/configuracoes')->assertRedirect(route('dashboard'));
+
+        $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
+        $this->actingAs($admin)->get('/configuracoes')->assertOk();
+    }
+
+    public function test_configuracao_overrides_are_isolated_between_implantacoes(): void
+    {
+        $configuracao = Configuracao::factory()->create(['chave' => 'geral.telefone_contato', 'tipo' => 'texto']);
+
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        ImplantacaoConfiguracao::query()->create(['configuracao_id' => $configuracao->id, 'valor' => 'A']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        ImplantacaoConfiguracao::query()->create(['configuracao_id' => $configuracao->id, 'valor' => 'B']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $this->assertSame('A', $configuracao->fresh()->valorEfetivo());
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        $this->assertSame('B', $configuracao->fresh()->valorEfetivo());
+    }
+
+    public function test_the_cash_register_uses_the_configured_suggested_opening_balance(): void
+    {
+        $configuracao = Configuracao::factory()->create([
+            'chave' => 'caixa.saldo_sugerido_abertura',
+            'tipo' => 'numero',
+            'valor_padrao' => '200.00',
+        ]);
+
+        ImplantacaoConfiguracao::query()->create(['configuracao_id' => $configuracao->id, 'valor' => '350.00']);
+
+        Livewire::test(CashRegister::class)
+            ->assertSet('openingBalanceInput', '350,00');
+    }
+
+    public function test_the_cash_register_falls_back_to_the_literal_default_without_configuration(): void
+    {
+        Livewire::test(CashRegister::class)
+            ->assertSet('openingBalanceInput', '200,00');
     }
 }
