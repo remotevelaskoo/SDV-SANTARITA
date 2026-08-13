@@ -167,8 +167,15 @@ class ConfiguracaoManagement extends Component
         ];
     }
 
+    private function canManage(): bool
+    {
+        return Auth::user()?->hasPermission('configuracoes.gerenciar') ?? false;
+    }
+
     public function render(): View
     {
+        abort_unless($this->canManage(), 403);
+
         return view('livewire.configuracao-management', [
             'configuracoesPorCategoria' => $this->configuracoesPorCategoria(),
             'editingConfiguracao' => $this->editingConfiguracao(),

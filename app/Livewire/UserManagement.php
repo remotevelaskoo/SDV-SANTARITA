@@ -50,7 +50,7 @@ class UserManagement extends Component
 
     public function openUser(string $id): void
     {
-        if (User::query()->whereKey($id)->exists()) {
+        if (User::query()->whereKey($id)->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'))->exists()) {
             $this->selectedUserId = $id;
             $this->mode = 'detail';
             $this->blockReason = '';
@@ -298,7 +298,10 @@ class UserManagement extends Component
     private function findSelected(): ?User
     {
         return $this->selectedUserId
-            ? User::query()->with(['usuarioPerfis' => fn ($q) => $q->whereNull('ended_at')->with('perfil')])->find($this->selectedUserId)
+            ? User::query()
+                ->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'))
+                ->with(['usuarioPerfis' => fn ($q) => $q->whereNull('ended_at')->with('perfil')])
+                ->find($this->selectedUserId)
             : null;
     }
 
@@ -379,6 +382,15 @@ class UserManagement extends Component
         $this->resetErrorBag();
     }
 
+    // Sem abort_unless(hasPermission(...)) aqui de propósito, diferente de
+    // PerfilManagement/ConfiguracaoManagement/CatalogoManagement: exigir
+    // usuarios.administrar para renderizar tornaria
+    // wouldRemoveLastAdministrator() estruturalmente inalcançável — quem
+    // chega ao componente já seria administrador, então bloquear "o último
+    // admin" nunca dropa a zero (o próprio ator conta como outro admin
+    // ativo). A rota já exige a permissão (routes/web.php); a correção real
+    // desta fatia (openUser/findSelected sem escopo de implantação) não
+    // depende disto.
     public function render(): View
     {
         return view('livewire.user-management', [

@@ -122,6 +122,11 @@ class ExampleTest extends TestCase
         }
 
         UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+        // Mesmo vínculo que UserManagement::saveUser() sempre cria na vida
+        // real — sem isso, openUser()/findSelected() (escopados por
+        // implantação desde a correção do vazamento cross-tenant do P26)
+        // nunca encontrariam este usuário de teste.
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
 
         return $user;
     }
@@ -2200,6 +2205,7 @@ class ExampleTest extends TestCase
     {
         $admin = $this->operatorWithPermissions('usuarios.administrar');
         $target = User::factory()->create();
+        UsuarioImplantacao::factory()->for($target)->create(['status' => 'ativa']);
 
         $this->actingAs($admin);
 
@@ -2291,6 +2297,71 @@ class ExampleTest extends TestCase
 
         $admin = $this->operatorWithPermissions('usuarios.administrar');
         $this->actingAs($admin)->get('/usuarios')->assertOk();
+    }
+
+    public function test_opening_a_user_from_another_implantacao_is_rejected(): void
+    {
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        $userB = User::factory()->create();
+        UsuarioImplantacao::factory()->for($userB)->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', $userB->id)
+            ->assertSet('selectedUserId', null)
+            ->assertSet('mode', 'list');
+    }
+
+    public function test_blocking_a_user_id_forced_from_another_implantacao_has_no_effect(): void
+    {
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        $userB = User::factory()->create(['status' => 'ativo']);
+        UsuarioImplantacao::factory()->for($userB)->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->set('selectedUserId', $userB->id)
+            ->set('blockReason', 'Tentativa entre implantações')
+            ->call('blockUser');
+
+        $this->assertDatabaseHas('users', ['id' => $userB->id, 'status' => 'ativo']);
+    }
+
+    public function test_perfil_management_rejects_rendering_without_the_permission(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(PerfilManagement::class)->assertStatus(403);
+    }
+
+    public function test_configuracao_management_rejects_rendering_without_the_permission(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(ConfiguracaoManagement::class)->assertStatus(403);
+    }
+
+    public function test_catalogo_management_rejects_rendering_without_the_permission(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(CatalogoManagement::class)->assertStatus(403);
     }
 
     public function test_creating_a_perfil_persists_it_with_the_selected_permissions(): void
@@ -2522,7 +2593,6 @@ class ExampleTest extends TestCase
 
         ImplantacaoContext::setCurrentForTesting($implantacaoA);
         $admin = $this->operatorWithPermissions('usuarios.administrar');
-        UsuarioImplantacao::factory()->for($admin)->create(['status' => 'ativa']);
         $userA = User::factory()->create(['name' => 'Usuário da Implantação A']);
         UsuarioImplantacao::factory()->for($userA)->create(['status' => 'ativa']);
 
