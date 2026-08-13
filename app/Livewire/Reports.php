@@ -6,6 +6,7 @@ use App\Models\CaixaMovimentacao;
 use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -58,12 +59,20 @@ class Reports extends Component
         $this->mount();
     }
 
-    public function exportCsv(): StreamedResponse
+    public function exportCsv(AuditService $audit): StreamedResponse
     {
         abort_unless($this->canViewReports(), 403);
 
         $type = $this->reportType === 'caixa' ? 'caixa' : 'acessos';
         $filename = "relatorio-{$type}-{$this->dateFrom}-a-{$this->dateTo}.csv";
+
+        $audit->record(
+            action: 'exportou_csv',
+            module: 'relatorios',
+            entityType: 'relatorio_'.$type,
+            classification: 'restrita',
+            metadata: ['date_from' => $this->dateFrom, 'date_to' => $this->dateTo],
+        );
 
         return response()->streamDownload(function () use ($type): void {
             $output = fopen('php://output', 'w');

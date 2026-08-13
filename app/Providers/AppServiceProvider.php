@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Observers\AuditObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach (AuditObserver::observedModels() as $model) {
+            $model::observe(AuditObserver::class);
+        }
+
         $resetUrl = fn (User $notifiable, string $token) => route('password.reset', [
             'token' => $token,
             'email' => $notifiable->getEmailForPasswordReset(),

@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\UsuarioImplantacao;
 use App\Models\UsuarioPerfil;
 use App\Notifications\UserInvited;
+use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -129,7 +131,7 @@ class UserManagement extends Component
         ];
     }
 
-    public function blockUser(): void
+    public function blockUser(AuditService $audit): void
     {
         $user = $this->findSelected();
 
@@ -159,6 +161,8 @@ class UserManagement extends Component
             'status_changed_by' => Auth::id(),
             'status_changed_at' => now(),
         ]);
+
+        $this->revokeUserSessions($user, $audit, 'usuario_bloqueado');
 
         $this->blockReason = '';
         $this->feedback = [
@@ -190,7 +194,7 @@ class UserManagement extends Component
         ];
     }
 
-    public function inactivateUser(): void
+    public function inactivateUser(AuditService $audit): void
     {
         $user = $this->findSelected();
 
@@ -231,6 +235,8 @@ class UserManagement extends Component
                 // no mesmo segundo (ex.: perfil recém-atribuído).
                 'ended_at' => now()->max($vinculo->started_at->copy()->addSecond()),
             ]));
+
+        $this->revokeUserSessions($user, $audit, 'usuario_inativado');
 
         $this->inactivateReason = '';
         $this->feedback = [
@@ -292,6 +298,23 @@ class UserManagement extends Component
     private function isSelf(User $user): bool
     {
         return (int) Auth::id() === (int) $user->id;
+    }
+
+    private function revokeUserSessions(User $user, AuditService $audit, string $reasonCode): void
+    {
+        $deleted = DB::table('sessions')->where('user_id', $user->id)->delete();
+
+        if ($deleted > 0) {
+            $audit->record(
+                action: 'revogou_sessoes_usuario',
+                module: 'usuarios',
+                entityType: 'users',
+                entityId: $user->id,
+                reasonCode: $reasonCode,
+                classification: 'restrita',
+                metadata: ['quantity' => $deleted],
+            );
+        }
     }
 
     private function wouldRemoveLastAdministrator(User $user): bool

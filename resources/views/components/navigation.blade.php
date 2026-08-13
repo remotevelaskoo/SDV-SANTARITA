@@ -17,7 +17,7 @@
             ['label' => 'Administração', 'icon' => 'settings', 'route' => 'users'],
             ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
-            ['label' => 'Logs e auditoria', 'icon' => 'scroll'],
+            ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],
             ['label' => 'Manutenção', 'icon' => 'wrench'],
             ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
         ],

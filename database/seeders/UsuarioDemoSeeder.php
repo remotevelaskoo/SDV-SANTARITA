@@ -46,6 +46,8 @@ class UsuarioDemoSeeder extends Seeder
         'perfis.administrar' => ['modulo' => 'usuarios', 'descricao' => 'Administrar perfis e permissões'],
         'configuracoes.gerenciar' => ['modulo' => 'configuracoes', 'descricao' => 'Gerenciar configurações da implantação'],
         'integracoes.gerenciar' => ['modulo' => 'integracoes', 'descricao' => 'Gerenciar integrações externas'],
+        'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
+        'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],
     ];
 
     /** @var list<string> */
@@ -79,6 +81,8 @@ class UsuarioDemoSeeder extends Seeder
         'empresas.consultar',
         'caixa.consolidado.consultar',
         'relatorios.consolidado.consultar',
+        'auditoria.consultar',
+        'auditoria.exportar',
     ];
 
     public function run(): void
