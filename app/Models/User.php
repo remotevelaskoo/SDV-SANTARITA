@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'username', 'password'])]
+#[Fillable(['name', 'email', 'username', 'password', 'status', 'status_reason', 'status_changed_by', 'status_changed_at', 'invited_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,6 +29,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'status_changed_at' => 'datetime',
+            'invited_at' => 'datetime',
         ];
     }
 
@@ -35,6 +38,12 @@ class User extends Authenticatable
     public function implantacoes(): HasMany
     {
         return $this->hasMany(UsuarioImplantacao::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function statusChangedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 
     /** @return HasMany<UsuarioPerfil, $this> */
