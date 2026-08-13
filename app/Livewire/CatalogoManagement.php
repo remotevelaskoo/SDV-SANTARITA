@@ -6,6 +6,7 @@ use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -193,8 +194,15 @@ class CatalogoManagement extends Component
         $this->resetErrorBag();
     }
 
+    private function canManage(): bool
+    {
+        return Auth::user()?->hasPermission('catalogos.gerenciar') ?? false;
+    }
+
     public function render(): View
     {
+        abort_unless($this->canManage(), 403);
+
         return view('livewire.catalogo-management', [
             'itensDoCatalogo' => $this->itensDoCatalogo(),
         ])->layout('components.layouts.app', [

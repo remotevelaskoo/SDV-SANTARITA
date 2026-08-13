@@ -8,6 +8,7 @@ use App\Services\AuditService;
 use App\Support\ImplantacaoContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -319,8 +320,15 @@ class PerfilManagement extends Component
         $this->resetErrorBag();
     }
 
+    private function canManage(): bool
+    {
+        return Auth::user()?->hasPermission('perfis.administrar') ?? false;
+    }
+
     public function render(): View
     {
+        abort_unless($this->canManage(), 403);
+
         return view('livewire.perfil-management', [
             'filteredPerfis' => $this->filteredPerfis(),
             'selectedPerfil' => $this->selectedPerfil(),
