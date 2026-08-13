@@ -20,6 +20,17 @@
         <x-ui.alert variant="warning" title="Atenção">{{ $record->alert }}</x-ui.alert>
     @endif
 
+    @php
+        $documentLink = $record->currentFileLink('documento');
+        $selfieLink = $record->currentFileLink('selfie');
+    @endphp
+
+    <x-protected-file-review
+        :document-link="$documentLink"
+        :selfie-link="$selfieLink"
+        :id="'pre-registration-'.$record->id"
+    />
+
     <section aria-labelledby="detail-data-{{ $record->id }}">
         <h4 id="detail-data-{{ $record->id }}">Dados preenchidos</h4>
         <dl class="pre-registration-detail__data">

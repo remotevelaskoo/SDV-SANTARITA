@@ -134,6 +134,19 @@
             </article>
         </div>
 
+        @php($protectedFiles = $this->currentProtectedFiles)
+        @if ($protectedFiles['pre_registration_id'])
+            <x-protected-file-review
+                :document-link="$protectedFiles['document']"
+                :selfie-link="$protectedFiles['selfie']"
+                :id="'validation-'.$protectedFiles['pre_registration_id']"
+            />
+        @else
+            <x-ui.alert variant="info" title="Sem imagens de pré-cadastro aprovado">
+                Nenhum documento ou selfie protegido foi localizado para esta pessoa. A decisão deve considerar os demais dados disponíveis.
+            </x-ui.alert>
+        @endif
+
         @if ($quickPersonRegistered)
             <x-ui.alert variant="warning" title="Atendimento preservado">
                 A pessoa foi anexada com cadastro mínimo. Contribuição, observações e demais dados deste atendimento não foram apagados.

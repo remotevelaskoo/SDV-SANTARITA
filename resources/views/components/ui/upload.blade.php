@@ -12,6 +12,7 @@
         type="file"
         accept="{{ $accept }}"
         x-on:change="const file = $event.target.files[0]; hasFile = !!file; fileName = file?.name ?? ''; fileSize = file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : ''"
+        {{ $attributes }}
     >
     <label for="{{ $id }}" class="ui-upload__dropzone">
         <span class="ui-upload__icon"><x-icon name="upload" /></span>

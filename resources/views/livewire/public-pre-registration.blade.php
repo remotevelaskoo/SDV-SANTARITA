@@ -139,14 +139,15 @@
                                 <p>Mantenha o documento inteiro visível, sem reflexos e com o texto legível.</p>
                                 @if ($documentReady)
                                     <x-ui.alert variant="success" title="Documento pronto para análise">
-                                        Imagem demonstrativa recebida. O OCR apenas sugerirá dados e a portaria fará a conferência.
+                                        Imagem recebida e pronta para ser protegida quando você concluir o envio. A portaria fará a conferência visual.
                                     </x-ui.alert>
-                                    <x-ui.button variant="secondary" wire:click="$set('documentReady', false)">Substituir documento</x-ui.button>
+                                    <x-ui.button variant="secondary" wire:click="removeDocumentFile">Substituir documento</x-ui.button>
                                 @else
-                                    <x-ui.button variant="primary" wire:click="markDocumentReady">Simular envio do documento</x-ui.button>
-                                    @error('documentReady') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
+                                    <x-ui.upload id="pre-document-file" label="Enviar foto do documento" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="documentFile" />
+                                    <span wire:loading wire:target="documentFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo imagem…</span>
+                                    @error('documentFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif
-                                <small>Protótipo: nenhum arquivo real é armazenado nesta etapa.</small>
+                                <small>Formatos aceitos: JPG, PNG ou WebP. O arquivo não recebe endereço público.</small>
                             </div>
                         @elseif ($step === 4)
                             <div class="pre-registration-capture pre-registration-capture--selfie">
@@ -155,14 +156,15 @@
                                 <p>Posicione o rosto em local iluminado, sem acessórios que dificultem a conferência.</p>
                                 @if ($selfieReady)
                                     <x-ui.alert variant="success" title="Selfie pronta para análise">
-                                        A imagem foi marcada como adequada nesta demonstração. Ela não cria uma credencial biométrica.
+                                        Imagem recebida e pronta para ser protegida quando você concluir o envio. Ela será usada somente para conferência humana e não cria credencial biométrica.
                                     </x-ui.alert>
-                                    <x-ui.button variant="secondary" wire:click="$set('selfieReady', false)">Repetir selfie</x-ui.button>
+                                    <x-ui.button variant="secondary" wire:click="removeSelfieFile">Repetir selfie</x-ui.button>
                                 @else
-                                    <x-ui.button variant="primary" wire:click="markSelfieReady">Simular captura da selfie</x-ui.button>
-                                    @error('selfieReady') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
+                                    <x-ui.upload id="pre-selfie-file" label="Enviar selfie recente" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="selfieFile" source="Câmera ou arquivo do dispositivo" />
+                                    <span wire:loading wire:target="selfieFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo selfie…</span>
+                                    @error('selfieFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif
-                                <small>Você também poderá enviar um arquivo quando a captura real for implementada.</small>
+                                <small>A selfie não será enviada a equipamento ou serviço de reconhecimento facial.</small>
                             </div>
                         @elseif ($step === 5)
                             <x-ui.switch id="pre-has-vehicle" label="Vou chegar com um veículo" description="Informar o veículo é opcional e não garante acesso." wire:model.live="hasVehicle" :checked="$hasVehicle" />
@@ -183,7 +185,7 @@
                             <div class="pre-registration-review">
                                 <article><span>Dados pessoais</span><strong>{{ $name ?: 'Não informado' }}</strong><small>{{ ucfirst($accessType) }} · {{ $cpf ?: 'CPF não informado' }}</small><button type="button" wire:click="editStep(1)">Editar</button></article>
                                 <article><span>Endereço informado</span><strong>{{ $address ?: 'Não informado' }}, {{ $addressNumber ?: 's/n' }}</strong><small>{{ $city ?: 'Cidade' }}/{{ strtoupper($state ?: 'UF') }}</small><button type="button" wire:click="editStep(2)">Editar</button></article>
-                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>OCR e qualidade exigem conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
+                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>Legibilidade e identidade exigem conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
                                 <article><span>Veículo</span><strong>{{ $hasVehicle ? ($plate ?: 'Placa pendente') : 'Sem veículo' }}</strong><small>{{ $hasVehicle ? ($vehicleModel ?: 'Modelo pendente') : 'Etapa opcional' }}</small><button type="button" wire:click="editStep(5)">Editar</button></article>
                             </div>
 
@@ -199,6 +201,7 @@
                             <x-ui.alert variant="warning" title="Pré-cadastro não é liberação">
                                 A aprovação apenas prepara a solicitação. A entrada continuará sujeita à Validação de Entrada na portaria.
                             </x-ui.alert>
+                            @error('submission') <x-ui.alert variant="danger" title="Envio não concluído">{{ $message }}</x-ui.alert> @enderror
                         @endif
                     </div>
                 </div>

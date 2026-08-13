@@ -7,6 +7,8 @@ use App\Models\Imovel;
 use App\Models\Pessoa;
 use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
+use App\Models\PreRegistration;
+use App\Models\PreRegistrationArquivo;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -270,6 +272,38 @@ class AccessValidation extends Component
             'responsible' => $this->quickPersonRegistered && $this->quickResponsible !== '' ? $this->quickResponsible : 'Próprio morador',
             'status' => $this->quickPersonRegistered ? 'Cadastro mínimo' : 'Cadastro ativo',
             'validity' => $this->quickPersonRegistered ? 'Aguardando análise' : 'Acesso permanente',
+        ];
+    }
+
+    /** @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string} */
+    #[Computed]
+    public function currentProtectedFiles(): array
+    {
+        if ($this->quickPersonRegistered || ! $this->currentPessoaId) {
+            return ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+        }
+
+        $presentedDocument = PessoaDocumento::query()
+            ->where('pessoa_id', $this->currentPessoaId)
+            ->where('status', 'ativo')
+            ->whereNull('ended_at')
+            ->value('valor_apresentacao');
+
+        if (! $presentedDocument) {
+            return ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+        }
+
+        $preRegistration = PreRegistration::query()
+            ->where('document', $presentedDocument)
+            ->where('status', 'aprovado')
+            ->with('fileLinks.file')
+            ->latest('submitted_at')
+            ->first();
+
+        return [
+            'document' => $preRegistration?->currentFileLink('documento'),
+            'selfie' => $preRegistration?->currentFileLink('selfie'),
+            'pre_registration_id' => $preRegistration?->id,
         ];
     }
 
