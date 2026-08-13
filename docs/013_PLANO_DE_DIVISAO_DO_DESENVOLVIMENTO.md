@@ -296,6 +296,7 @@ Registro leve de correções em partes já marcadas como concluídas — não cr
 | 11/08/2026 | P08 | Painel de edição da fila de pré-cadastros fechava sozinho ao abrir, por um detalhe de ordem dos hooks do Livewire (`dehydrate()` roda depois de o framework já ter processado os eventos despachados) | [#25](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/25) |
 | 11/08/2026 | P11 / P12 | Botões "Visualizar"/"Editar" de Imóveis e Veículos passavam o UUID sem aspas para o `wire:click` — expressão JS inválida que quebrava o clique em qualquer registro real da lista | [#37](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/37) |
 | 13/08/2026 | P06 / P08 / P20 / P22 | AJ-001: envio, armazenamento e conferência visual protegida de documento e selfie, com permissão própria, isolamento e auditoria | PR a abrir — branch `codex/aj001-conferencia-visual` |
+| 13/08/2026 | P06 (Modo Portaria) | AJ-001 cobriu o detalhe do pré-cadastro e a Validação de Entrada, conforme o texto do ajuste (§8.1) — mas a observação original do PO que motivou o AJ-001 também citava a falta de imagem no Modo Portaria ("moto portaria"). Reaproveitada a mesma ponte por CPF já usada em `AccessValidation::currentProtectedFiles()` (sem tabela ou serviço novos) para exibir "Conferência visual protegida" nos atendimentos recentes da Portaria quando existe um pré-cadastro aprovado correspondente | `vinicius/aj001-portaria-fatia2` |
 
 ## 10. Documentos principais para consulta
 

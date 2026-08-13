@@ -124,4 +124,22 @@
             </x-ui.responsive-table>
         </x-ui.card>
     </section>
+
+    <section aria-label="Documentos protegidos dos atendimentos recentes">
+        @php($comArquivo = collect($recentAttendances)->filter(fn ($a) => $a['protectedFiles']['pre_registration_id']))
+        @if ($comArquivo->isEmpty())
+            <x-ui.alert variant="info" title="Sem imagens de pré-cadastro aprovado">
+                Nenhum dos atendimentos recentes tem documento ou selfie protegido vinculado a um pré-cadastro aprovado.
+            </x-ui.alert>
+        @else
+            @foreach ($comArquivo as $attendance)
+                <x-protected-file-review
+                    :document-link="$attendance['protectedFiles']['document']"
+                    :selfie-link="$attendance['protectedFiles']['selfie']"
+                    :id="'portaria-'.$attendance['protectedFiles']['pre_registration_id']"
+                    :title="'Conferência visual protegida — '.$attendance['name']"
+                />
+            @endforeach
+        @endif
+    </section>
 </div>
