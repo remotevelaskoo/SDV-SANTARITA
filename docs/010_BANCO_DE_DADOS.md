@@ -2,7 +2,7 @@
 ## Modelo conceitual e lógico de referência
 
 **Documento:** SDV-BDD-010  
-**Versão:** 1.0.1
+**Versão:** 1.1.0
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita  
 **Empresa proprietária:** Soluções do Vale Tecnologia  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Definição inicial do modelo conceitual e lógico de dados |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal do modelo conceitual e lógico de dados |
+| 1.1.0 | 12/08/2026 | Product Owner | Preparação de importação assistida e trilha de consulta de dados sensíveis |
 
 ---
 
@@ -878,8 +879,26 @@ Enquanto a política não for aprovada, nenhuma rotina definitiva de descarte de
 - `importacao_registros`;
 - `importacao_erros`;
 - `importacao_mapeamentos`.
+- `importacao_extracoes`;
+- `importacao_revisoes`.
 
 Importação não deverá contornar regras essenciais de segregação, integridade ou auditoria.
+
+## 32.3 Importação assistida por OCR ou IA
+
+Quando essa capacidade for ativada conforme ADR-011, a área de preparação deverá preservar, no mínimo:
+
+- implantação, lote, arquivo e registro de origem;
+- campo de destino sugerido;
+- valor original e valor normalizado sugerido;
+- confiança e versão do mecanismo;
+- candidatos a duplicidade e critérios utilizados;
+- decisão humana, responsável, instante e justificativa quando aplicável;
+- estado de validação, erro e reconciliação.
+
+Resultados de OCR ou IA não serão gravados diretamente nas entidades canônicas. Somente registros revisados e aprovados poderão seguir por transação de importação que execute as mesmas validações, vínculos, restrições de implantação e auditoria do cadastro manual.
+
+Eventos de abertura de arquivo protegido ou revelação de CPF/documento integral serão registrados na trilha de auditoria por categoria e identificador da entidade. O valor integral, o conteúdo do arquivo e a URL temporária não serão copiados para o log.
 
 ---
 

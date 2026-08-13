@@ -2,7 +2,7 @@
 ## Fluxo público, análise pela portaria e acompanhamento
 
 **Documento:** SDV-UXP-006  
-**Versão:** 1.0.1  
+**Versão:** 1.1.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Especificação inicial do Pré-Cadastro e da análise pela portaria |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação UX/UI do Pré-Cadastro |
+| 1.1.0 | 12/08/2026 | Product Owner | Conferência visual de arquivos e revelação controlada de documento durante a análise pela portaria |
 
 ---
 
@@ -1022,6 +1023,35 @@ A edição deverá:
 - não alterar automaticamente pessoa, imóvel, vínculo, autorização ou credencial;
 - encaminhar ao fluxo "Solicitar correção" documentos, selfies ou informações que dependam de novo envio pelo solicitante — nunca substituí-los diretamente.
 
+## 20.3.2 Visualização protegida de foto e documento
+
+O operador autorizado deverá conseguir abrir a selfie, a foto e o documento efetivamente enviados pelo solicitante. Exibir somente o nome do arquivo, um ícone, um estado de upload ou um item marcado no checklist não atende à conferência operacional.
+
+A visualização deverá:
+
+- ocorrer no drawer ou em modal protegido, sem abandonar a análise;
+- usar proxy autenticado ou URL temporária de curta duração, sem endereço público permanente;
+- permitir ampliação controlada para conferência;
+- identificar indisponibilidade, validação pendente, arquivo inválido e quarentena;
+- apresentar a versão original submetida e, após correção, permitir consultar as versões preservadas conforme permissão;
+- registrar ator, instante, pré-cadastro, tipo de arquivo, contexto e resultado do acesso;
+- não oferecer download por padrão.
+
+Visualizar uma selfie para conferência humana não cria credencial biométrica e não autoriza envio a controladora ou fornecedor.
+
+## 20.3.3 Revelação controlada de CPF ou documento
+
+Na fila, no dashboard e no resumo inicial, o CPF ou documento deverá permanecer mascarado. No detalhe da análise, o operador autorizado poderá revelar temporariamente o valor integral para comparar o cadastro com o documento apresentado.
+
+A ação deverá:
+
+- ser explícita e exigir permissão própria;
+- informar a finalidade de conferência de identidade;
+- voltar ao mascaramento ao fechar o drawer, expirar a janela ou concluir a análise;
+- gerar auditoria sem gravar o documento integral no evento;
+- respeitar a implantação, o registro em análise e o menor privilégio;
+- não permitir exportação ou revelação em massa.
+
 ## 20.4 Histórico
 
 Exibir:
@@ -1054,6 +1084,7 @@ O operador deverá conferir:
 - possível duplicidade;
 - documento;
 - selfie;
+- comparação visual entre a pessoa, a selfie e o documento apresentado, quando aplicável;
 - destino;
 - responsável;
 - período;

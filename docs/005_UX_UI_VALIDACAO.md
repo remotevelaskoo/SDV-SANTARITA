@@ -2,7 +2,7 @@
 ## Especificação funcional, visual, responsiva e operacional
 
 **Documento:** SDV-UXV-005  
-**Versão:** 1.0.1  
+**Versão:** 1.1.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Especificação inicial da Validação de Entrada baseada na referência visual aprovada |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação UX/UI da Validação de Entrada |
+| 1.1.0 | 12/08/2026 | Product Owner | Visualização efetiva de foto/documento e revelação controlada de CPF para conferência operacional |
 
 ---
 
@@ -174,6 +175,8 @@ Por padrão, terão consulta ao histórico ou à decisão, não execução de li
 | `validation.view` | abrir e consultar a validação |
 | `validation.search` | pesquisar pessoa, autorização e veículo |
 | `validation.view_sensitive` | visualizar documento, foto e contato |
+| `validation.reveal_document` | revelar temporariamente CPF ou documento integral para conferência de identidade |
+| `validation.view_image` | abrir foto, selfie ou documento protegido no contexto do atendimento |
 | `validation.deny` | negar entrada |
 | `validation.save_pending` | salvar sem liberar |
 | `validation.release` | validar e solicitar liberação |
@@ -448,12 +451,26 @@ Devem aparecer antes da decisão:
 ## 10.4 Visualização de foto e documento
 
 - abrir em modal ou drawer protegido;
-- registrar acesso quando aplicável;
+- apresentar a imagem efetivamente submetida, e não apenas indicador de existência ou checklist;
+- registrar todo acesso, com ator, instante, pessoa ou pré-cadastro, finalidade, contexto e resultado;
 - impedir URL pública permanente;
+- obter o arquivo por proxy autenticado ou URL temporária de curta duração;
 - permitir zoom controlado;
 - mascarar dados conforme perfil;
 - devolver foco ao acionador;
 - não oferecer download sem permissão específica.
+
+Na lista, pesquisa, dashboard e histórico, CPF e documento permanecerão mascarados. No detalhe de uma validação ativa, o operador autorizado poderá usar ação explícita para revelar o valor integral somente com a finalidade de conferir a identidade apresentada.
+
+A revelação deverá:
+
+- exigir `validation.reveal_document` ou permissão técnica equivalente;
+- ser temporária e voltar ao estado mascarado ao fechar o detalhe, expirar a janela ou encerrar o atendimento;
+- produzir evento de auditoria sem copiar o valor integral para logs;
+- ser negada fora da implantação e do atendimento autorizado;
+- não habilitar download, exportação ou cópia em massa.
+
+A permissão de abrir imagens protegidas é independente da permissão de revelar CPF ou documento textual integral.
 
 ## 10.5 Cadastro completo
 

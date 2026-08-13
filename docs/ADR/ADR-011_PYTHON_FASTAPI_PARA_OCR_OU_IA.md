@@ -1,7 +1,7 @@
 # ADR-011 — PYTHON/FASTAPI PARA OCR OU IA
 
 **Identificador:** ADR-011
-**Versão:** 1.0.0
+**Versão:** 1.0.1
 **Status:** Adiado
 **Prioridade:** P2 — Condicional
 **Produto:** SDV Access — Implantação Santa Rita
@@ -15,6 +15,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | 30/07/2026 | Product Owner | Registro e aprovação do adiamento de Python/FastAPI |
+| 1.0.1 | 12/08/2026 | Product Owner | Registro da importação assistida como caso futuro, sem ativar Python/FastAPI |
 
 # 1. Contexto
 
@@ -173,6 +174,7 @@ Negativas:
 | PEN-ADR-011-003 | Metas de precisão |
 | PEN-ADR-011-004 | Tecnologia/modelo |
 | PEN-ADR-011-005 | Infraestrutura e custo |
+| PEN-ADR-011-006 | Fontes, volume e campos da importação assistida |
 
 # 16. Aprovação
 
@@ -184,6 +186,10 @@ Negativas:
 # 17. Condição de retomada
 
 Voltará a **Proposto** após aprovação do caso, política de dados e prova técnica.
+
+O caso de uso de importação assistida de documentos, imagens, planilhas e dados legados está aprovado como necessidade futura do produto. Essa aprovação funcional não ativa Python/FastAPI nem autoriza envio de arquivos a terceiros. Antes da implementação deverão ser definidos escopo, fontes, volume, política de dados, métricas de qualidade e prova técnica.
+
+Quando retomado, o resultado permanecerá em área de preparação, com confiança, versão, fonte, candidatos a duplicidade e revisão humana obrigatória. A gravação canônica continuará sob responsabilidade do Laravel e das regras de domínio existentes.
 
 # 18. Decisão resultante
 

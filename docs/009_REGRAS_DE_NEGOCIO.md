@@ -2,7 +2,7 @@
 ## Catálogo consolidado, estados, validações e rastreabilidade
 
 **Documento:** SDV-RNG-009  
-**Versão:** 1.0.1  
+**Versão:** 1.1.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Empresa proprietária:** Soluções do Vale Tecnologia  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Consolidação das regras existentes e incorporação das decisões UX/UI aprovadas |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal do catálogo consolidado de Regras de Negócio |
+| 1.1.0 | 12/08/2026 | Product Owner | Conferência protegida de dados e imagens, importação assistida e separação da integração biométrica |
 
 ---
 
@@ -231,7 +232,7 @@ O pré-cadastro registra dados, mas não garante acesso até que a validação e
 Visitantes recorrentes poderão reutilizar o cadastro da pessoa, mas novas visitas deverão gerar novas autorizações quando aplicável.
 
 **RN-028 — Documento e imagem**  
-A captura de documento e imagem deverá seguir os campos, etapas, finalidade, proteção e retenção aprovados.
+A captura de documento e imagem deverá seguir os campos, etapas, finalidade, proteção e retenção aprovados. Durante análise ou validação, o operador autorizado deverá conseguir abrir o conteúdo efetivamente submetido; indicador de upload ou checklist isolado não substitui a conferência humana.
 
 ---
 
@@ -369,7 +370,7 @@ A detecção de pessoa existente deverá evitar nova cópia sem revelar dados a 
 Dado pessoal sensível ou adicional somente deverá ser coletado quando houver finalidade, necessidade, acesso e retenção definidos.
 
 **RN-066 — Arquivo protegido**  
-Documento, selfie, foto e imagem operacional deverão permanecer privados e ser acessados por autorização ou endereço temporário.
+Documento, selfie, foto e imagem operacional deverão permanecer privados e ser acessados por proxy autenticado ou endereço temporário de curta duração. A visualização deverá ser auditada, não disponibilizar download por padrão e nunca depender de URL pública permanente.
 
 ---
 
@@ -397,10 +398,10 @@ Solicitação de correção, reenvio e edição autorizada pela portaria deverã
 Motivo e observação internos não deverão ser enviados automaticamente ao solicitante; a mensagem pública deverá ser controlada separadamente.
 
 **RN-074 — OCR assistivo**  
-Resultado de OCR deverá ser tratado como sugestão sujeita a conferência e não como validação documental.
+Resultado de OCR ou IA deverá ser tratado como sugestão sujeita a conferência e não como validação documental. Na importação de fontes legadas, cada sugestão deverá preservar fonte, valor extraído, confiança, versão do mecanismo, possíveis duplicidades e decisão humana. O processamento permanecerá em área de preparação até aprovação; não poderá criar ou alterar silenciosamente pessoa, imóvel, vínculo, autorização, credencial ou evento de acesso.
 
 **RN-075 — Selfie não é credencial automática**  
-A coleta de selfie não deverá criar ou sincronizar credencial biométrica sem finalidade, base legal, política e autorização aplicáveis.
+A coleta, visualização ou aprovação de selfie não deverá criar ou sincronizar credencial biométrica sem finalidade, base legal, política e autorização aplicáveis. Qualquer envio para controladora, inclusive equipamento BRAVAS, pertence ao fluxo separado de integração biométrica e permanece condicionado à retomada e aprovação da ADR-013.
 
 **RN-076 — Veículo opcional não autoriza**  
 O veículo informado no pré-cadastro não deverá garantir acesso nem liberação automática.

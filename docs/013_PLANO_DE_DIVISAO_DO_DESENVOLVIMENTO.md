@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 11 de agosto de 2026
+**Última atualização:** 12 de agosto de 2026
 
 ## 1. Objetivo deste documento
 
@@ -243,6 +243,17 @@ Uma parte somente estará pronta quando:
 | Escolher o responsável por P21 | Lucas e Vinicius | Resolvida — Vinicius, dividida em 7 fatias planejadas previamente |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
+
+## 8.1 Ajustes funcionais aprovados para as próximas entregas
+
+| Ajuste | Entrega esperada | Momento | Dependências | Situação |
+|---|---|---|---|---|
+| AJ-001 — Conferência visual protegida | Porteiro/Caixa autorizado abre a foto, selfie e documento efetivamente submetidos no detalhe do pré-cadastro e da validação; acesso privado e auditado | Antes da homologação interna dos fluxos de pré-cadastro e validação | Armazenamento privado, P20 e P22 | 🟡 Planejada |
+| AJ-002 — Revelação controlada de CPF/documento | Listas permanecem mascaradas; detalhe permite revelação explícita, temporária, autorizada e auditada para conferir identidade | Antes da homologação interna dos fluxos de pré-cadastro e validação | Extensão do catálogo P20 e auditoria P22 | 🟡 Planejada |
+| AJ-003 — Integração facial BRAVAS | Sincronização separada da aprovação do pré-cadastro, por adaptador, fila, confirmação e revogação | P25 | Inventário do equipamento, política jurídica, homologação e retomada da ADR-013 | 🔴 Bloqueada |
+| AJ-004 — Importação assistida por IA | Importar fontes legadas por área de preparação, extração com confiança, deduplicação e revisão humana obrigatória | Após estabilização do modelo e da auditoria | P17, P22 e retomada da ADR-011 | 🟡 Planejada |
+
+As quatro decisões acima não reabrem P08, P20 ou P21 como um todo. AJ-001 e AJ-002 são endurecimentos necessários para homologação; AJ-003 permanece no escopo futuro de P25; AJ-004 deverá ser detalhada em entrega própria quando suas dependências forem resolvidas.
 
 ## 9. Correções e ajustes técnicos
 

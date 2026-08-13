@@ -2,7 +2,7 @@
 ## UX/UI de usuários, permissões, configurações, equipamentos e auditoria
 
 **Documento:** SDV-ADM-008  
-**Versão:** 1.0.1  
+**Versão:** 1.1.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | Julho/2026 | Soluções do Vale | Especificação inicial dos módulos administrativos |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação de Administração |
+| 1.1.0 | 12/08/2026 | Product Owner | Auditoria de visualização de arquivos e revelação controlada de dados sensíveis |
 
 ---
 
@@ -1140,6 +1141,22 @@ Ator poderá ser:
 ## 28.4 Imutabilidade
 
 Usuário operacional não edita log. Correções serão novos eventos.
+
+## 28.5 Consulta de dado sensível
+
+Abrir foto, selfie ou documento protegido e revelar CPF ou documento integral deverão gerar eventos de auditoria próprios.
+
+O evento deverá registrar:
+
+- ator, perfil e sessão;
+- implantação;
+- pessoa ou pré-cadastro consultado;
+- categoria do dado ou arquivo, sem reproduzir seu conteúdo;
+- atendimento ou finalidade operacional;
+- instante e resultado;
+- origem e correlação.
+
+O log nunca armazenará CPF integral, imagem, conteúdo de documento, URL temporária, token ou segredo. A consulta aos próprios eventos também respeitará permissão e segregação por implantação.
 
 ---
 
