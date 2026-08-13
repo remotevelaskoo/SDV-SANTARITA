@@ -281,10 +281,9 @@
                 >
                     <div class="validation-denial-form">
                         <x-ui.select id="denial-reason" label="Motivo da negativa" wire:model="denialReason" :error="$errors->first('denialReason')" required>
-                            <option value="sem_autorizacao">Sem autorização válida</option>
-                            <option value="documento_invalido">Documento inválido</option>
-                            <option value="vinculo_irregular">Vínculo irregular</option>
-                            <option value="decisao_operador">Decisão justificada do operador</option>
+                            @foreach ($denialReasonOptions as $opcao)
+                                <option value="{{ $opcao['codigo'] }}">{{ $opcao['rotulo'] }}</option>
+                            @endforeach
                         </x-ui.select>
 
                         <label class="validation-notes-field" for="denial-details">

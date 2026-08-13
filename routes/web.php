@@ -6,6 +6,7 @@ use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\AuditLog;
 use App\Livewire\CashRegister;
+use App\Livewire\CatalogoManagement;
 use App\Livewire\CompanyManagement;
 use App\Livewire\ConfiguracaoManagement;
 use App\Livewire\Dashboard;
@@ -68,6 +69,7 @@ Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relato
 Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:usuarios.administrar'])->name('users');
 Route::get('/perfis', PerfilManagement::class)->middleware(['auth', 'permissao:perfis.administrar'])->name('profiles');
 Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth', 'permissao:configuracoes.gerenciar'])->name('settings');
+Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permissao:catalogos.gerenciar'])->name('catalogs');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 Route::get('/auditoria', AuditLog::class)->middleware(['auth', 'permissao:auditoria.consultar'])->name('audit-log');
 Route::get('/arquivos/{arquivo}/visualizar', ProtectedFileController::class)

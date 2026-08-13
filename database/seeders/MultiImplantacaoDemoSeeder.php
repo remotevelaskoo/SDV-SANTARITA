@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Catalogo;
+use App\Models\CatalogoItem;
 use App\Models\Implantacao;
 use App\Models\Organizacao;
 use App\Models\Perfil;
@@ -86,6 +88,32 @@ class MultiImplantacaoDemoSeeder extends Seeder
             );
 
             $this->vincularPerfil($user, $santaRitaId, $perfilAdminSantaRita->id);
+        }
+
+        $this->semearMotivosNegativa($implantacao->id, $santaRitaId);
+    }
+
+    /**
+     * Copia os itens seedados para Santa Rita por `CatalogoSeeder` — evita
+     * que Jardins fique com o select de motivos de negativa vazio na
+     * Validação de entrada (P17 fatia 4).
+     */
+    private function semearMotivosNegativa(string $implantacaoId, ?string $santaRitaId): void
+    {
+        $catalogo = Catalogo::query()->where('chave', 'motivos_negativa')->first();
+
+        if (! $catalogo || ! $santaRitaId) {
+            return;
+        }
+
+        foreach (CatalogoItem::withoutGlobalScope(ImplantacaoScope::class)
+            ->where('catalogo_id', $catalogo->id)
+            ->where('implantacao_id', $santaRitaId)
+            ->get(['codigo', 'rotulo', 'ordem']) as $item) {
+            CatalogoItem::withoutGlobalScope(ImplantacaoScope::class)->firstOrCreate(
+                ['implantacao_id' => $implantacaoId, 'catalogo_id' => $catalogo->id, 'codigo' => $item->codigo],
+                ['rotulo' => $item->rotulo, 'status' => 'ativo', 'ordem' => $item->ordem],
+            );
         }
     }
 

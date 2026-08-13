@@ -45,6 +45,7 @@ class UsuarioDemoSeeder extends Seeder
         'usuarios.administrar' => ['modulo' => 'usuarios', 'descricao' => 'Administrar usuários do sistema'],
         'perfis.administrar' => ['modulo' => 'usuarios', 'descricao' => 'Administrar perfis e permissões'],
         'configuracoes.gerenciar' => ['modulo' => 'configuracoes', 'descricao' => 'Gerenciar configurações da implantação'],
+        'catalogos.gerenciar' => ['modulo' => 'catalogos', 'descricao' => 'Gerenciar catálogos parametrizados'],
         'integracoes.gerenciar' => ['modulo' => 'integracoes', 'descricao' => 'Gerenciar integrações externas'],
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
         'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],
