@@ -38,6 +38,7 @@ Documentação em elaboração e fundação frontend iniciada.
 O desenvolvimento foi dividido em partes para que Lucas e Vinicius possam trabalhar em paralelo. O quadro com situação, responsável, dependências e orientação de trabalho está em:
 
 - [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md)
+- [UX/UI de Relatórios — P16](docs/014_UX_UI_RELATORIOS.md)
 
 ## Base técnica do desenvolvimento
 

@@ -15,6 +15,7 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\ResetPassword;
+use App\Livewire\Reports;
 use App\Livewire\VehicleManagement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,7 @@ Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'per
 Route::get('/empresas', CompanyManagement::class)->middleware(['auth', 'permissao:empresas.consultar'])->name('companies');
 Route::get('/caixa', CashRegister::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar'])->name('cash-register');
 Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permissao:encomendas.registrar'])->name('packages');
+Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relatorios.proprio.consultar,relatorios.consolidado.consultar'])->name('reports');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 
 if (app()->environment(['local', 'testing'])) {

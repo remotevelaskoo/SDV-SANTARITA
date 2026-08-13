@@ -15,7 +15,7 @@
         ],
         'Gestão' => [
             ['label' => 'Administração', 'icon' => 'settings'],
-            ['label' => 'Relatórios', 'icon' => 'chart'],
+            ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ['label' => 'Logs e auditoria', 'icon' => 'scroll'],
             ['label' => 'Manutenção', 'icon' => 'wrench'],

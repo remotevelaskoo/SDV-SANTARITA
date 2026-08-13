@@ -83,6 +83,9 @@
         @case('upload')
             <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
             @break
+        @case('download')
+            <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
+            @break
         @case('file')
             <path d="M6 2h8l4 4v16H6zM14 2v5h5" />
             @break

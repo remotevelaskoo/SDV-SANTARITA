@@ -35,13 +35,13 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 
 | Situação | Quantidade | Partes |
 |---|---:|---|
-| ✅ Concluídas | 18 | P01 a P15, P18, P20 e P21 |
+| ✅ Concluídas | 19 | P01 a P16, P18, P20 e P21 |
 | 🟡 Em andamento | 1 | P19 |
 | 🟢 Disponíveis | 0 | — |
-| 🔴 Bloqueadas | 7 | P16, P17, P22 a P25 e P27 |
+| 🔴 Bloqueadas | 6 | P17, P22 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
-O avanço por quantidade de partes é de **18 concluídas em 27 (aproximadamente 67%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
+O avanço por quantidade de partes é de **19 concluídas em 27 (aproximadamente 70%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
 
 ## 3. Termos usados pela equipe
 
@@ -160,7 +160,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 |---|---|---|---|---|---|---|
 | P14 | Caixa | Abertura, movimentações, contribuições, conferência e fechamento | P04 e regras financeiras | ✅ Concluída (protótipo — regras completas da contribuição ainda pendentes, `PEN-RNG-011`) | Vinicius | `vinicius/p14-caixa` |
 | P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p15-encomendas` |
-| P16 | Relatórios | Consultas, filtros e exportações autorizadas | Dados reais dos módulos | 🔴 Bloqueada | A definir | A definir |
+| P16 | Relatórios | Consultas, filtros e exportações autorizadas | Dados reais dos módulos | ✅ Concluída — especificação `SDV-UXR-014`; relatórios reais de acessos e caixa; escopo próprio para Porteiro/Caixa e consolidado para Gestor/Auditor/Administrador; filtros, totais conciliáveis, exportação CSV sem dados sensíveis e 7 testes específicos. PDF, exportação persistida/assíncrona e auditoria de exportação permanecem nas dependências documentadas | Vinicius | `codex/p16-relatorios` |
 | P17 | Administração | Usuários, perfis, permissões, configurações, equipamentos e auditoria | Login real e banco de dados | 🔴 Bloqueada | A definir | A definir |
 
 ### 4.4 Parte interna e dados reais
@@ -185,7 +185,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14, P15, o **P18 — Banco de dados inicial** (fundação multi-implantação e os grupos Imóveis, Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões), o **P20 — Perfis e permissões** (catálogo real de perfis e rotas internas protegidas) e o **P21 — Conexão das telas** (as 10 telas do protótipo passaram a ler/escrever dados reais, entregue em 7 fatias) já foram concluídos. **P19 — Login real** segue em andamento com Vinicius. As demais partes (P16, P17, P22 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
+P09, P14, P15, **P16 — Relatórios**, o **P18 — Banco de dados inicial** (fundação multi-implantação e os grupos Imóveis, Pessoas, Vínculos, Veículos e Usuários/Perfis/Permissões), o **P20 — Perfis e permissões** (catálogo real de perfis e rotas internas protegidas) e o **P21 — Conexão das telas** (as 10 telas do protótipo passaram a ler/escrever dados reais, entregue em 7 fatias) já foram concluídos. **P19 — Login real** segue em andamento com Vinicius. As demais partes (P17, P22 a P25 e P27) seguem bloqueadas por dependência, e a P26 está apenas planejada.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
