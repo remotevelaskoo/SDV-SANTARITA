@@ -45,6 +45,7 @@ use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Notifications\UserInvited;
+use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
 use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
@@ -306,6 +307,55 @@ class ExampleTest extends TestCase
             ->assertSee('Rafael Domingues')
             ->assertSee('Validação de entrada — Portaria Principal')
             ->assertSee('Liberado');
+    }
+
+    public function test_the_portaria_shows_protected_files_of_a_recent_attendance_via_the_approved_pre_registration(): void
+    {
+        Storage::fake(PrivateFileService::DISK);
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar', 'arquivos.sensiveis.visualizar'));
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Fernanda Alves Correia']);
+        PessoaDocumento::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'cpf',
+            'valor_normalizado' => '55566677788',
+            'valor_apresentacao' => '555.666.777-88',
+            'status' => 'ativo',
+            'ended_at' => null,
+        ]);
+        $preRegistration = PreRegistration::factory()->withStatus('aprovado')->create([
+            'document' => '555.666.777-88',
+        ]);
+        [$file] = app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
+            'documento' => UploadedFile::fake()->image('documento-fernanda.jpg'),
+        ]);
+        HistoricoAcesso::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'entrada',
+            'resultado' => 'liberado',
+            'ponto_acesso' => 'Portaria Principal',
+            'occurred_at' => now()->subMinutes(2),
+        ]);
+
+        Livewire::test(Portaria::class)
+            ->assertSee('Fernanda Alves Correia')
+            ->assertSee('Conferência visual protegida — Fernanda Alves Correia')
+            ->assertSee('Abrir documento')
+            ->assertSee($file->id, escape: false);
+    }
+
+    public function test_the_portaria_shows_a_notice_when_no_recent_attendance_has_protected_files(): void
+    {
+        $this->actingAs($this->operatorWithPermissions('validacao.registrar', 'arquivos.sensiveis.visualizar'));
+
+        $pessoa = Pessoa::factory()->create(['nome' => 'Heitor Ramalho']);
+        HistoricoAcesso::factory()->for($pessoa, 'pessoa')->create([
+            'tipo' => 'entrada',
+            'resultado' => 'liberado',
+            'ponto_acesso' => 'Portaria Principal',
+            'occurred_at' => now()->subMinutes(3),
+        ]);
+
+        Livewire::test(Portaria::class)
+            ->assertSee('Sem imagens de pré-cadastro aprovado');
     }
 
     public function test_the_portaria_alerts_pre_registrations_pending_for_more_than_a_day(): void

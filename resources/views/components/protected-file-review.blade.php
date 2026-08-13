@@ -1,4 +1,4 @@
-@props(['documentLink' => null, 'selfieLink' => null, 'id'])
+@props(['documentLink' => null, 'selfieLink' => null, 'id', 'title' => 'Conferência visual protegida'])
 
 <section
     class="protected-file-review"
@@ -7,7 +7,7 @@
 >
     <header>
         <div>
-            <h4 id="protected-files-{{ $id }}">Conferência visual protegida</h4>
+            <h4 id="protected-files-{{ $id }}">{{ $title }}</h4>
             <p>Abra somente durante a conferência de identidade. Cada visualização será registrada na auditoria.</p>
         </div>
         <x-ui.badge variant="warning">Dados sensíveis</x-ui.badge>

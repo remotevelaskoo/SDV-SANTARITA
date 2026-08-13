@@ -4,7 +4,10 @@ namespace App\Livewire;
 
 use App\Models\CaixaTurno;
 use App\Models\HistoricoAcesso;
+use App\Models\Pessoa;
+use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
+use App\Models\PreRegistrationArquivo;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -69,7 +72,7 @@ class Portaria extends Component
         ];
     }
 
-    /** @return list<array{time: string, name: string, relation: string, subject: string, result: string}> */
+    /** @return list<array{time: string, name: string, relation: string, subject: string, result: string, protectedFiles: array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}}> */
     public function recentAttendances(): array
     {
         return HistoricoAcesso::query()
@@ -88,8 +91,53 @@ class Portaria extends Component
                     'relation' => $this->relationLabel($vinculo?->tipo),
                     'subject' => 'Validação de '.($entry->tipo === 'entrada' ? 'entrada' : 'saída').' — '.$entry->ponto_acesso,
                     'result' => $entry->resultado,
+                    'protectedFiles' => $this->protectedFilesFor($entry->pessoa),
                 ];
             })->values()->all();
+    }
+
+    /**
+     * Mesma ponte por CPF que AccessValidation::currentProtectedFiles() usa
+     * (não existe promoção de PreRegistration para Pessoa ainda — RN-028/066
+     * já cobertas pelo AJ-001 mergeado; aqui só reaproveitamos o mecanismo
+     * para o Modo Portaria, sem tabela ou serviço novos).
+     *
+     * @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}
+     */
+    private function protectedFilesFor(?Pessoa $pessoa): array
+    {
+        $vazio = ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+
+        if (! $pessoa) {
+            return $vazio;
+        }
+
+        $presentedDocument = PessoaDocumento::query()
+            ->where('pessoa_id', $pessoa->id)
+            ->where('status', 'ativo')
+            ->whereNull('ended_at')
+            ->value('valor_apresentacao');
+
+        if (! $presentedDocument) {
+            return $vazio;
+        }
+
+        $preRegistration = PreRegistration::query()
+            ->where('document', $presentedDocument)
+            ->where('status', 'aprovado')
+            ->with('fileLinks.file')
+            ->latest('submitted_at')
+            ->first();
+
+        if (! $preRegistration) {
+            return $vazio;
+        }
+
+        return [
+            'document' => $preRegistration->currentFileLink('documento'),
+            'selfie' => $preRegistration->currentFileLink('selfie'),
+            'pre_registration_id' => $preRegistration->id,
+        ];
     }
 
     private function relationLabel(?string $tipo): string
