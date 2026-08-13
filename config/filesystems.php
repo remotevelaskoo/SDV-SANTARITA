@@ -47,6 +47,23 @@ return [
             'report' => false,
         ],
 
+        // Arquivos pessoais do SDV. Em desenvolvimento e testes usa uma pasta
+        // fora de public/. Em homologação/produção, configure o driver como
+        // s3 e um bucket privado compatível com a ADR-006.
+        'private-files' => [
+            'driver' => env('PRIVATE_FILESYSTEM_DRIVER', 'local'),
+            'root' => storage_path('app/private/sdv-files'),
+            'key' => env('PRIVATE_FILESYSTEM_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('PRIVATE_FILESYSTEM_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('PRIVATE_FILESYSTEM_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('PRIVATE_FILESYSTEM_BUCKET', env('AWS_BUCKET')),
+            'endpoint' => env('PRIVATE_FILESYSTEM_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('PRIVATE_FILESYSTEM_PATH_STYLE', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

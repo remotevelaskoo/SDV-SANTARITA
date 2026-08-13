@@ -50,11 +50,13 @@ use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -506,6 +508,8 @@ class ExampleTest extends TestCase
 
     public function test_the_public_pre_registration_preserves_the_six_step_journey(): void
     {
+        Storage::fake('private-files');
+
         Livewire::test(PublicPreRegistration::class)
             ->call('start')
             ->assertSet('step', 1)
@@ -524,10 +528,10 @@ class ExampleTest extends TestCase
             ->set('state', 'SP')
             ->call('nextStep')
             ->assertSet('step', 3)
-            ->call('markDocumentReady')
+            ->set('documentFile', UploadedFile::fake()->image('documento.jpg', 640, 480))
             ->call('nextStep')
             ->assertSet('step', 4)
-            ->call('markSelfieReady')
+            ->set('selfieFile', UploadedFile::fake()->image('selfie.jpg', 480, 640))
             ->call('nextStep')
             ->assertSet('step', 5)
             ->call('nextStep')
@@ -545,10 +549,14 @@ class ExampleTest extends TestCase
             'destination_property' => null,
             'responsible_name' => null,
         ]);
+        $this->assertDatabaseCount('arquivos', 2);
+        $this->assertDatabaseCount('pre_registration_arquivos', 2);
     }
 
     public function test_the_public_pre_registration_persists_a_visitor_with_vehicle_and_destination(): void
     {
+        Storage::fake('private-files');
+
         Livewire::test(PublicPreRegistration::class)
             ->call('start')
             ->set('accessType', 'visitante')
@@ -568,9 +576,9 @@ class ExampleTest extends TestCase
             ->set('destinationProperty', 'Bloco B — Apto 304')
             ->call('nextStep')
             ->assertSet('step', 3)
-            ->call('markDocumentReady')
+            ->set('documentFile', UploadedFile::fake()->image('documento.png', 640, 480))
             ->call('nextStep')
-            ->call('markSelfieReady')
+            ->set('selfieFile', UploadedFile::fake()->image('selfie.png', 480, 640))
             ->call('nextStep')
             ->assertSet('step', 5)
             ->set('hasVehicle', true)

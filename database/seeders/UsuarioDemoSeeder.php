@@ -48,6 +48,7 @@ class UsuarioDemoSeeder extends Seeder
         'integracoes.gerenciar' => ['modulo' => 'integracoes', 'descricao' => 'Gerenciar integrações externas'],
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
         'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],
+        'arquivos.sensiveis.visualizar' => ['modulo' => 'arquivos', 'descricao' => 'Visualizar documentos, fotos e selfies protegidos'],
     ];
 
     /** @var list<string> */
@@ -59,6 +60,7 @@ class UsuarioDemoSeeder extends Seeder
         'pre-registro.aprovar',
         'pre-registro.rejeitar',
         'pre-registro.solicitar-correcao',
+        'arquivos.sensiveis.visualizar',
         'validacao.registrar',
         'imoveis.consultar',
         'veiculos.consultar',

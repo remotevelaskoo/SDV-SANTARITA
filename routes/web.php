@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProtectedFileController;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
@@ -63,6 +64,9 @@ Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relato
 Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:usuarios.administrar'])->name('users');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 Route::get('/auditoria', AuditLog::class)->middleware(['auth', 'permissao:auditoria.consultar'])->name('audit-log');
+Route::get('/arquivos/{arquivo}/visualizar', ProtectedFileController::class)
+    ->middleware(['auth', 'permissao:arquivos.sensiveis.visualizar'])
+    ->name('protected-files.show');
 
 if (app()->environment(['local', 'testing'])) {
     Route::view('/componentes', 'design-system')->name('design-system');

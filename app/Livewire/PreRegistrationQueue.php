@@ -386,7 +386,7 @@ class PreRegistrationQueue extends Component
     private function baseQuery(): Builder
     {
         return PreRegistration::query()
-            ->with('edits')
+            ->with(['edits', 'fileLinks.file'])
             ->when($this->search !== '', function (Builder $query): void {
                 $term = '%'.trim($this->search).'%';
                 $query->where(function (Builder $query) use ($term): void {

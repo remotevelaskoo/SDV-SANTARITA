@@ -49,6 +49,21 @@ class PreRegistration extends Model
         return $this->hasMany(PreRegistrationEdit::class)->orderBy('occurred_at');
     }
 
+    /** @return HasMany<PreRegistrationArquivo, $this> */
+    public function fileLinks(): HasMany
+    {
+        return $this->hasMany(PreRegistrationArquivo::class)->orderByDesc('linked_at');
+    }
+
+    public function currentFileLink(string $category): ?PreRegistrationArquivo
+    {
+        $links = $this->relationLoaded('fileLinks')
+            ? $this->fileLinks
+            : $this->fileLinks()->with('file')->get();
+
+        return $links->first(fn (PreRegistrationArquivo $link) => $link->category === $category && $link->is_current);
+    }
+
     public function isEditable(): bool
     {
         return in_array($this->status, self::EDITABLE_STATUSES, true);
