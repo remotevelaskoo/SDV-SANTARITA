@@ -18,6 +18,7 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\ResetPassword;
+use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
@@ -43,6 +44,7 @@ use App\Models\UsuarioPerfil;
 use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
+use App\Notifications\UserInvited;
 use App\Support\ImplantacaoContext;
 use Database\Seeders\UsuarioDemoSeeder;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
@@ -2030,5 +2032,194 @@ class ExampleTest extends TestCase
 
         $this->get('/esqueci-minha-senha')->assertOk();
         $this->get('/redefinir-senha/qualquer-token')->assertOk();
+    }
+
+    public function test_creating_a_user_sends_an_invitation_and_creates_a_pending_account(): void
+    {
+        Notification::fake();
+
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $perfil = Perfil::factory()->create(['nome' => 'Auditor']);
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->call('createUser')
+            ->set('name', 'Nova Pessoa')
+            ->set('username', 'nova.pessoa')
+            ->set('email', 'nova.pessoa@sdv-santarita.local')
+            ->set('perfilId', $perfil->id)
+            ->call('saveUser')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['username' => 'nova.pessoa', 'status' => 'pendente']);
+
+        $user = User::where('username', 'nova.pessoa')->firstOrFail();
+        Notification::assertSentTo($user, UserInvited::class);
+        $this->assertDatabaseHas('usuario_perfis', ['user_id' => $user->id, 'perfil_id' => $perfil->id]);
+    }
+
+    public function test_creating_a_user_rejects_duplicate_username_or_email(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $perfil = Perfil::factory()->create();
+        User::factory()->create(['username' => 'jasmim', 'email' => 'jasmim@sdv-santarita.local']);
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->set('name', 'Outra Pessoa')
+            ->set('username', 'jasmim')
+            ->set('email', 'outra@sdv-santarita.local')
+            ->set('perfilId', $perfil->id)
+            ->call('saveUser')
+            ->assertHasErrors('username');
+
+        $this->assertSame(2, User::query()->count());
+    }
+
+    public function test_pending_blocked_and_inactive_users_cannot_log_in(): void
+    {
+        User::factory()->pendente()->create(['username' => 'pendente1', 'password' => 'senha12345']);
+        User::factory()->bloqueado()->create(['username' => 'bloqueado1', 'password' => 'senha12345']);
+        User::factory()->inativo()->create(['username' => 'inativo1', 'password' => 'senha12345']);
+
+        foreach (['pendente1', 'bloqueado1', 'inativo1'] as $username) {
+            Livewire::test(Login::class)
+                ->set('identification', $username)
+                ->set('password', 'senha12345')
+                ->call('login')
+                ->assertHasErrors('credentials');
+        }
+    }
+
+    public function test_the_full_invitation_flow_activates_the_account_and_allows_login(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $perfil = Perfil::factory()->create();
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->set('name', 'Convidado Teste')
+            ->set('username', 'convidado.teste')
+            ->set('email', 'convidado.teste@sdv-santarita.local')
+            ->set('perfilId', $perfil->id)
+            ->call('saveUser');
+
+        $user = User::where('username', 'convidado.teste')->firstOrFail();
+        $this->assertSame('pendente', $user->status);
+
+        $token = Password::createToken($user);
+
+        Livewire::test(ResetPassword::class, ['token' => $token])
+            ->set('email', $user->email)
+            ->set('password', 'novaSenha123')
+            ->set('password_confirmation', 'novaSenha123')
+            ->call('resetPassword')
+            ->assertHasNoErrors();
+
+        $this->assertSame('ativo', $user->fresh()->status);
+
+        Auth::logout();
+
+        $this->assertTrue(Auth::attempt(['username' => 'convidado.teste', 'password' => 'novaSenha123', 'status' => 'ativo']));
+    }
+
+    public function test_blocking_requires_a_reason_and_can_be_reversed(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $target = User::factory()->create();
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $target->id)
+            ->call('blockUser')
+            ->assertHasErrors('blockReason');
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $target->id)
+            ->set('blockReason', 'Suspeita de uso indevido')
+            ->call('blockUser')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'bloqueado', 'status_reason' => 'Suspeita de uso indevido']);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $target->id)
+            ->call('unblockUser');
+
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'ativo']);
+    }
+
+    public function test_inactivating_ends_active_profile_assignments(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $target = $this->operatorWithPermissions('empresas.consultar');
+        $vinculo = UsuarioPerfil::query()->where('user_id', $target->id)->whereNull('ended_at')->firstOrFail();
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $target->id)
+            ->set('inactivateReason', 'Desligamento')
+            ->call('inactivateUser')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'inativo']);
+        $this->assertNotNull($vinculo->fresh()->ended_at);
+    }
+
+    public function test_a_user_cannot_block_or_inactivate_their_own_account(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $admin->id)
+            ->set('blockReason', 'Teste')
+            ->call('blockUser')
+            ->assertHasErrors('blockReason');
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'status' => 'ativo']);
+    }
+
+    public function test_the_last_active_administrator_cannot_be_blocked_or_inactivated(): void
+    {
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $other = $this->operatorWithPermissions('empresas.consultar');
+
+        $this->actingAs($other);
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $admin->id)
+            ->set('blockReason', 'Teste')
+            ->call('blockUser')
+            ->assertHasErrors('blockReason');
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'status' => 'ativo']);
+
+        $this->operatorWithPermissions('usuarios.administrar');
+
+        Livewire::test(UserManagement::class)
+            ->call('openUser', (string) $admin->id)
+            ->set('blockReason', 'Teste com backup')
+            ->call('blockUser')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'status' => 'bloqueado']);
+    }
+
+    public function test_the_users_route_requires_the_administrar_permission(): void
+    {
+        $this->withoutVite();
+
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/usuarios')->assertRedirect(route('dashboard'));
+
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        $this->actingAs($admin)->get('/usuarios')->assertOk();
     }
 }

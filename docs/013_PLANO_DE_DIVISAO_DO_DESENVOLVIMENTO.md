@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 12 de agosto de 2026
+**Última atualização:** 13 de agosto de 2026
 
 ## 1. Objetivo deste documento
 
@@ -36,9 +36,9 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | Situação | Quantidade | Partes |
 |---|---:|---|
 | ✅ Concluídas | 19 | P01 a P16, P18, P20 e P21 |
-| 🟡 Em andamento | 1 | P19 |
+| 🟡 Em andamento | 2 | P17 e P19 |
 | 🟢 Disponíveis | 0 | — |
-| 🔴 Bloqueadas | 6 | P17, P22 a P25 e P27 |
+| 🔴 Bloqueadas | 5 | P22 a P25 e P27 |
 | ⚪ Planejada | 1 | P26 |
 
 O avanço por quantidade de partes é de **19 concluídas em 27 (aproximadamente 70%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes.
@@ -161,7 +161,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P14 | Caixa | Abertura, movimentações, contribuições, conferência e fechamento | P04 e regras financeiras | ✅ Concluída (protótipo — regras completas da contribuição ainda pendentes, `PEN-RNG-011`) | Vinicius | `vinicius/p14-caixa` |
 | P15 | Encomendas | Recebimento, armazenamento, aviso e entrega de pacotes | P04 e cadastro de pessoas | ✅ Concluída (protótipo demonstrativo) | Vinicius | `vinicius/p15-encomendas` |
 | P16 | Relatórios | Consultas, filtros e exportações autorizadas | Dados reais dos módulos | ✅ Concluída — especificação `SDV-UXR-014`; relatórios reais de acessos e caixa; escopo próprio para Porteiro/Caixa e consolidado para Gestor/Auditor/Administrador; filtros, totais conciliáveis, exportação CSV sem dados sensíveis e 7 testes específicos. PDF, exportação persistida/assíncrona e auditoria de exportação permanecem nas dependências documentadas | Vinicius | `codex/p16-relatorios` |
-| P17 | Administração | Usuários, perfis, permissões, configurações, equipamentos e auditoria | Login real e banco de dados | 🔴 Bloqueada | A definir | A definir |
+| P17 | Administração | Usuários, perfis, permissões, configurações, equipamentos e auditoria | Login real e banco de dados | 🟡 Em andamento — planejada em fatias, como P20/P21 (a spec completa em docs/008 são 43 seções: um painel administrativo inteiro). **Fatia 1 concluída** — gerenciamento de usuários (`UserManagement.php`, rota `/usuarios`, permissão `usuarios.administrar`): listar, convidar, bloquear e inativar contas. O convite reaproveita o broker nativo de senha já construído na P19 (`Password::createToken()`/`Password::reset()`, mesma rota `/redefinir-senha/{token}`) — o admin nunca define a senha do usuário, só uma notification própria (`UserInvited`) muda o texto do e-mail; usuário criado fica `pendente` até definir a própria senha. Login passa a exigir `status='ativo'` (`Auth::attempt` com a chave extra `status`, reaproveitando a mensagem de erro genérica já existente — não revela se a conta existe mas está bloqueada). Bloquear e inativar são ações distintas (bloquear é reversível; inativar também encerra os `usuario_perfis` vigentes do usuário) e ambas são vetadas para a própria conta e para o último usuário ativo com a permissão `usuarios.administrar`. Sem tabela de histórico completo — só o estado atual (`status_reason`/`status_changed_by`/`status_changed_at`), mesma fronteira já usada em toda fatia anterior que esbarra em auditoria genérica. Fica para fatias futuras: CRUD de perfis/permissões, configurações da implantação, pontos de acesso, cadastro de equipamentos (hardware) e auditoria genérica (P22, que também cobre encerrar sessões já abertas de um usuário recém-inativado — hoje bloquear/inativar só impede *novas* sessões) | Vinicius | [`vinicius/p17-usuarios-fatia1`](https://github.com/remotevelaskoo/SDV-SANTARITA/pull/50) |
 
 ### 4.4 Parte interna e dados reais
 

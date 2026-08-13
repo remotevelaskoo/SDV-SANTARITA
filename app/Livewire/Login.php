@@ -29,7 +29,7 @@ class Login extends Component
             'password.required' => 'Informe sua senha.',
         ]);
 
-        if (! Auth::attempt(['username' => $credentials['identification'], 'password' => $credentials['password']])) {
+        if (! Auth::attempt(['username' => $credentials['identification'], 'password' => $credentials['password'], 'status' => 'ativo'])) {
             $this->addError('credentials', 'Identificação ou senha inválida.');
 
             return null;

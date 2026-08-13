@@ -30,6 +30,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'status' => 'ativo',
         ];
     }
 
@@ -40,6 +41,32 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function pendente(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'pendente',
+            'invited_at' => now(),
+        ]);
+    }
+
+    public function bloqueado(string $reason = 'Motivo de teste'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'bloqueado',
+            'status_reason' => $reason,
+            'status_changed_at' => now(),
+        ]);
+    }
+
+    public function inativo(string $reason = 'Motivo de teste'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'inativo',
+            'status_reason' => $reason,
+            'status_changed_at' => now(),
         ]);
     }
 }

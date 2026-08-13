@@ -14,7 +14,7 @@
             ['label' => 'Veículos', 'icon' => 'car', 'route' => 'vehicles'],
         ],
         'Gestão' => [
-            ['label' => 'Administração', 'icon' => 'settings'],
+            ['label' => 'Administração', 'icon' => 'settings', 'route' => 'users'],
             ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ['label' => 'Logs e auditoria', 'icon' => 'scroll'],

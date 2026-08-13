@@ -40,7 +40,10 @@ class ResetPassword extends Component
         $status = Password::reset(
             [...$credentials, 'token' => $this->token],
             function (User $user, string $password): void {
-                $user->forceFill(['password' => $password])->save();
+                $user->forceFill([
+                    'password' => $password,
+                    'status' => $user->status === 'pendente' ? 'ativo' : $user->status,
+                ])->save();
             }
         );
 
