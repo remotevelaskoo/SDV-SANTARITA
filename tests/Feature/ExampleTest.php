@@ -10,6 +10,7 @@ use App\Livewire\CashRegister;
 use App\Livewire\CompanyManagement;
 use App\Livewire\Dashboard;
 use App\Livewire\ForgotPassword;
+use App\Livewire\ImplantacaoSelection;
 use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PerfilManagement;
@@ -2429,5 +2430,101 @@ class ExampleTest extends TestCase
         Livewire::test(PerfilManagement::class)
             ->call('openPerfil', $perfil->id)
             ->assertSee('Priscila Andrade');
+    }
+
+    public function test_a_user_with_a_single_active_implantacao_is_auto_selected_into_session_without_seeing_the_picker(): void
+    {
+        $this->withoutVite();
+
+        $implantacao = Implantacao::factory()->create(['status' => 'ativa']);
+        $user = User::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacao);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::forgetCurrent();
+
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+
+        $this->assertSame((string) $implantacao->id, session('implantacao_atual_id'));
+    }
+
+    public function test_a_user_with_two_active_implantacoes_and_none_selected_is_redirected_to_the_selection_screen(): void
+    {
+        $this->withoutVite();
+
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+        $user = User::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::forgetCurrent();
+
+        $this->actingAs($user)->get('/dashboard')->assertRedirect(route('implantacao.selecionar'));
+    }
+
+    public function test_selecting_a_valid_implantacao_stores_it_in_session_and_resolves_context_afterward(): void
+    {
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+        $user = User::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::forgetCurrent();
+
+        $this->actingAs($user);
+
+        Livewire::test(ImplantacaoSelection::class)
+            ->call('selecionar', (string) $implantacaoB->id)
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertSame($implantacaoB->id, ImplantacaoContext::current()->id);
+    }
+
+    public function test_selecting_an_implantacao_the_user_has_no_access_to_is_rejected(): void
+    {
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoAlheia = Implantacao::factory()->create(['status' => 'ativa']);
+        $user = User::factory()->create();
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
+        ImplantacaoContext::forgetCurrent();
+
+        $this->actingAs($user);
+
+        Livewire::test(ImplantacaoSelection::class)
+            ->call('selecionar', (string) $implantacaoAlheia->id)
+            ->assertSet('erro', 'Selecione uma das implantações listadas.');
+
+        $this->assertNull(session('implantacao_atual_id'));
+    }
+
+    public function test_the_users_list_only_shows_users_of_the_current_implantacao(): void
+    {
+        $implantacaoA = Implantacao::factory()->create(['status' => 'ativa']);
+        $implantacaoB = Implantacao::factory()->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $admin = $this->operatorWithPermissions('usuarios.administrar');
+        UsuarioImplantacao::factory()->for($admin)->create(['status' => 'ativa']);
+        $userA = User::factory()->create(['name' => 'Usuário da Implantação A']);
+        UsuarioImplantacao::factory()->for($userA)->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoB);
+        $userB = User::factory()->create(['name' => 'Usuário da Implantação B']);
+        UsuarioImplantacao::factory()->for($userB)->create(['status' => 'ativa']);
+
+        ImplantacaoContext::setCurrentForTesting($implantacaoA);
+        $this->actingAs($admin);
+
+        Livewire::test(UserManagement::class)
+            ->assertSee('Usuário da Implantação A')
+            ->assertDontSee('Usuário da Implantação B');
     }
 }

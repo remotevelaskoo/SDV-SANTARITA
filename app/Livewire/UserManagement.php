@@ -251,7 +251,12 @@ class UserManagement extends Component
     {
         $search = mb_strtolower(trim($this->search));
 
-        $query = User::query()->with(['usuarioPerfis' => fn ($q) => $q->whereNull('ended_at')->with('perfil')]);
+        // User é global (identidade compartilhada entre implantações, ADR-002
+        // §10) — sem este filtro, um administrador veria usuários de toda
+        // implantação do sistema, não só a atual.
+        $query = User::query()
+            ->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'))
+            ->with(['usuarioPerfis' => fn ($q) => $q->whereNull('ended_at')->with('perfil')]);
 
         if ($this->statusFilter !== 'todos') {
             $query->where('status', $this->statusFilter);
@@ -280,11 +285,13 @@ class UserManagement extends Component
     /** @return array{pendente: int, ativo: int, bloqueado: int, inativo: int} */
     public function userCounts(): array
     {
+        $base = fn () => User::query()->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'));
+
         return [
-            'pendente' => User::query()->where('status', 'pendente')->count(),
-            'ativo' => User::query()->where('status', 'ativo')->count(),
-            'bloqueado' => User::query()->where('status', 'bloqueado')->count(),
-            'inativo' => User::query()->where('status', 'inativo')->count(),
+            'pendente' => $base()->where('status', 'pendente')->count(),
+            'ativo' => $base()->where('status', 'ativo')->count(),
+            'bloqueado' => $base()->where('status', 'bloqueado')->count(),
+            'inativo' => $base()->where('status', 'inativo')->count(),
         ];
     }
 
