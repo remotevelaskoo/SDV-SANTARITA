@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Services\AuditService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,7 @@ class ActiveSessions extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
-    public function revoke(string $sessionId): void
+    public function revoke(string $sessionId, AuditService $audit): void
     {
         if ($sessionId === session()->getId()) {
             return;
@@ -25,6 +26,13 @@ class ActiveSessions extends Component
             ->delete();
 
         if ($deleted) {
+            $audit->record(
+                action: 'revogou_sessao',
+                module: 'autenticacao',
+                entityType: 'sessao',
+                entityId: hash('sha256', $sessionId),
+                classification: 'restrita',
+            );
             $this->feedback = [
                 'variant' => 'success',
                 'title' => 'Sessão encerrada',
@@ -33,12 +41,22 @@ class ActiveSessions extends Component
         }
     }
 
-    public function revokeOthers(): void
+    public function revokeOthers(AuditService $audit): void
     {
         $deleted = DB::table('sessions')
             ->where('user_id', Auth::id())
             ->where('id', '!=', session()->getId())
             ->delete();
+
+        if ($deleted > 0) {
+            $audit->record(
+                action: 'revogou_outras_sessoes',
+                module: 'autenticacao',
+                entityType: 'sessao',
+                metadata: ['quantity' => $deleted],
+                classification: 'restrita',
+            );
+        }
 
         $this->feedback = $deleted > 0
             ? ['variant' => 'success', 'title' => 'Sessões encerradas', 'message' => "Encerramos {$deleted} outra(s) sessão(ões). Este dispositivo continua conectado."]
