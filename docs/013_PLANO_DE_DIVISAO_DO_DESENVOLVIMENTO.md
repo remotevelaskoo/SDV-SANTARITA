@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 13 de agosto de 2026
+**Última atualização:** 14 de agosto de 2026
 
 ## 1. Objetivo deste documento
 
@@ -60,7 +60,7 @@ O avanço por quantidade de partes é de **21 concluídas em 27 (aproximadamente
 | ID | Parte | Entrega principal | Dependência | Situação | Responsável | Branch |
 |---|---|---|---|---|---|---|
 | P01 | Estrutura principal | Menu lateral, cabeçalho, navegação, identidade visual e adaptação para celular | Nenhuma | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
-| P02 | Dashboard operacional | Indicadores, alertas, gráfico, acessos recentes e câmeras demonstrativas | P01 | ✅ Concluída visualmente | Lucas + Codex | `codex/fundacao-frontend` |
+| P02 | Dashboard operacional | Indicadores, alertas, gráfico, acessos recentes e câmeras demonstrativas | P01 | ✅ Concluída — `app/Livewire/Dashboard.php` passou a consultar dados reais (`Pessoa`, `HistoricoAcesso`, `Vinculo`, `Veiculo`, `CaixaMovimentacao`, `PreRegistration`) em vez de métricas fixas simuladas; a seção de câmeras não afirma mais "AO VIVO" nem qualquer conexão — exibe "Não integrado" e explica que depende da homologação do equipamento (P23). Corrigido dentro do PR #60 (`codex/correcoes-avaliacao-previa`), motivado por uma avaliação prévia do sistema que identificou o dashboard como fonte de dados fictícios | Lucas + Codex + Vinicius | `codex/fundacao-frontend`, `codex/correcoes-avaliacao-previa` |
 | P03 | Login visual | Entrada no sistema, aviso de erro, mostrar senha e acesso demonstrativo | P01 | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
 | P04 | Componentes compartilhados | Padrões reutilizáveis de campos, botões, tabelas, avisos, cartões e janelas | P01 | ✅ Concluída | Lucas + Codex | `codex/fundacao-frontend` |
 
