@@ -70,6 +70,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -98,16 +99,23 @@ class ExampleTest extends TestCase
             'password' => 'sdv2026',
         ]);
 
-        if ($canEdit) {
-            $permissao = Permissao::query()->firstOrCreate(
-                ['chave' => 'pre-registro.editar'],
-                ['modulo' => 'pre-cadastro', 'descricao' => 'Corrigir dados de um pré-cadastro antes da aprovação']
-            );
-            $perfil = Perfil::factory()->create();
-            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        // Mesmas permissões de decisão que o perfil Porteiro/Caixa real
+        // (UsuarioDemoSeeder::PORTEIRO_CAIXA) sempre tem, independente do
+        // parâmetro $canEdit — que controla só a permissão de correção.
+        $chaves = ['pre-registro.aprovar', 'pre-registro.rejeitar', 'pre-registro.solicitar-correcao'];
 
-            UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+        if ($canEdit) {
+            $chaves[] = 'pre-registro.editar';
         }
+
+        $perfil = Perfil::factory()->create();
+
+        foreach ($chaves as $chave) {
+            $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'pre-cadastro', 'descricao' => $chave]);
+            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        }
+
+        UsuarioPerfil::factory()->for($user)->for($perfil)->create();
 
         return $user;
     }
@@ -268,6 +276,19 @@ class ExampleTest extends TestCase
             'reason_code' => 'limite_tentativas_excedido',
             'result' => 'negado',
         ]);
+    }
+
+    public function test_the_password_field_is_cleared_after_a_failed_login_attempt(): void
+    {
+        // Propriedades públicas do Livewire são serializadas no HTML da
+        // resposta — a senha não pode continuar na propriedade depois de uma
+        // tentativa, ou fica exposta no código-fonte da página de erro.
+        Livewire::test(Login::class)
+            ->set('identification', 'pessoa-desconhecida')
+            ->set('password', 'senha-digitada')
+            ->call('login')
+            ->assertHasErrors(['credentials'])
+            ->assertSet('password', '');
     }
 
     public function test_logging_out_invalidates_the_session_and_redirects_to_login(): void
@@ -652,6 +673,18 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('historico_acessos', ['resultado' => 'pendente']);
     }
 
+    public function test_current_pessoa_id_cannot_be_tampered_by_a_crafted_client_update(): void
+    {
+        $outraPessoa = Pessoa::factory()->create();
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        // currentPessoaId decide de quem o histórico de acesso é gravado e a
+        // quem o CPF revelado pertence — sem #[Locked] um payload adulterado
+        // poderia apontar para outra pessoa que não a atendida no balcão.
+        Livewire::test(AccessValidation::class)->set('currentPessoaId', $outraPessoa->id);
+    }
+
     public function test_the_public_pre_registration_renders_the_secure_invitation(): void
     {
         $this->withoutVite();
@@ -790,6 +823,8 @@ class ExampleTest extends TestCase
 
     public function test_the_pre_registration_queue_records_each_demo_decision(): void
     {
+        $this->actingAs($this->operatorWithPermissions('pre-registro.aprovar', 'pre-registro.rejeitar', 'pre-registro.solicitar-correcao'));
+
         $first = PreRegistration::factory()->create(['status' => 'aguardando']);
         $second = PreRegistration::factory()->create(['status' => 'aguardando']);
 
@@ -938,6 +973,20 @@ class ExampleTest extends TestCase
             ->call('beginEdit', $record->id)
             ->call('approve', $record->id)
             ->assertHasErrors('editReason');
+
+        $this->assertSame('aguardando', $record->fresh()->status);
+    }
+
+    public function test_approving_rejecting_and_requesting_correction_require_their_own_permissions(): void
+    {
+        // pre-registro.analisar só dá acesso à fila — não às decisões, que têm
+        // permissões próprias (pre-registro.aprovar/rejeitar/solicitar-correcao).
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar'));
+        $record = PreRegistration::factory()->create(['status' => 'aguardando']);
+
+        Livewire::test(PreRegistrationQueue::class)->call('approve', $record->id)->assertStatus(403);
+        Livewire::test(PreRegistrationQueue::class)->call('reject', $record->id)->assertStatus(403);
+        Livewire::test(PreRegistrationQueue::class)->call('requestCorrection', $record->id)->assertStatus(403);
 
         $this->assertSame('aguardando', $record->fresh()->status);
     }
@@ -1389,6 +1438,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_detail_preserves_people_links_and_vehicles(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         $imovel = Imovel::factory()->create();
         EnderecoImovel::factory()->for($imovel, 'imovel')->create();
 
@@ -1416,6 +1467,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_form_creates_a_demo_property_without_implicit_links(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         Livewire::test(PropertyManagement::class)
             ->call('createProperty')
             ->assertSet('mode', 'form')
@@ -1456,6 +1509,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_detail_preserves_links_when_blocked(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
         $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
         $veiculo = Veiculo::factory()->create();
@@ -1477,6 +1532,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_creates_a_demo_vehicle_without_releasing_access(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Pessoa::factory()->create(['nome' => 'Camila Andrade']);
 
         Livewire::test(VehicleManagement::class)
@@ -1502,6 +1559,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_rejects_a_duplicate_plate(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Pessoa::factory()->create(['nome' => 'Outra pessoa']);
         Veiculo::factory()->create(['plate_display' => 'ABC1D23', 'plate_normalized' => 'ABC1D23']);
 
@@ -1521,6 +1580,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_rejects_an_owner_that_does_not_exist(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Livewire::test(VehicleManagement::class)
             ->call('createVehicle')
             ->set('plate', 'QRS-8T90')
@@ -1642,6 +1703,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_detail_preserves_providers_documents_and_services(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         $empresa = Empresa::factory()->create(['status' => 'ativo']);
 
         $pessoa = Pessoa::factory()->create(['nome' => 'Sérgio Aparecido Luz']);
@@ -1665,6 +1728,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_form_creates_a_demo_company_without_implicit_providers(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         Livewire::test(CompanyManagement::class)
             ->call('createCompany')
             ->assertSet('mode', 'form')
@@ -1685,6 +1750,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_form_rejects_a_duplicate_cnpj(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         Empresa::factory()->create(['cnpj' => '12.345.678/0001-90']);
 
         Livewire::test(CompanyManagement::class)
@@ -1697,6 +1764,30 @@ class ExampleTest extends TestCase
             ->call('saveCompany')
             ->assertHasErrors(['cnpj'])
             ->assertSee('Já existe uma empresa cadastrada com este CNPJ.');
+    }
+
+    public function test_read_only_permissions_do_not_grant_write_access_to_properties_vehicles_or_companies(): void
+    {
+        // O perfil Auditor (e qualquer outro que só tenha *.consultar) é
+        // deliberadamente só-leitura — as ações de escrita exigem a
+        // permissão *.gerenciar dedicada, separada da consulta.
+        $auditor = $this->operatorWithPermissions('imoveis.consultar', 'veiculos.consultar', 'empresas.consultar');
+        $imovel = Imovel::factory()->create();
+        $veiculo = Veiculo::factory()->create();
+        $empresa = Empresa::factory()->create();
+
+        $this->actingAs($auditor);
+
+        Livewire::test(PropertyManagement::class)->call('createProperty')->call('saveProperty')->assertStatus(403);
+        Livewire::test(PropertyManagement::class)->set('selectedPropertyId', $imovel->id)->call('togglePropertyBlock')->assertStatus(403);
+        Livewire::test(VehicleManagement::class)->call('createVehicle')->call('saveVehicle')->assertStatus(403);
+        Livewire::test(VehicleManagement::class)->set('selectedVehicleId', $veiculo->id)->call('toggleVehicleBlock')->assertStatus(403);
+        Livewire::test(CompanyManagement::class)->call('createCompany')->call('saveCompany')->assertStatus(403);
+        Livewire::test(CompanyManagement::class)->set('selectedCompanyId', $empresa->id)->call('toggleCompanyStatus')->assertStatus(403);
+
+        $this->assertNotSame('bloqueado', $imovel->fresh()->status);
+        $this->assertNotSame('bloqueado', $veiculo->fresh()->status);
+        $this->assertNotSame('inativo', $empresa->fresh()->status);
     }
 
     public function test_the_access_history_renders_the_p09_list(): void
@@ -1832,6 +1923,26 @@ class ExampleTest extends TestCase
 
         $this->assertDatabaseCount('caixa_turnos', 2);
         $this->assertDatabaseHas('caixa_turnos', ['status' => 'aberto', 'opening_balance' => 200.00]);
+    }
+
+    public function test_registering_a_movement_is_rejected_when_current_turno_id_is_forced_to_a_closed_turno(): void
+    {
+        $turnoFechado = CaixaTurno::factory()->create(['status' => 'fechado']);
+
+        // currentTurnoId é uma propriedade pública comum, adulterável via um
+        // payload Livewire forjado — a validação de status precisa acontecer
+        // no servidor, não confiar apenas no fluxo normal de syncCurrentTurno().
+        Livewire::test(CashRegister::class)
+            ->set('currentTurnoId', $turnoFechado->id)
+            ->set('movementType', 'entrada')
+            ->set('movementAmount', '100,00')
+            ->set('movementMethod', 'dinheiro')
+            ->set('movementDescription', 'Tentativa em turno já fechado')
+            ->call('registerMovement')
+            ->assertSet('feedback.variant', 'danger')
+            ->assertSee('RN-084');
+
+        $this->assertDatabaseCount('caixa_movimentacoes', 0);
     }
 
     public function test_the_cash_register_closing_computes_the_difference(): void
@@ -2192,7 +2303,10 @@ class ExampleTest extends TestCase
             ->set('password_confirmation', 'nova-senha-123')
             ->call('resetPassword')
             ->assertHasNoErrors()
-            ->assertSet('completed', true);
+            ->assertSet('completed', true)
+            // A senha não pode continuar na propriedade pública depois do
+            // sucesso, ou fica exposta no HTML da própria tela de confirmação.
+            ->assertSet('password', '');
 
         $this->assertFalse(Auth::attempt(['username' => 'portaria', 'password' => 'senha-antiga']));
         $this->assertTrue(Auth::attempt(['username' => 'portaria', 'password' => 'nova-senha-123']));

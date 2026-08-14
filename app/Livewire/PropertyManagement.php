@@ -9,6 +9,7 @@ use App\Models\Imovel;
 use App\Models\Pessoa;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -145,6 +146,8 @@ class PropertyManagement extends Component
 
     public function saveDraft(): void
     {
+        abort_unless($this->canManage(), 403);
+
         $this->validate([
             'unit' => ['required', 'string', 'max:20'],
             'code' => ['required', 'string', 'max:40'],
@@ -160,6 +163,8 @@ class PropertyManagement extends Component
 
     public function saveProperty(): void
     {
+        abort_unless($this->canManage(), 403);
+
         $this->validateProperty();
 
         $code = strtoupper($this->code);
@@ -241,6 +246,8 @@ class PropertyManagement extends Component
 
     public function togglePropertyBlock(): void
     {
+        abort_unless($this->canManage(), 403);
+
         if (! $this->selectedPropertyId) {
             return;
         }
@@ -403,6 +410,11 @@ class PropertyManagement extends Component
             'dependente' => 'Dependente',
             default => $papel !== null ? ucfirst($papel) : '—',
         };
+    }
+
+    private function canManage(): bool
+    {
+        return Auth::user()?->hasPermission('imoveis.gerenciar') ?? false;
     }
 
     private function resetForm(): void

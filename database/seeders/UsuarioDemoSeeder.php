@@ -30,8 +30,11 @@ class UsuarioDemoSeeder extends Seeder
         'pre-registro.solicitar-correcao' => ['modulo' => 'pre-cadastro', 'descricao' => 'Solicitar correção de um pré-cadastro'],
         'validacao.registrar' => ['modulo' => 'validacao', 'descricao' => 'Registrar entradas e saídas'],
         'imoveis.consultar' => ['modulo' => 'imoveis', 'descricao' => 'Consultar imóveis e responsáveis'],
+        'imoveis.gerenciar' => ['modulo' => 'imoveis', 'descricao' => 'Cadastrar, editar e bloquear imóveis'],
         'veiculos.consultar' => ['modulo' => 'veiculos', 'descricao' => 'Consultar veículos cadastrados'],
+        'veiculos.gerenciar' => ['modulo' => 'veiculos', 'descricao' => 'Cadastrar, editar e bloquear veículos'],
         'empresas.consultar' => ['modulo' => 'empresas', 'descricao' => 'Consultar empresas e prestadores'],
+        'empresas.gerenciar' => ['modulo' => 'empresas', 'descricao' => 'Cadastrar, editar e inativar empresas'],
         'encomendas.registrar' => ['modulo' => 'encomendas', 'descricao' => 'Registrar recebimento de encomendas'],
         'contribuicao.registrar' => ['modulo' => 'contribuicao', 'descricao' => 'Registrar contribuições/taxas na portaria'],
         'caixa.proprio.gerenciar' => ['modulo' => 'caixa', 'descricao' => 'Abrir, movimentar e fechar o caixa próprio'],
@@ -103,7 +106,7 @@ class UsuarioDemoSeeder extends Seeder
 
         $grants = [
             'Porteiro/Caixa' => self::PORTEIRO_CAIXA,
-            'Gestor' => [...self::PORTEIRO_CAIXA, 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar'],
+            'Gestor' => [...self::PORTEIRO_CAIXA, 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'imoveis.gerenciar', 'veiculos.gerenciar', 'empresas.gerenciar'],
             'Auditor' => self::AUDITOR,
             'Administrador' => array_keys(self::PERMISSOES),
         ];

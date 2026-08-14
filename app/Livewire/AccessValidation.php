@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class AccessValidation extends Component
@@ -61,6 +62,7 @@ class AccessValidation extends Component
 
     public string $quickNotes = '';
 
+    #[Locked]
     public ?string $currentPessoaId = null;
 
     public function mount(): void

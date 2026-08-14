@@ -86,7 +86,7 @@ class CashRegister extends Component
     {
         $turno = $this->currentTurno();
 
-        if (! $turno) {
+        if (! $turno || $turno->status !== 'aberto') {
             $this->feedback = [
                 'variant' => 'danger',
                 'title' => 'Caixa fechado',
