@@ -31,7 +31,7 @@ O modelo de negócio do SDV Access é centrado no **imóvel**, ao qual são vinc
 
 ## Status
 
-Documentação em elaboração e fundação frontend iniciada.
+21 de 27 partes do plano concluídas (~78%). As restantes dependem da definição e homologação de equipamentos físicos (câmeras, portões, leitura de placas) pela equipe — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md) para a situação detalhada de cada parte.
 
 ## Coordenação da equipe
 
@@ -88,4 +88,4 @@ vendor/bin/pint --test
 pnpm run build
 ```
 
-Os indicadores exibem placeholders intencionais. Nenhum dado ilustrativo das referências foi incorporado como dado real.
+Os indicadores do dashboard consultam dados reais do banco (pessoas, acessos, vínculos, veículos, caixa). Módulos que dependem de equipamento físico ainda não homologado (câmeras, portões, leitura de placas) informam claramente que não estão integrados, em vez de simular uma conexão.
