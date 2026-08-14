@@ -6,7 +6,7 @@
         ['value' => 'tenant', 'label' => 'Inquilino', 'description' => 'Ocupante com contrato vigente', 'icon' => 'key'],
         ['value' => 'provider', 'label' => 'Prestador', 'description' => 'Serviço autorizado', 'icon' => 'wrench'],
         ['value' => 'visitor', 'label' => 'Visitante', 'description' => 'Entrada vinculada a responsável', 'icon' => 'users'],
-        ['value' => 'tourist', 'label' => 'Turista', 'description' => 'Hospedagem com período definido', 'icon' => 'package'],
+        ['value' => 'tourist', 'label' => 'Turista', 'description' => 'Visita à praia, sem vínculo com imóvel', 'icon' => 'package'],
     ];
 @endphp
 

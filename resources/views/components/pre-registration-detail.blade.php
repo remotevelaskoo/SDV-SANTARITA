@@ -1,9 +1,9 @@
-@props(['record', 'editing' => false])
+@props(['record', 'editing' => false, 'revealedDocumentId' => null])
 
 <div class="pre-registration-detail">
     <header class="pre-registration-detail__person">
         <span>{{ $record->initials() }}</span>
-        <div><strong>{{ $record->name }}</strong><small>{{ ucfirst($record->access_type) }} · {{ $record->document }}</small></div>
+        <div><strong>{{ $record->name }}</strong><small>{{ ucfirst($record->access_type) }} · {{ $record->maskedDocument() }}</small></div>
         <x-ui.badge :variant="match ($record->status) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
             {{ match ($record->status) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
         </x-ui.badge>
@@ -35,7 +35,17 @@
         <h4 id="detail-data-{{ $record->id }}">Dados preenchidos</h4>
         <dl class="pre-registration-detail__data">
             <div><dt>Nome completo</dt><dd>{{ $record->name }}</dd></div>
-            <div><dt>Documento</dt><dd>{{ $record->document }}</dd></div>
+            <div>
+                <dt>Documento</dt>
+                <dd>
+                    {{ $revealedDocumentId === $record->id ? $record->document : $record->maskedDocument() }}
+                    @if (auth()->user()?->hasPermission('dados-sensiveis.revelar'))
+                        <button type="button" class="sensitive-reveal" wire:click="toggleDocumentReveal('{{ $record->id }}')">
+                            {{ $revealedDocumentId === $record->id ? 'Ocultar' : 'Revelar' }}
+                        </button>
+                    @endif
+                </dd>
+            </div>
             <div><dt>Data de nascimento</dt><dd>{{ $record->birth_date->format('d/m/Y') }}</dd></div>
             <div><dt>Telefone</dt><dd>{{ $record->phone }}</dd></div>
             <div><dt>E-mail</dt><dd>{{ $record->email }}</dd></div>
@@ -48,8 +58,8 @@
             <div><dt>Responsável</dt><dd>{{ $record->responsible_name ?? 'Não exige responsável de imóvel' }}</dd></div>
             <div><dt>Período</dt><dd>{{ $record->periodLabel() }}</dd></div>
             <div><dt>Veículo</dt><dd>{{ $record->vehicleLabel() }}</dd></div>
-            <div><dt>Situação do documento</dt><dd>{{ $record->document_status }}</dd></div>
-            <div><dt>Situação da selfie</dt><dd>{{ $record->selfie_status }}</dd></div>
+            <div><dt>Situação do documento</dt><dd>{{ $documentLink?->file ? $record->document_status : 'Não enviado' }}</dd></div>
+            <div><dt>Situação da selfie</dt><dd>{{ $selfieLink?->file ? $record->selfie_status : 'Não enviada' }}</dd></div>
             <div><dt>Protocolo</dt><dd>{{ $record->protocol }}</dd></div>
             <div><dt>Enviado em</dt><dd>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</dd></div>
         </dl>

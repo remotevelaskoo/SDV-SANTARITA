@@ -105,6 +105,11 @@
                 :tone="$quickPersonRegistered ? 'warning' : 'success'"
             >
                 <x-slot:actions>
+                    @if (auth()->user()?->hasPermission('dados-sensiveis.revelar'))
+                        <x-ui.button variant="ghost" size="sm" wire:click="toggleDocumentReveal">
+                            {{ $documentRevealed ? 'Ocultar documento' : 'Revelar documento' }}
+                        </x-ui.button>
+                    @endif
                     <x-ui.button variant="secondary" size="sm" disabled title="Consulta completa será conectada ao cadastro em uma próxima etapa">
                         Ver cadastro completo
                     </x-ui.button>
@@ -218,7 +223,7 @@
                         <div><dt>Desconto</dt><dd>R$ 0,00</dd></div>
                         <div class="is-total"><dt>Total</dt><dd>R$ 15,00</dd></div>
                     </dl>
-                    <small>Caixa: Portaria Principal · Tatiane</small>
+                    <small>Caixa: Portaria Principal · {{ auth()->user()?->name ?? 'Operador identificado na sessão' }}</small>
                 </aside>
             </div>
         @elseif ($contribution === 'no')

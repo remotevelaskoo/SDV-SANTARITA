@@ -4,6 +4,7 @@
     'description' => null,
     'triggerLabel' => 'Abrir painel',
     'reopenOn' => null,
+    'closeAction' => null,
 ])
 
 <div x-data class="ui-overlay-trigger">
@@ -16,6 +17,9 @@
         @click.self="$el.close()"
         @if ($reopenOn)
             x-on:{{ $reopenOn }}.window="if (! $refs['{{ $id }}'].open) { $refs['{{ $id }}'].showModal() }"
+        @endif
+        @if ($closeAction)
+            x-on:close="$wire.call('{{ $closeAction }}')"
         @endif
     >
         <div class="ui-drawer__surface">

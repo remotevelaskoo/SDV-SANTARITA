@@ -2,105 +2,111 @@
 
 namespace App\Livewire;
 
+use App\Models\CaixaMovimentacao;
+use App\Models\HistoricoAcesso;
+use App\Models\Pessoa;
+use App\Models\PreRegistration;
+use App\Models\Veiculo;
+use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Livewire\Component;
 
 class Dashboard extends Component
 {
     public string $period = 'hoje';
 
-    /** @var array<string, bool> */
-    public array $cameraStatus = [
-        'cam-01' => true,
-        'cam-02' => true,
-        'cam-03' => true,
-        'cam-04' => true,
-    ];
-
-    /** @var list<array<string, mixed>> */
-    public array $metrics = [
-        ['label' => 'Pessoas cadastradas', 'value' => 4182, 'type' => 'number', 'variation' => 2.4, 'trend' => 'up', 'comparison' => 'vs. mês anterior', 'period' => 'Base atual', 'updated' => '16:02', 'link' => true],
-        ['label' => 'Visitantes hoje', 'value' => 137, 'type' => 'number', 'variation' => 11.8, 'trend' => 'up', 'comparison' => 'vs. mesmo dia da semana', 'period' => 'Hoje, desde 00h00', 'updated' => '16:02', 'link' => true],
-        ['label' => 'Entradas hoje', 'value' => 612, 'type' => 'number', 'variation' => 4.1, 'trend' => 'up', 'comparison' => 'vs. ontem', 'period' => 'Hoje, desde 00h00', 'updated' => '16:02', 'link' => true],
-        ['label' => 'Saídas hoje', 'value' => 574, 'type' => 'number', 'variation' => 1.3, 'trend' => 'down', 'comparison' => 'vs. ontem', 'period' => 'Hoje, desde 00h00', 'updated' => '16:02', 'link' => true],
-        ['label' => 'Moradores', 'value' => 2914, 'type' => 'number', 'variation' => 0.0, 'trend' => 'stable', 'comparison' => 'vs. mês anterior', 'period' => 'Vínculos vigentes', 'updated' => '16:00', 'link' => true],
-        ['label' => 'Prestadores', 'value' => 268, 'type' => 'number', 'variation' => 6.7, 'trend' => 'up', 'comparison' => 'vs. mês anterior', 'period' => 'Autorizações vigentes', 'updated' => '16:00', 'link' => true],
-        ['label' => 'Veículos cadastrados', 'value' => 1903, 'type' => 'number', 'variation' => 1.9, 'trend' => 'up', 'comparison' => 'vs. mês anterior', 'period' => 'Base atual', 'updated' => '16:00', 'link' => true],
-        ['label' => 'Arrecadação hoje', 'value' => 3487.50, 'type' => 'currency', 'variation' => 8.2, 'trend' => 'up', 'comparison' => 'vs. ontem', 'period' => 'Turno do caixa aberto', 'updated' => '16:02', 'link' => false],
-    ];
-
-    /** @var list<array<string, string>> */
-    public array $alerts = [
-        ['severity' => 'warning', 'title' => '3 pré-cadastros aguardando análise há mais de 24 horas', 'description' => 'Solicitações de visitantes pendentes de decisão da administração.'],
-        ['severity' => 'danger', 'title' => 'Controladora do Portão de Serviço sem comunicação', 'description' => 'Última sincronização às 14:52. Operação em modo de contingência.'],
-    ];
-
-    /** @var list<array<string, string>> */
-    public array $accesses = [
-        ['time' => '16:01', 'name' => 'Camila Andrade', 'document' => '•••.•••.331-07', 'relation' => 'Visitante', 'property' => 'Bloco B — Apto 304', 'point' => 'Portaria Principal', 'plate' => 'RQK8H21', 'type' => 'entrada', 'result' => 'liberado'],
-        ['time' => '15:58', 'name' => 'Eduardo Nogueira', 'document' => '•••.•••.760-55', 'relation' => 'Morador', 'property' => 'Bloco A — Apto 112', 'point' => 'Portaria Principal', 'plate' => 'GFT4A09', 'type' => 'saida', 'result' => 'liberado'],
-        ['time' => '15:54', 'name' => 'Luciana Ferraz', 'document' => '•••.•••.218-90', 'relation' => 'Prestador', 'property' => 'Área comum — Manutenção', 'point' => 'Portão de Serviço', 'plate' => '', 'type' => 'entrada', 'result' => 'pendente'],
-        ['time' => '15:47', 'name' => 'Rafael Domingues', 'document' => '•••.•••.004-12', 'relation' => 'Inquilino', 'property' => 'Bloco C — Apto 501', 'point' => 'Portaria Principal', 'plate' => '', 'type' => 'entrada', 'result' => 'liberado'],
-        ['time' => '15:41', 'name' => 'Bianca Moretti', 'document' => '•••.•••.615-38', 'relation' => 'Visitante', 'property' => 'Bloco A — Apto 208', 'point' => 'Portaria Principal', 'plate' => '', 'type' => 'entrada', 'result' => 'negado'],
-        ['time' => '15:33', 'name' => 'Sérgio Aparecido Luz', 'document' => '•••.•••.447-61', 'relation' => 'Prestador', 'property' => 'Bloco B — Apto 706', 'point' => 'Portão de Serviço', 'plate' => 'LMD7C44', 'type' => 'entrada', 'result' => 'liberado'],
-    ];
-
-    /** @var array<string, list<array{label: string, entries: int, exits: int}>> */
-    public array $series = [
-        'hoje' => [
-            ['label' => '00h', 'entries' => 8, 'exits' => 14],
-            ['label' => '03h', 'entries' => 4, 'exits' => 6],
-            ['label' => '06h', 'entries' => 41, 'exits' => 96],
-            ['label' => '09h', 'entries' => 122, 'exits' => 71],
-            ['label' => '12h', 'entries' => 158, 'exits' => 129],
-            ['label' => '15h', 'entries' => 181, 'exits' => 148],
-            ['label' => '18h', 'entries' => 74, 'exits' => 82],
-            ['label' => '21h', 'entries' => 24, 'exits' => 28],
-        ],
-        '7dias' => [
-            ['label' => 'Seg', 'entries' => 588, 'exits' => 561],
-            ['label' => 'Ter', 'entries' => 604, 'exits' => 592],
-            ['label' => 'Qua', 'entries' => 631, 'exits' => 608],
-            ['label' => 'Qui', 'entries' => 612, 'exits' => 574],
-            ['label' => 'Sex', 'entries' => 702, 'exits' => 688],
-            ['label' => 'Sáb', 'entries' => 489, 'exits' => 512],
-            ['label' => 'Dom', 'entries' => 352, 'exits' => 377],
-        ],
-        '30dias' => [
-            ['label' => 'Sem. 1', 'entries' => 3921, 'exits' => 3844],
-            ['label' => 'Sem. 2', 'entries' => 4108, 'exits' => 4021],
-            ['label' => 'Sem. 3', 'entries' => 3987, 'exits' => 3902],
-            ['label' => 'Sem. 4', 'entries' => 4212, 'exits' => 4160],
-        ],
-    ];
-
-    /** @var list<array{id: string, title: string}> */
-    public array $cameras = [
-        ['id' => 'cam-01', 'title' => 'Portaria Principal'],
-        ['id' => 'cam-02', 'title' => 'Garagem Subsolo'],
-        ['id' => 'cam-03', 'title' => 'Pátio de Carga'],
-        ['id' => 'cam-04', 'title' => 'Área de Lazer'],
-    ];
-
     public function setPeriod(string $period): void
     {
-        if (array_key_exists($period, $this->series)) {
+        if (in_array($period, ['hoje', '7dias', '30dias'], true)) {
             $this->period = $period;
         }
     }
 
-    public function toggleCamera(string $cameraId): void
+    /** @return list<array<string, mixed>> */
+    private function metrics(): array
     {
-        if (array_key_exists($cameraId, $this->cameraStatus)) {
-            $this->cameraStatus[$cameraId] = ! $this->cameraStatus[$cameraId];
-        }
+        $today = now()->startOfDay();
+
+        return [
+            $this->metric('Pessoas cadastradas', Pessoa::query()->where('status', 'ativo')->count(), 'Base atual'),
+            $this->metric('Visitantes hoje', HistoricoAcesso::query()->where('occurred_at', '>=', $today)->whereHas('pessoa.vinculos', fn ($query) => $query->where('tipo', 'visitante'))->distinct('pessoa_id')->count('pessoa_id'), 'Hoje, desde 00h00'),
+            $this->metric('Entradas hoje', HistoricoAcesso::query()->where('occurred_at', '>=', $today)->where('tipo', 'entrada')->count(), 'Hoje, desde 00h00'),
+            $this->metric('Saídas hoje', HistoricoAcesso::query()->where('occurred_at', '>=', $today)->where('tipo', 'saida')->count(), 'Hoje, desde 00h00'),
+            $this->metric('Moradores', Vinculo::query()->whereIn('tipo', ['morador', 'proprietario', 'inquilino'])->whereNull('ended_at')->count(), 'Vínculos vigentes'),
+            $this->metric('Prestadores', Vinculo::query()->where('tipo', 'prestador')->whereNull('ended_at')->count(), 'Vínculos vigentes'),
+            $this->metric('Veículos cadastrados', Veiculo::query()->where('status', 'ativo')->count(), 'Base atual'),
+            $this->metric('Arrecadação hoje', (float) CaixaMovimentacao::query()->where('occurred_at', '>=', $today)->where('type', 'entrada')->sum('amount'), 'Movimentações de hoje', 'currency'),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function metric(string $label, int|float $value, string $period, string $type = 'number'): array
+    {
+        return ['label' => $label, 'value' => $value, 'type' => $type, 'variation' => null, 'trend' => 'stable', 'comparison' => 'Dados reais', 'period' => $period, 'updated' => now()->format('H:i'), 'link' => false];
+    }
+
+    /** @return list<array<string, string>> */
+    private function alerts(): array
+    {
+        $late = PreRegistration::query()->where('status', 'aguardando')->where('submitted_at', '<=', now()->subDay())->count();
+
+        return $late > 0 ? [[
+            'severity' => 'warning',
+            'title' => "{$late} pré-cadastro(s) aguardando análise há mais de 24 horas",
+            'description' => 'Solicitações pendentes de decisão da portaria.',
+        ]] : [];
+    }
+
+    /** @return list<array<string, string>> */
+    private function accesses(): array
+    {
+        return HistoricoAcesso::query()->with(['pessoa.documentos', 'pessoa.vinculos', 'imovel', 'veiculo'])->latest('occurred_at')->limit(6)->get()->map(fn (HistoricoAcesso $access) => [
+            'time' => $access->occurred_at->format('H:i'),
+            'name' => $access->pessoa?->nomeExibicao() ?? 'Não identificado',
+            'document' => $this->maskDocument($access->pessoa?->documentos->first()?->valor_apresentacao),
+            'relation' => ucfirst((string) ($access->pessoa?->vinculos->first()?->tipo ?? 'não identificado')),
+            'property' => $access->imovel?->label() ?? 'Sem imóvel',
+            'point' => $access->ponto_acesso,
+            'plate' => $access->veiculo?->plate_display ?? '',
+            'type' => $access->tipo,
+            'result' => $access->resultado,
+        ])->all();
+    }
+
+    private function maskDocument(?string $document): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $document) ?? '';
+
+        return strlen($digits) === 11 ? '***.***.'.substr($digits, 6, 3).'-**' : 'Documento protegido';
+    }
+
+    /** @return array<string, list<array{label: string, entries: int, exits: int}>> */
+    private function series(): array
+    {
+        return [
+            'hoje' => $this->seriesFor(now()->startOfDay(), 'H'),
+            '7dias' => $this->seriesFor(now()->subDays(6)->startOfDay(), 'd/m'),
+            '30dias' => $this->seriesFor(now()->subDays(29)->startOfDay(), 'd/m'),
+        ];
+    }
+
+    /** @return list<array{label: string, entries: int, exits: int}> */
+    private function seriesFor(Carbon $start, string $format): array
+    {
+        return HistoricoAcesso::query()->where('occurred_at', '>=', $start)->orderBy('occurred_at')->get()
+            ->groupBy(fn (HistoricoAcesso $item) => $item->occurred_at->format($format))
+            ->map(fn ($items, string $label) => ['label' => $label, 'entries' => $items->where('tipo', 'entrada')->count(), 'exits' => $items->where('tipo', 'saida')->count()])
+            ->values()->all();
     }
 
     public function render(): View
     {
-        return view('livewire.dashboard')
-            ->layout('components.layouts.app', [
-                'title' => 'Dashboard operacional',
-            ]);
+        return view('livewire.dashboard', [
+            'metrics' => $this->metrics(),
+            'alerts' => $this->alerts(),
+            'accesses' => $this->accesses(),
+            'series' => $this->series(),
+        ])->layout('components.layouts.app', ['title' => 'Dashboard operacional']);
     }
 }

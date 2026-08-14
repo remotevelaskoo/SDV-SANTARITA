@@ -50,6 +50,7 @@ class UsuarioDemoSeeder extends Seeder
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
         'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],
         'arquivos.sensiveis.visualizar' => ['modulo' => 'arquivos', 'descricao' => 'Visualizar documentos, fotos e selfies protegidos'],
+        'dados-sensiveis.revelar' => ['modulo' => 'dados-sensiveis', 'descricao' => 'Revelar temporariamente documentos pessoais para conferência operacional'],
     ];
 
     /** @var list<string> */
@@ -62,6 +63,7 @@ class UsuarioDemoSeeder extends Seeder
         'pre-registro.rejeitar',
         'pre-registro.solicitar-correcao',
         'arquivos.sensiveis.visualizar',
+        'dados-sensiveis.revelar',
         'validacao.registrar',
         'imoveis.consultar',
         'veiculos.consultar',

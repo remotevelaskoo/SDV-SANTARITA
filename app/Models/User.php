@@ -72,4 +72,16 @@ class User extends Authenticatable
 
         return mb_strtoupper($first.$last);
     }
+
+    public function operationalRoleLabel(): string
+    {
+        return $this->usuarioPerfis()
+            ->whereNull('ended_at')
+            ->with('perfil:id,nome')
+            ->get()
+            ->pluck('perfil.nome')
+            ->filter()
+            ->unique()
+            ->implode(', ') ?: 'Usuário sem perfil';
+    }
 }

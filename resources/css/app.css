@@ -1285,6 +1285,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .pre-registration-detail__data > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--neutral-200); font-size: 0.63rem; }
 .pre-registration-detail__data dt { color: var(--neutral-600); }
 .pre-registration-detail__data dd { margin: 0; font-weight: 700; text-align: right; }
+.sensitive-reveal { margin-left: 0.4rem; border: 0; background: transparent; color: var(--blue-700); font: inherit; text-decoration: underline; cursor: pointer; }
 .pre-registration-history li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.6rem; padding-bottom: 0.7rem; }
 .pre-registration-history li > span { width: 0.65rem; height: 0.65rem; margin-top: 0.2rem; border: 2px solid var(--blue-600); border-radius: 999px; background: var(--white); }
 .pre-registration-history strong, .pre-registration-history small { display: block; }

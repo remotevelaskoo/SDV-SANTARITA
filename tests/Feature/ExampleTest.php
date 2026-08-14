@@ -24,6 +24,7 @@ use App\Livewire\PublicPreRegistration;
 use App\Livewire\ResetPassword;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
+use App\Models\AuditoriaEvento;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Catalogo;
@@ -209,7 +210,8 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('Dashboard operacional')
             ->assertSee('Pessoas cadastradas')
-            ->assertSee('4.182')
+            ->assertSee('Dados reais')
+            ->assertDontSee('4.182')
             ->assertSee('Acessos recentes')
             ->assertSee('Entradas e saídas')
             ->assertSee('Monitoramento de Câmeras');
@@ -262,16 +264,15 @@ class ExampleTest extends TestCase
             ->assertSee('aria-valuenow="68"', false);
     }
 
-    public function test_the_dashboard_period_and_camera_controls_are_interactive(): void
+    public function test_the_dashboard_period_is_interactive_and_does_not_claim_unavailable_camera_integration(): void
     {
         Livewire::test(Dashboard::class)
             ->assertSet('period', 'hoje')
             ->call('setPeriod', '7dias')
             ->assertSet('period', '7dias')
-            ->assertSet('cameraStatus.cam-01', true)
-            ->call('toggleCamera', 'cam-01')
-            ->assertSet('cameraStatus.cam-01', false)
-            ->assertSee('SEM SINAL');
+            ->assertSee('Dados reais')
+            ->assertSee('Nenhuma câmera integrada')
+            ->assertDontSee('AO VIVO');
     }
 
     public function test_the_portaria_shows_the_real_operator_and_open_cash_register(): void
@@ -737,10 +738,32 @@ class ExampleTest extends TestCase
             ->assertSee($record->destination_property)
             ->assertSee($record->responsible_name)
             ->assertSee('ABC1D23')
-            ->assertSee('Documento enviado e legível')
-            ->assertSee('Selfie enviada e adequada')
+            ->assertSee('Não enviado')
+            ->assertSee('Não enviada')
             ->assertSee('PRE-SRA-X7K9M2')
             ->assertSee('Dados preenchidos');
+    }
+
+    public function test_an_authorized_operator_can_temporarily_reveal_a_document_with_audit(): void
+    {
+        $operator = $this->operatorWithPermissions('pre-registro.analisar', 'dados-sensiveis.revelar');
+        $record = PreRegistration::factory()->create(['document' => '123.456.789-01']);
+
+        $this->actingAs($operator);
+
+        Livewire::test(PreRegistrationQueue::class)
+            ->assertSee('***.***.789-**')
+            ->assertDontSee('123.456.789-01')
+            ->call('toggleDocumentReveal', $record->id)
+            ->assertSet('revealedDocumentId', $record->id)
+            ->assertSee('123.456.789-01')
+            ->call('hideSensitiveDocument')
+            ->assertSet('revealedDocumentId', null)
+            ->assertDontSee('123.456.789-01');
+
+        $event = AuditoriaEvento::query()->where('action', 'revelou_dado_sensivel')->sole();
+        $this->assertSame('restrita', $event->classification);
+        $this->assertSame($record->id, $event->entity_id);
     }
 
     public function test_the_gate_operator_can_edit_submitted_data_with_an_audit_reason_before_approval(): void
@@ -1166,6 +1189,7 @@ class ExampleTest extends TestCase
         $this->assertTrue($porteiroCaixa->concede('veiculos.consultar'));
         $this->assertTrue($porteiroCaixa->concede('empresas.consultar'));
         $this->assertTrue($porteiroCaixa->concede('encomendas.registrar'));
+        $this->assertTrue($porteiroCaixa->concede('dados-sensiveis.revelar'));
         $this->assertFalse($porteiroCaixa->concede('usuarios.administrar'));
         $this->assertFalse($porteiroCaixa->concede('caixa.consolidado.consultar'));
 
@@ -1180,6 +1204,7 @@ class ExampleTest extends TestCase
         $this->assertFalse($auditor->concede('validacao.registrar'), 'auditor só consulta, não registra validações');
         $this->assertFalse($auditor->concede('pre-registro.aprovar'));
         $this->assertFalse($auditor->concede('caixa.proprio.gerenciar'));
+        $this->assertFalse($auditor->concede('dados-sensiveis.revelar'));
 
         $this->assertTrue($administrador->concede('usuarios.administrar'));
         $this->assertTrue($administrador->concede('perfis.administrar'));
