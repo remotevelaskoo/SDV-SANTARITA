@@ -12,6 +12,7 @@ use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationArquivo;
 use App\Models\Vinculo;
+use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -37,6 +38,8 @@ class AccessValidation extends Component
     public ?array $feedback = null;
 
     public ?string $protocol = null;
+
+    public bool $documentRevealed = false;
 
     public bool $quickRegistrationOpen = false;
 
@@ -242,6 +245,30 @@ class AccessValidation extends Component
         $this->paymentMethod = 'dinheiro';
         $this->denialReason = 'sem_autorizacao';
         $this->currentPessoaId = $this->findResidentWithActiveVinculo();
+        $this->documentRevealed = false;
+    }
+
+    public function toggleDocumentReveal(AuditService $audit): void
+    {
+        abort_unless(Auth::user()?->hasPermission('dados-sensiveis.revelar'), 403);
+
+        if ($this->documentRevealed) {
+            $this->documentRevealed = false;
+
+            return;
+        }
+
+        abort_unless($this->currentPessoaId !== null, 404);
+        $this->documentRevealed = true;
+
+        $audit->record(
+            action: 'revelou_dado_sensivel',
+            module: 'validacao',
+            entityType: 'pessoas',
+            entityId: $this->currentPessoaId,
+            classification: 'restrita',
+            metadata: ['categoria' => 'documento'],
+        );
     }
 
     /** @return array{name: string, initials: string, document: string, type: string, property: string, responsible: string, status: string, validity: string} */
@@ -268,13 +295,24 @@ class AccessValidation extends Component
         return [
             'name' => $pessoa->nomeExibicao(),
             'initials' => $this->initialsFromName($pessoa->nome),
-            'document' => $pessoa->documentos->first()?->valor_apresentacao ?? 'Não informado',
+            'document' => $this->documentRevealed
+                ? ($pessoa->documentos->first()?->valor_apresentacao ?? 'Não informado')
+                : $this->maskDocument($pessoa->documentos->first()?->valor_apresentacao),
             'type' => $this->relationLabel($vinculo?->tipo),
             'property' => $vinculo?->imovel?->label() ?? 'Não vinculado',
             'responsible' => $this->quickPersonRegistered && $this->quickResponsible !== '' ? $this->quickResponsible : 'Próprio morador',
             'status' => $this->quickPersonRegistered ? 'Cadastro mínimo' : 'Cadastro ativo',
             'validity' => $this->quickPersonRegistered ? 'Aguardando análise' : 'Acesso permanente',
         ];
+    }
+
+    private function maskDocument(?string $document): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $document) ?? '';
+
+        return strlen($digits) === 11
+            ? '***.***.'.substr($digits, 6, 3).'-**'
+            : ($document ? 'Documento protegido' : 'Não informado');
     }
 
     /** @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string} */

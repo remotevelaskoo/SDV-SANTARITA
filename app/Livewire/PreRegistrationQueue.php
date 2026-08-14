@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Exceptions\StalePreRegistrationException;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
+use App\Services\AuditService;
 use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +31,8 @@ class PreRegistrationQueue extends Component
     public ?array $feedback = null;
 
     public ?string $editingId = null;
+
+    public ?string $revealedDocumentId = null;
 
     public ?int $editVersion = null;
 
@@ -80,6 +83,34 @@ class PreRegistrationQueue extends Component
         if (in_array($status, ['aguardando', 'aprovado', 'rejeitado', 'todos'], true)) {
             $this->statusFilter = $status;
         }
+    }
+
+    public function toggleDocumentReveal(string $id, AuditService $audit): void
+    {
+        abort_unless(Auth::user()?->hasPermission('dados-sensiveis.revelar'), 403);
+
+        if ($this->revealedDocumentId === $id) {
+            $this->revealedDocumentId = null;
+
+            return;
+        }
+
+        $record = PreRegistration::query()->findOrFail($id);
+        $this->revealedDocumentId = $record->id;
+
+        $audit->record(
+            action: 'revelou_dado_sensivel',
+            module: 'pre-cadastro',
+            entityType: 'pre_registrations',
+            entityId: $record->id,
+            classification: 'restrita',
+            metadata: ['categoria' => 'documento'],
+        );
+    }
+
+    public function hideSensitiveDocument(): void
+    {
+        $this->revealedDocumentId = null;
     }
 
     public function approve(string $id): void

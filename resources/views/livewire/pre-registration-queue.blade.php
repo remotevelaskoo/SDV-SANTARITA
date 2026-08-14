@@ -73,7 +73,7 @@
                 <tbody>
                     @foreach ($filteredRecords as $record)
                         <tr wire:key="row-{{ $record->id }}">
-                            <td><strong>{{ $record->name }}</strong><small>{{ $record->document }} · {{ $record->destination_label }}</small></td>
+                            <td><strong>{{ $record->name }}</strong><small>{{ $record->maskedDocument() }} · {{ $record->destination_label }}</small></td>
                             <td>{{ ucfirst($record->access_type) }}</td>
                             <td>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</td>
                             <td>{{ $record->vehicleLabel() }}</td>
@@ -84,8 +84,8 @@
                                 </x-ui.badge>
                             </td>
                             <td>
-                                <x-ui.drawer id="pre-registration-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id">
-                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" />
+                                <x-ui.drawer id="pre-registration-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id" close-action="hideSensitiveDocument">
+                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" :revealed-document-id="$revealedDocumentId" />
 
                                     <x-slot:footer>
                                         @if ($record->status === 'aguardando')
@@ -134,8 +134,8 @@
                                 <x-ui.badge :variant="match ($record->status) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">
                                     {{ match ($record->status) { 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado', 'correcao' => 'Correção', default => 'Aguardando' } }}
                                 </x-ui.badge>
-                                <x-ui.drawer id="pre-registration-mobile-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id">
-                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" />
+                                <x-ui.drawer id="pre-registration-mobile-{{ $record->id }}" title="Analisar pré-cadastro" description="{{ $record->protocol }}" trigger-label="Analisar" :reopen-on="'pre-registration-edit-started-'.$record->id" close-action="hideSensitiveDocument">
+                                    <x-pre-registration-detail :record="$record" :editing="$editingId === $record->id" :revealed-document-id="$revealedDocumentId" />
                                     <x-slot:footer>
                                         @if ($record->status === 'aguardando')
                                             <div class="pre-registration-review-actions">

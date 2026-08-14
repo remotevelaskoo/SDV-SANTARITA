@@ -103,4 +103,21 @@ class PreRegistration extends Model
     {
         return $this->vehicle_plate ?: 'Sem veículo';
     }
+
+    public function maskedDocument(): string
+    {
+        if (str_contains($this->document, '*')) {
+            return $this->document;
+        }
+
+        $digits = preg_replace('/\D/', '', $this->document) ?? '';
+
+        if (strlen($digits) === 11) {
+            return '***.***.'.substr($digits, 6, 3).'-**';
+        }
+
+        return mb_strlen($this->document) > 4
+            ? str_repeat('*', max(4, mb_strlen($this->document) - 4)).mb_substr($this->document, -4)
+            : 'Documento protegido';
+    }
 }

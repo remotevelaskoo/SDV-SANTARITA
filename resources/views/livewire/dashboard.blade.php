@@ -1,6 +1,6 @@
 <div class="dashboard">
     <section class="welcome" aria-labelledby="welcome-title">
-        <h2 id="welcome-title">Olá, Tatiane</h2>
+        <h2 id="welcome-title">Olá, {{ auth()->user()?->name ?? 'operador' }}</h2>
         <p>Situação atual do condomínio Santa Rita.</p>
     </section>
 
@@ -35,11 +35,7 @@
                         @endif
                     </strong>
 
-                    <p class="metric-card__comparison metric-card__comparison--{{ $metric['trend'] }}">
-                        <x-icon :name="$metric['trend'] === 'up' ? 'arrow-up-right' : ($metric['trend'] === 'down' ? 'arrow-down-right' : 'minus')" />
-                        <strong>{{ number_format($metric['variation'], 1, ',', '.') }}%</strong>
-                        <span>{{ $metric['comparison'] }}</span>
-                    </p>
+                    <p class="metric-card__comparison metric-card__comparison--stable"><x-icon name="check" /><span>{{ $metric['comparison'] }}</span></p>
 
                     <footer>
                         <span>{{ $metric['period'] }}</span>
@@ -70,7 +66,7 @@
             </header>
 
             @php
-                $chartData = $series[$period];
+                $chartData = $series[$period] ?: [['label' => 'Sem dados', 'entries' => 0, 'exits' => 0]];
                 $chartMaximum = max(array_merge(array_column($chartData, 'entries'), array_column($chartData, 'exits'))) ?: 1;
                 $chartWidth = 720;
                 $chartHeight = 230;
@@ -162,25 +158,9 @@
 
     <section class="panel cameras-panel" aria-labelledby="cameras-title">
         <header class="panel__header">
-            <div><h2 id="cameras-title">Monitoramento de Câmeras</h2><p>Visualização em tempo real dos pontos críticos de acesso</p></div>
-            <span class="live-badge"><i></i>AO VIVO</span>
+            <div><h2 id="cameras-title">Monitoramento de Câmeras</h2><p>Aguardando definição e homologação dos equipamentos da implantação.</p></div>
+            <x-ui.badge variant="neutral">Não integrado</x-ui.badge>
         </header>
-        <div class="cameras-grid">
-            @foreach ($cameras as $camera)
-                <article @class(['camera', 'camera--offline' => ! $cameraStatus[$camera['id']]]) wire:key="{{ $camera['id'] }}">
-                    @if ($cameraStatus[$camera['id']])
-                        <span class="camera__record"><i></i> REC {{ strtoupper($camera['id']) }}</span>
-                        <x-icon name="video" class="camera__placeholder" />
-                        <h3>{{ $camera['title'] }}</h3>
-                    @else
-                        <x-icon name="alert" class="camera__placeholder" />
-                        <strong>SEM SINAL</strong>
-                    @endif
-                    <button type="button" wire:click="toggleCamera('{{ $camera['id'] }}')" aria-label="{{ $cameraStatus[$camera['id']] ? 'Desligar' : 'Ligar' }} {{ $camera['title'] }}">
-                        <x-icon name="power" />
-                    </button>
-                </article>
-            @endforeach
-        </div>
+        <x-ui.empty-state title="Nenhuma câmera integrada" description="Imagens e comandos serão habilitados somente após inventário técnico e homologação dos equipamentos (P23)." />
     </section>
 </div>

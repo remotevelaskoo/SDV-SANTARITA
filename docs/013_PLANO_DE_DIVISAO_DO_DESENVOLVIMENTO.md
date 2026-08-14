@@ -198,7 +198,7 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14, P15, **P16 — Relatórios**, o **P18 — Banco de dados inicial**, o **P19 — Login real**, o **P20 — Perfis e permissões**, o **P21 — Conexão das telas**, a **P22 — Auditoria** e o ajuste **AJ-001 — Conferência visual protegida** já foram concluídos. **P17 — Administração** e **P26 — Testes e segurança finais** (a parte que não depende de equipamento) seguem em andamento com Vinicius. Sem interferir no trabalho dele, o próximo ajuste disponível para Lucas é o **AJ-002 — Revelação controlada de CPF/documento**. P23 a P25 continuam bloqueadas até a equipe definir e disponibilizar os equipamentos físicos; P27 depende da P26.
+P09, P14, P15, **P16 — Relatórios**, o **P18 — Banco de dados inicial**, o **P19 — Login real**, o **P20 — Perfis e permissões**, o **P21 — Conexão das telas**, a **P22 — Auditoria** e os ajustes **AJ-001 — Conferência visual protegida** e **AJ-002 — Revelação controlada de CPF/documento** já foram concluídos. **P17 — Administração** e **P26 — Testes e segurança finais** (a parte que não depende de equipamento) seguem em andamento com Vinicius. P23 a P25 continuam bloqueadas até a equipe definir e disponibilizar os equipamentos físicos; P27 depende da P26.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
@@ -263,7 +263,7 @@ Uma parte somente estará pronta quando:
 | Ajuste | Entrega esperada | Momento | Dependências | Situação |
 |---|---|---|---|---|
 | AJ-001 — Conferência visual protegida | Porteiro/Caixa autorizado abre documento e selfie efetivamente submetidos no detalhe do pré-cadastro e da validação; acesso privado e auditado | Antes da homologação interna dos fluxos de pré-cadastro e validação | Armazenamento privado, P20 e P22 | ✅ Concluída — branch `codex/aj001-conferencia-visual`; pronta para revisão |
-| AJ-002 — Revelação controlada de CPF/documento | Listas permanecem mascaradas; detalhe permite revelação explícita, temporária, autorizada e auditada para conferir identidade | Antes da homologação interna dos fluxos de pré-cadastro e validação | Extensão do catálogo P20 e auditoria P22 | 🟡 Planejada |
+| AJ-002 — Revelação controlada de CPF/documento | Listas permanecem mascaradas; detalhe permite revelação explícita, temporária, autorizada e auditada para conferir identidade | Antes da homologação interna dos fluxos de pré-cadastro e validação | Extensão do catálogo P20 e auditoria P22 | ✅ Concluída — permissão `dados-sensiveis.revelar`, revelação temporária nas fichas de pré-cadastro e validação, remascaramento e evento restrito de auditoria |
 | AJ-003 — Integração facial BRAVAS | Sincronização separada da aprovação do pré-cadastro, por adaptador, fila, confirmação e revogação | P25 | Inventário do equipamento, política jurídica, homologação e retomada da ADR-013 | 🔴 Bloqueada |
 | AJ-004 — Importação assistida por IA | Importar fontes legadas por área de preparação, extração com confiança, deduplicação e revisão humana obrigatória | Após estabilização do modelo e da auditoria | P17, P22 e retomada da ADR-011 | 🟡 Planejada |
 

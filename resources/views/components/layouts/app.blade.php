@@ -34,7 +34,7 @@
                     @auth
                         <div>
                             <strong>{{ auth()->user()->name }}</strong>
-                            <small>Operador de portaria</small>
+                            <small>{{ auth()->user()->operationalRoleLabel() }}</small>
                         </div>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -104,11 +104,11 @@
                                 <details class="header-popover user-menu">
                                     <summary class="user-chip">
                                         <span class="avatar" aria-hidden="true">{{ auth()->user()->initials() }}</span>
-                                        <span><strong>{{ auth()->user()->name }}</strong><small>Operador de portaria</small></span>
+                                        <span><strong>{{ auth()->user()->name }}</strong><small>{{ auth()->user()->operationalRoleLabel() }}</small></span>
                                     </summary>
                                     <div class="header-popover__panel user-menu__panel">
                                         <strong>{{ auth()->user()->name }}</strong>
-                                        <small>Operador de portaria · Portaria Principal</small>
+                                        <small>{{ auth()->user()->operationalRoleLabel() }} · Portaria Principal</small>
                                         <span>Condomínio Santa Rita</span>
                                         <a href="{{ route('sessions') }}" class="user-menu__link">
                                             <x-icon name="shield" />
