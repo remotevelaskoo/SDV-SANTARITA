@@ -5,10 +5,16 @@ namespace App\Livewire;
 use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Login extends Component
 {
+    private const MAX_ATTEMPTS = 5;
+
+    private const DECAY_SECONDS = 60;
+
     public string $identification = '';
 
     public string $password = '';
@@ -30,7 +36,28 @@ class Login extends Component
             'password.required' => 'Informe sua senha.',
         ]);
 
+        // Chave combina identificação + IP: freia tanto quem tenta várias
+        // senhas contra uma conta quanto um IP tentando várias contas, sem
+        // travar globalmente outros operadores legítimos no mesmo terminal.
+        $throttleKey = Str::lower($credentials['identification']).'|'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_ATTEMPTS)) {
+            $audit->record(
+                action: 'tentou_entrar',
+                module: 'autenticacao',
+                entityType: 'sessao',
+                result: 'negado',
+                reasonCode: 'limite_tentativas_excedido',
+                classification: 'restrita',
+            );
+            $this->addError('credentials', 'Muitas tentativas. Tente novamente em '.RateLimiter::availableIn($throttleKey).' segundos.');
+
+            return null;
+        }
+
         if (! Auth::attempt(['username' => $credentials['identification'], 'password' => $credentials['password'], 'status' => 'ativo'])) {
+            RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
+
             $audit->record(
                 action: 'tentou_entrar',
                 module: 'autenticacao',
@@ -44,6 +71,7 @@ class Login extends Component
             return null;
         }
 
+        RateLimiter::clear($throttleKey);
         session()->regenerate();
 
         $audit->record(

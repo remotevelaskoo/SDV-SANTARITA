@@ -177,6 +177,99 @@ class ExampleTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_repeated_invalid_login_attempts_are_throttled(): void
+    {
+        $user = User::factory()->create(['username' => 'operador.teste', 'password' => 'senha-correta', 'status' => 'ativo']);
+
+        for ($i = 0; $i < 5; $i++) {
+            Livewire::test(Login::class)
+                ->set('identification', 'operador.teste')
+                ->set('password', 'senha-errada')
+                ->call('login')
+                ->assertHasErrors(['credentials']);
+        }
+
+        // 6ª tentativa é bloqueada mesmo com a senha correta — a
+        // autenticação nem chega a ser consultada.
+        Livewire::test(Login::class)
+            ->set('identification', 'operador.teste')
+            ->set('password', 'senha-correta')
+            ->call('login')
+            ->assertHasErrors(['credentials'])
+            ->assertSee('Muitas tentativas');
+
+        $this->assertGuest();
+    }
+
+    public function test_a_successful_login_clears_the_throttle_counter(): void
+    {
+        $user = User::factory()->create(['username' => 'operador.limpo', 'password' => 'senha-correta', 'status' => 'ativo']);
+
+        Livewire::test(Login::class)
+            ->set('identification', 'operador.limpo')
+            ->set('password', 'senha-errada')
+            ->call('login')
+            ->assertHasErrors(['credentials']);
+
+        Livewire::test(Login::class)
+            ->set('identification', 'operador.limpo')
+            ->set('password', 'senha-correta')
+            ->call('login')
+            ->assertRedirect(route('dashboard'));
+
+        Auth::logout();
+
+        // Depois de um login bem-sucedido, o contador é reiniciado — uma
+        // única tentativa errada logo em seguida não está pré-bloqueada.
+        Livewire::test(Login::class)
+            ->set('identification', 'operador.limpo')
+            ->set('password', 'senha-errada')
+            ->call('login')
+            ->assertHasErrors(['credentials'])
+            ->assertSee('Identificação ou senha inválida.');
+    }
+
+    public function test_login_throttle_is_scoped_per_identification(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            Livewire::test(Login::class)
+                ->set('identification', 'primeiro.usuario')
+                ->set('password', 'senha-errada')
+                ->call('login')
+                ->assertHasErrors(['credentials']);
+        }
+
+        // Outro identification (mesmo "IP" simulado do ambiente de teste)
+        // não compartilha o contador do primeiro.
+        Livewire::test(Login::class)
+            ->set('identification', 'segundo.usuario')
+            ->set('password', 'senha-errada')
+            ->call('login')
+            ->assertHasErrors(['credentials'])
+            ->assertSee('Identificação ou senha inválida.');
+    }
+
+    public function test_exceeding_the_login_throttle_is_audited(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            Livewire::test(Login::class)
+                ->set('identification', 'operador.auditado')
+                ->set('password', 'senha-errada')
+                ->call('login');
+        }
+
+        Livewire::test(Login::class)
+            ->set('identification', 'operador.auditado')
+            ->set('password', 'senha-errada')
+            ->call('login');
+
+        $this->assertDatabaseHas('auditoria_eventos', [
+            'action' => 'tentou_entrar',
+            'reason_code' => 'limite_tentativas_excedido',
+            'result' => 'negado',
+        ]);
+    }
+
     public function test_logging_out_invalidates_the_session_and_redirects_to_login(): void
     {
         $user = $this->portariaOperator();
