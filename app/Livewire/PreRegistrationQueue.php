@@ -115,6 +115,8 @@ class PreRegistrationQueue extends Component
 
     public function approve(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('pre-registro.aprovar'), 403);
+
         if ($this->editingId === $id) {
             $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
 
@@ -132,6 +134,8 @@ class PreRegistrationQueue extends Component
 
     public function reject(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('pre-registro.rejeitar'), 403);
+
         $this->validate([
             'rejectionReason' => ['required', Rule::in(['documento_incompleto', 'dados_divergentes', 'periodo_invalido', 'solicitacao_nao_confirmada'])],
         ]);
@@ -153,6 +157,8 @@ class PreRegistrationQueue extends Component
 
     public function requestCorrection(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('pre-registro.solicitar-correcao'), 403);
+
         $this->validate([
             'correctionItems' => ['required', Rule::in(['dados_pessoais', 'documento', 'selfie', 'veiculo'])],
         ]);

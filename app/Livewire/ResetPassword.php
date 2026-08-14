@@ -48,11 +48,13 @@ class ResetPassword extends Component
         );
 
         if ($status !== Password::PASSWORD_RESET) {
+            $this->reset('password', 'password_confirmation');
             $this->addError('token', 'Link inválido ou expirado. Solicite um novo link de recuperação.');
 
             return;
         }
 
+        $this->reset('password', 'password_confirmation');
         $this->completed = true;
     }
 

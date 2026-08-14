@@ -7,6 +7,7 @@ use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -93,6 +94,8 @@ class CompanyManagement extends Component
 
     public function saveDraft(): void
     {
+        abort_unless($this->canManage(), 403);
+
         $this->validate([
             'name' => ['required', 'string', 'max:160'],
             'cnpj' => ['required', 'string'],
@@ -107,6 +110,8 @@ class CompanyManagement extends Component
 
     public function saveCompany(): void
     {
+        abort_unless($this->canManage(), 403);
+
         $this->validateCompany();
 
         $duplicate = Empresa::query()
@@ -148,6 +153,8 @@ class CompanyManagement extends Component
 
     public function toggleCompanyStatus(): void
     {
+        abort_unless($this->canManage(), 403);
+
         if (! $this->selectedCompanyId) {
             return;
         }
@@ -265,6 +272,11 @@ class CompanyManagement extends Component
         }
 
         return null;
+    }
+
+    private function canManage(): bool
+    {
+        return Auth::user()?->hasPermission('empresas.gerenciar') ?? false;
     }
 
     private function resetForm(): void

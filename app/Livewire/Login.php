@@ -50,6 +50,7 @@ class Login extends Component
                 reasonCode: 'limite_tentativas_excedido',
                 classification: 'restrita',
             );
+            $this->reset('password');
             $this->addError('credentials', 'Muitas tentativas. Tente novamente em '.RateLimiter::availableIn($throttleKey).' segundos.');
 
             return null;
@@ -66,6 +67,7 @@ class Login extends Component
                 reasonCode: 'credenciais_invalidas',
                 classification: 'restrita',
             );
+            $this->reset('password');
             $this->addError('credentials', 'Identificação ou senha inválida.');
 
             return null;

@@ -15,6 +15,7 @@ use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\User;
 use App\Models\UsuarioPerfil;
+use App\Models\Vinculo;
 use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -210,6 +211,10 @@ class ProtectedFileTest extends TestCase
             'status' => 'ativo',
             'ended_at' => null,
         ]);
+        // currentPessoaId é #[Locked] (não pode ser adulterado via payload
+        // Livewire) — para o componente selecionar esta pessoa no mount(),
+        // ela precisa ser a única com vínculo ativo neste teste isolado.
+        Vinculo::factory()->for($person, 'pessoa')->create();
         $preRegistration = PreRegistration::factory()->withStatus('aprovado')->create([
             'document' => '123.456.789-00',
         ]);
@@ -220,7 +225,6 @@ class ProtectedFileTest extends TestCase
 
         Livewire::actingAs($operator)
             ->test(AccessValidation::class)
-            ->set('currentPessoaId', $person->id)
             ->assertSee('Conferência visual protegida')
             ->assertSee('Abrir documento')
             ->assertSee($file->id, escape: false)
