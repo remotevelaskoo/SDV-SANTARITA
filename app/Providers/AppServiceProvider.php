@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -15,7 +16,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // O simulador guarda em memória o estado do "terminal" durante o processo.
+        $this->app->singleton(SimuladorEquipamento::class);
     }
 
     /**
