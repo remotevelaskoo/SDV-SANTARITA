@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.21
+**Versão:** 1.0.22
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -37,6 +37,7 @@
 | 1.0.19 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-013 |
 | 1.0.20 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-014 |
 | 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
+| 1.0.22 | 27/09/2026 | Product Owner | Inclusão e aprovação do ADR-015 para integração direta dos terminais faciais |
 
 ---
 
@@ -261,6 +262,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
+| [ADR-015](ADR-015_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -305,7 +307,11 @@ ADR-002 Multi-implantação
 
 ADR-007 Portas e adaptadores
 ├── ADR-008 Contingência
-└── ADR-013 Biometria
+├── ADR-013 Biometria
+└── ADR-015 Integração direta do terminal facial
+
+ADR-008 + ADR-013
+└── ADR-015 produção e contingência
 
 ADR-004 + ADR-005 + ADR-009
 └── ADR-012 Deploy e rollback
@@ -376,6 +382,7 @@ Antes da produção:
 | ADR-012 | `RN-088`, `RN-100` |
 | ADR-013 | `RN-045`, `RN-065`, `RN-066`, `RN-075` |
 | ADR-014 | `RN-041`, `RN-046` a `RN-049`, `RN-086` |
+| ADR-015 | `RN-038`, `RN-040`, `RN-045`, `RN-077` a `RN-080`, `RN-086` a `RN-093` |
 
 ---
 
@@ -395,6 +402,7 @@ Antes da produção:
 | ADR-012 | `PEN-ARQ-012`, `PEN-ARQ-013`, `PEN-ARQ-019`, `PEN-ARQ-020` |
 | ADR-013 | `PEN-RNG-005`, `PEN-BDD-007`, `PEN-ARQ-008` |
 | ADR-014 | `PEN-BDD-021`, `PEN-BDD-025`, `PEN-ARQ-017` |
+| ADR-015 | `PEN-001`, `PEN-002`, `PEN-005`, `PEN-017`, `PEN-ARQ-001`, `PEN-ARQ-002`, `PEN-ARQ-008` |
 
 ---
 
@@ -493,7 +501,7 @@ Ficam propostas para aprovação:
 - sequência permanente e não reutilizável;
 - estados Proposto, Aprovado, Rejeitado, Adiado, Substituído e Obsoleto;
 - mudança de decisão aprovada por novo ADR;
-- catálogo inicial de `ADR-001` a `ADR-014`;
+- catálogo inicial de `ADR-001` a `ADR-014`, ampliado pelo `ADR-015`;
 - seis ADRs P0 para a fundação técnica;
 - separação entre filas/idempotência e adaptadores de equipamentos;
 - ADRs de OCR/IA, biometria e particionamento como condicionais;
@@ -521,6 +529,7 @@ O conjunto inicial está completo:
 - `ADR-011`: adiado com aprovação formal;
 - `ADR-012`: aprovado;
 - `ADR-013` e `ADR-014`: adiados com aprovação formal.
+- `ADR-015`: aprovado para a topologia e prova de integração; produção condicionada aos ADRs 008 e 013.
 
 Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas.
 
@@ -530,4 +539,4 @@ A próxima etapa documental é a especificação de APIs. Devido à divergência
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto `ADR-001` a `ADR-015` está integralmente documentado; onze ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada.
