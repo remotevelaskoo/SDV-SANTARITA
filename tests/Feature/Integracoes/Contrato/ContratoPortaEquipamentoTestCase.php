@@ -7,6 +7,7 @@ use App\Integracoes\Dominio\Dados\CapacidadesDeclaradas;
 use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
+use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
 use App\Integracoes\Dominio\Dados\SegredoTecnico;
@@ -75,7 +76,7 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
         );
     }
 
-    /** @return array<string, ResultadoOperacao|ResultadoColetaEventos|CapacidadesDeclaradas> */
+    /** @return array<string, ResultadoOperacao|ResultadoColetaEventos|CapacidadesDeclaradas|ImagemCapturada> */
     protected function executarTodas(ContextoEquipamento $contexto): array
     {
         $porta = $this->adaptador();
@@ -90,6 +91,7 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
             'coletar_eventos' => $porta->coletarEventos($contexto, null),
             'abertura_remota' => $porta->solicitarAbertura($contexto, $this->comando($contexto)),
             'consultar_resultado_comando' => $porta->consultarResultadoComando($contexto, (string) Str::uuid7()),
+            'capturar_imagem' => $porta->capturarImagem($contexto),
         ];
     }
 
@@ -123,6 +125,7 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
             'coletar_eventos' => Capacidade::ColetarEventos,
             'abertura_remota' => Capacidade::AberturaRemota,
             'consultar_resultado_comando' => Capacidade::ConsultarResultadoComando,
+            'capturar_imagem' => Capacidade::CapturarImagem,
         ];
 
         foreach ($this->executarTodas($contexto) as $operacao => $resultado) {
