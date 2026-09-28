@@ -14,7 +14,6 @@ class FabricaContextoEquipamento
     public function para(Equipamento $equipamento, string $correlationId): ContextoEquipamento
     {
         $credencial = $equipamento->credencialTecnicaAtiva();
-        $referencia = $credencial?->referencia_segredo;
 
         return new ContextoEquipamento(
             implantacaoId: $equipamento->implantacao_id,
@@ -29,8 +28,10 @@ class FabricaContextoEquipamento
             direcao: $equipamento->direcao,
             timeoutSegundos: $equipamento->timeout_segundos,
             usuarioTecnico: $credencial?->usuario_tecnico,
-            obterSegredo: fn () => $referencia === null ? null : $this->segredos->resolver($referencia),
+            obterSegredo: fn () => $credencial === null ? null : $this->segredos->resolverCredencial($credencial),
             correlationId: $correlationId,
+            esquema: $equipamento->esquema ?? 'https',
+            tlsPinSha256: $equipamento->tls_pin_sha256,
         );
     }
 
@@ -41,8 +42,8 @@ class FabricaContextoEquipamento
      */
     public function segredosConhecidos(Equipamento $equipamento): array
     {
-        $referencia = $equipamento->credencialTecnicaAtiva()?->referencia_segredo;
-        $segredo = $referencia === null ? null : $this->segredos->resolver($referencia);
+        $credencial = $equipamento->credencialTecnicaAtiva();
+        $segredo = $credencial === null ? null : $this->segredos->resolverCredencial($credencial);
 
         return $segredo === null ? [] : [$segredo->revelar()];
     }

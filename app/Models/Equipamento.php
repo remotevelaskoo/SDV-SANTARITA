@@ -17,14 +17,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Equipamento físico cadastrado por implantação (ADR-007, ADR-016).
- * Nenhum segredo fica neste model: a credencial técnica é somente uma
- * referência em `equipamento_credenciais`.
+ * Nenhum segredo fica neste model: a credencial técnica fica em
+ * `equipamento_credenciais`, como referência ou cifrada.
  */
 #[Fillable([
     'implantacao_id', 'nome', 'tipo', 'fabricante', 'modelo', 'numero_serie',
-    'endereco_rede', 'porta_rede', 'protocolo', 'firmware_versao', 'adaptador',
-    'direcao', 'status', 'estado_saude', 'ultima_comunicacao_at', 'ultimo_teste_at',
-    'ultimo_erro_sanitizado', 'timeout_segundos', 'versao',
+    'endereco_rede', 'porta_rede', 'esquema', 'tls_pin_sha256', 'protocolo', 'firmware_versao', 'adaptador',
+    'direcao', 'modulo_seguro_rs485', 'status', 'estado_saude', 'ultima_comunicacao_at', 'ultimo_teste_at',
+    'ultimo_erro_sanitizado', 'ultima_falha_at', 'timeout_segundos', 'versao',
     'created_by', 'updated_by', 'inactivated_at',
 ])]
 class Equipamento extends Model
@@ -45,6 +45,8 @@ class Equipamento extends Model
             'versao' => 'integer',
             'ultima_comunicacao_at' => 'datetime',
             'ultimo_teste_at' => 'datetime',
+            'ultima_falha_at' => 'datetime',
+            'modulo_seguro_rs485' => 'boolean',
             'inactivated_at' => 'datetime',
         ];
     }
