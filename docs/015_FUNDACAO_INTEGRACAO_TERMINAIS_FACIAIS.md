@@ -1,10 +1,25 @@
 # SDV Access — Fundação da integração com terminais faciais
 
 **Documento:** SDV-INT-015
-**Versão:** 1.0.0
-**Status:** Implementado como fundação, sem integração real
+**Versão:** 1.0.1
+**Status:** Implementado como fundação; integração real homologada em bancada em [SDV-INT-016](016_HOMOLOGACAO_FACIAL_HIKVISION.md)
 **Data:** 27/09/2026
 **Decisões de origem:** ADR-004, ADR-005, ADR-007, ADR-008, ADR-009, ADR-013 e ADR-016
+
+## Atualização 1.0.1 (27/09/2026)
+
+Este documento descreve a fundação como foi entregue e não foi reescrito. A etapa seguinte
+([SDV-INT-016](016_HOMOLOGACAO_FACIAL_HIKVISION.md), ADR-016 §21) mudou os pontos abaixo:
+
+- o adaptador Hikvision passou a falar com o terminal real (firmware V3.18.0 build 250115):
+  conexão, inventário, capacidades, captura estática e comando da porta 1;
+- as capacidades passaram a ter matriz de homologação por firmware (§3 do SDV-INT-016);
+- a senha técnica também pode ser digitada na tela e gravada cifrada, **somente fora de
+  produção** (decisão 4 abaixo continua valendo para produção);
+- a administração ganhou a tela **Gestão › Equipamentos** (a pendência "Sem telas" do §6 foi
+  resolvida para equipamentos; pontos de acesso seguem sem tela própria);
+- novo status de equipamento `em_homologacao` e novo tipo de ponto `bancada`, que nunca é ativado;
+- "teste do relé" separado da abertura remota operacional, que continua desligada.
 
 ## 1. O que esta entrega é
 
