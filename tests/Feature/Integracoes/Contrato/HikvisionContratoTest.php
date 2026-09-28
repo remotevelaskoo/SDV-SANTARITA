@@ -8,12 +8,13 @@ use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\SegredoTecnico;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\Direcao;
+use App\Integracoes\Dominio\Enums\EstadoHomologacao;
 use App\Integracoes\Dominio\Enums\ResultadoEquipamento;
 use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Tests\Feature\Integracoes\Concerns\RespostasIsapi;
 
 /**
  * Contrato do adaptador ISAPI com respostas gravadas no formato do terminal
@@ -22,13 +23,24 @@ use Illuminate\Support\Str;
  */
 class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
 {
+    use RespostasIsapi;
+
     private const FIRMWARE = 'V-CONTRATO-1';
 
     protected function setUp(): void
     {
         parent::setUp();
         config(['integracoes.hikvision.perfis_homologados' => [
-            self::FIRMWARE => ['testar_conexao', 'consultar_capacidades', 'capturar_imagem', 'abertura_remota', 'sincronizar_credencial'],
+            self::FIRMWARE => [
+                'testar_conexao' => 'homologada',
+                'consultar_informacoes' => 'homologada',
+                'consultar_capacidades' => 'homologada',
+                'capturar_imagem' => 'homologada',
+                'abertura_remota' => 'em_homologacao',
+                // Registrar estado executável não habilita o que o adaptador não implementa.
+                'sincronizar_credencial' => 'homologada',
+                'credencial_facial' => 'bloqueada',
+            ],
         ]]);
         $this->terminal();
     }
@@ -41,28 +53,17 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
     /** @param  array<string, mixed>  $sobrescrever */
     private function terminal(array $sobrescrever = []): void
     {
-        // Fábrica nova a cada cenário: no Http::fake o primeiro stub registrado vence.
-        Http::swap(new Factory);
-        Http::preventStrayRequests();
-        Http::fake(array_merge([
-            '*/ISAPI/System/deviceInfo' => Http::response($this->deviceInfo(self::FIRMWARE), 200, ['Content-Type' => 'application/xml']),
-            '*/ISAPI/Streaming/channels/1/picture' => Http::response("\xFF\xD8\xFF\xE0".str_repeat('x', 64), 200, ['Content-Type' => 'image/jpeg']),
-            '*/ISAPI/AccessControl/RemoteControl/door/1' => Http::response($this->respostaStatus(1, 'ok'), 200, ['Content-Type' => 'application/xml']),
-        ], $sobrescrever));
+        $this->fingirTerminal(self::FIRMWARE, $sobrescrever);
     }
 
     private function deviceInfo(string $firmware): string
     {
-        return '<?xml version="1.0" encoding="UTF-8"?><DeviceInfo version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
-            .'<deviceName>Access Controller</deviceName><model>DS-K1T673DX-BR</model><serialNumber>SERIE-CONTRATO</serialNumber>'
-            ."<firmwareVersion>{$firmware}</firmwareVersion><deviceType>ACS</deviceType></DeviceInfo>";
+        return $this->xmlDeviceInfo($firmware);
     }
 
     private function respostaStatus(int $codigo, string $sub): string
     {
-        return '<?xml version="1.0" encoding="UTF-8"?><ResponseStatus version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
-            ."<requestURL>/ISAPI/AccessControl/RemoteControl/door/1</requestURL><statusCode>{$codigo}</statusCode>"
-            ."<statusString>OK</statusString><subStatusCode>{$sub}</subStatusCode></ResponseStatus>";
+        return $this->xmlStatus($codigo, $sub);
     }
 
     private function falhaDeConexao(string $mensagem): \Closure
@@ -77,7 +78,7 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->assertSame(ResultadoEquipamento::Confirmado, $resultado->resultado);
         $this->assertSame('DS-K1T673DX-BR', $resultado->dados['modelo']);
         $this->assertSame(self::FIRMWARE, $resultado->dados['firmware']);
-        $this->assertSame('SERIE-CONTRATO', $resultado->dados['numero_serie']);
+        $this->assertSame('SERIE-SINTETICA-01', $resultado->dados['numero_serie']);
     }
 
     public function test_firmware_homologado_declara_somente_o_que_o_adaptador_implementa(): void
@@ -87,10 +88,49 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->assertTrue($capacidades->consultadoNoEquipamento);
         $this->assertSame(self::FIRMWARE, $capacidades->firmwareVersao);
         $this->assertEqualsCanonicalizing(
-            [Capacidade::TestarConexao, Capacidade::ConsultarCapacidades, Capacidade::CapturarImagem, Capacidade::AberturaRemota],
+            [Capacidade::TestarConexao, Capacidade::ConsultarInformacoes, Capacidade::ConsultarCapacidades, Capacidade::CapturarImagem, Capacidade::AberturaRemota],
             $capacidades->suportadas,
         );
         $this->assertFalse($capacidades->suporta(Capacidade::SincronizarCredencial), 'Perfil não habilita capacidade não implementada.');
+    }
+
+    public function test_matriz_tem_estado_independente_por_capacidade(): void
+    {
+        $capacidades = $this->adaptador()->consultarCapacidades($this->contexto());
+
+        $this->assertSame(EstadoHomologacao::Homologada, $capacidades->estado(Capacidade::CapturarImagem));
+        $this->assertSame(EstadoHomologacao::EmHomologacao, $capacidades->estado(Capacidade::AberturaRemota));
+        $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::SincronizarCredencial));
+        $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::GerenciarPessoas));
+        $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::ColetarEventos));
+        $this->assertSame(EstadoHomologacao::Bloqueada, $capacidades->estado(Capacidade::CredencialFacial));
+        $this->assertSame(EstadoHomologacao::NaoImplementada, $capacidades->estado(Capacidade::ConsultarResultadoComando));
+    }
+
+    public function test_terminal_que_nega_a_capacidade_vence_o_perfil(): void
+    {
+        $this->terminal(['*/ISAPI/AccessControl/capabilities' => Http::response($this->xmlCapacidadesAcesso(porta: false), 200)]);
+
+        $capacidades = $this->adaptador()->consultarCapacidades($this->contexto());
+
+        $this->assertSame(EstadoHomologacao::NaoSuportada, $capacidades->estado(Capacidade::AberturaRemota));
+        $this->assertFalse($capacidades->suporta(Capacidade::AberturaRemota));
+    }
+
+    public function test_canal_de_video_e_descoberto_no_terminal(): void
+    {
+        $this->adaptador()->capturarImagem($this->contexto());
+
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/ISAPI/Streaming/channels'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/ISAPI/Streaming/channels/101/picture'));
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/channels/100/'));
+    }
+
+    public function test_imagem_acima_do_limite_e_recusada(): void
+    {
+        config(['integracoes.captura.tamanho_maximo_bytes' => 10]);
+
+        $this->assertSame('imagem_grande_demais', $this->adaptador()->capturarImagem($this->contexto())->codigo);
     }
 
     public function test_firmware_nao_homologado_nao_declara_nada_nem_executa(): void
@@ -184,7 +224,7 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->assertSame('image/jpeg', $imagem->tipoMime);
         $this->assertStringNotContainsString('xxxx', print_r($imagem, true));
 
-        $this->terminal(['*/ISAPI/Streaming/channels/1/picture' => Http::response('<html></html>', 200, ['Content-Type' => 'image/jpeg'])]);
+        $this->terminal(['*/ISAPI/Streaming/channels/101/picture' => Http::response('<html></html>', 200, ['Content-Type' => 'image/jpeg'])]);
         $this->assertSame('resposta_invalida', $this->adaptador()->capturarImagem($this->contexto())->codigo);
     }
 

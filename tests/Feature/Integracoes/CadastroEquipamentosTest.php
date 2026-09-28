@@ -19,11 +19,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\Feature\Integracoes\Concerns\MontaCenarioIntegracao;
+use Tests\Feature\Integracoes\Concerns\RespostasIsapi;
 use Tests\TestCase;
 
 class CadastroEquipamentosTest extends TestCase
 {
-    use MontaCenarioIntegracao, RefreshDatabase;
+    use MontaCenarioIntegracao, RefreshDatabase, RespostasIsapi;
 
     protected function setUp(): void
     {
@@ -202,7 +203,7 @@ class CadastroEquipamentosTest extends TestCase
         $this->cadastro()->definirCredencialTecnica($terminal, 'env:SDV_TESTE_TERMINAL_SENHA', 'admin');
         $this->assertRegraViolada('capacidades_nao_verificadas', $ativar);
 
-        Http::fake(['*/ISAPI/System/deviceInfo' => Http::response($this->deviceInfo('V9.9.9', 'build 990101'), 200, ['Content-Type' => 'application/xml'])]);
+        $this->fingirTerminal('V9.9.9', ['*/ISAPI/System/deviceInfo' => Http::response($this->xmlDeviceInfo('V9.9.9', 'build 990101'), 200)]);
 
         $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($terminal));
         $this->assertRegraViolada('firmware_nao_inventariado', $ativar);
@@ -257,7 +258,7 @@ class CadastroEquipamentosTest extends TestCase
     public function test_hikvision_com_firmware_nao_homologado_nao_declara_capacidades(): void
     {
         config(['integracoes.hikvision.perfis_homologados' => []]);
-        Http::fake(['*/ISAPI/System/deviceInfo' => Http::response($this->deviceInfo('V9.9.9', 'build 990101'), 200, ['Content-Type' => 'application/xml'])]);
+        $this->fingirTerminal('V9.9.9', ['*/ISAPI/System/deviceInfo' => Http::response($this->xmlDeviceInfo('V9.9.9', 'build 990101'), 200)]);
         $terminal = $this->novoEquipamento(['adaptador' => 'hikvision-isapi', 'firmware_versao' => null]);
         $this->cadastro()->definirCredencialTecnica($terminal, 'env:SDV_TESTE_TERMINAL_SENHA', 'admin');
 
@@ -271,12 +272,5 @@ class CadastroEquipamentosTest extends TestCase
         $this->assertSame(count(Capacidade::cases()), $terminal->capacidades()->count());
         $this->assertStringContainsString('sem homologação registrada', (string) $terminal->capacidades()->where('capacidade', 'abertura_remota')->value('motivo_ausencia'));
         $this->assertSame('conectado', $terminal->estado_saude->value);
-    }
-
-    private function deviceInfo(string $versao, string $build): string
-    {
-        return '<?xml version="1.0" encoding="UTF-8"?><DeviceInfo version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
-            .'<deviceName>Facial</deviceName><model>DS-K1T673DX-BR</model><serialNumber>SERIE-TESTE-01</serialNumber>'
-            ."<firmwareVersion>{$versao}</firmwareVersion><firmwareReleasedDate>{$build}</firmwareReleasedDate><deviceType>ACS</deviceType></DeviceInfo>";
     }
 }
