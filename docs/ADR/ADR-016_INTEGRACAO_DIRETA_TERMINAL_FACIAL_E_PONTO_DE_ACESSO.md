@@ -1,7 +1,7 @@
 # ADR-016 — INTEGRAÇÃO DIRETA ENTRE TERMINAL FACIAL E PONTO DE ACESSO
 
 **Identificador:** ADR-016  
-**Versão:** 1.0.1  
+**Versão:** 1.1.0  
 **Status:** Aprovado  
 **Prioridade:** P1 — Obrigatório para a integração facial  
 **Produto:** SDV Access — Implantação Santa Rita  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | 27/09/2026 | Product Owner | Aprovação da integração direta entre terminal facial Hikvision e ponto de acesso |
 | 1.0.1 | 27/09/2026 | Soluções do Vale | Renumeração de ADR-015 para ADR-016 ao incorporar à `main`, onde ADR-015 já identifica a consulta de CEP (ViaCEP); conteúdo aprovado inalterado |
+| 1.1.0 | 27/09/2026 | Soluções do Vale | Registro da evidência técnica de bancada (§21) e da topologia com módulo seguro RS-485; decisão, alternativas e critérios de aceite das seções 1 a 20 inalterados |
 
 # 1. Contexto
 
@@ -271,3 +272,84 @@ A implantação Santa Rita adotará integração direta do SDV Access com termin
 ## Situação do ADR
 
 **Aprovado.** A topologia técnica e a prova de integração estão autorizadas; o uso biométrico em produção ainda não está autorizado.
+
+---
+
+# 21. Evidência técnica de bancada (adendo 1.1.0)
+
+Este adendo registra o resultado da prova de integração autorizada no §20. Ele não altera a
+decisão, as alternativas, a fronteira elétrica nem os critérios de aceite acima. O detalhe
+técnico, sem IP, série, MAC, certificado ou credencial real, está em
+[SDV-INT-016](../016_HOMOLOGACAO_FACIAL_HIKVISION.md).
+
+## 21.1 Equipamento e topologia ensaiados
+
+- modelo homologado em bancada: **Hikvision DS-K1T673DX-BR**;
+- família de firmware: **V3.18.0**; build efetivamente ensaiada: **V3.18.0 build 250115**;
+- o relé da porta 1 fica no **módulo seguro de controle de porta ligado por RS-485** ao terminal.
+  A topologia do §5 passa a ser, na bancada:
+
+```text
+SDV Access
+  → porta estável de integração
+    → adaptador Hikvision/ISAPI (HTTPS, Digest, chave pública fixada)
+      → terminal DS-K1T673DX-BR
+        → RS-485
+          → módulo seguro de controle de porta
+            → contato seco do relé (porta 1)
+              → entrada de comando da cancela ou catraca (ainda não ligada)
+```
+
+- o módulo seguro não altera a fronteira elétrica do §6: o relé continua sendo contato seco de
+  comando e nenhuma carga de potência foi ligada.
+
+## 21.2 Comunicação
+
+- HTTPS com autenticação Digest feita somente pelo backend;
+- o certificado do terminal é autoassinado. O SDV fixa o hash **SHA-256 da chave pública**
+  confiada pelo administrador e dispensa a cadeia de CA apenas nas chamadas desse adaptador;
+  a validação TLS do restante da aplicação não muda. Chave diferente aborta a conexão antes do
+  envio de dados;
+- a credencial técnica fica cifrada fora de produção; em produção continua exigido o cofre do
+  ADR-009.
+
+## 21.3 Capacidades homologadas separadamente
+
+Cada capacidade tem estado próprio por firmware; a build ensaiada não é declarada "compatível"
+como um todo.
+
+| Capacidade | Estado na V3.18.0 build 250115 |
+|---|---|
+| Teste de conexão e saúde | homologada |
+| Inventário (modelo, série, firmware) | homologada |
+| Consulta de capacidades | homologada |
+| Captura de imagem estática (canal descoberto no terminal) | homologada |
+| Abertura remota da porta 1 | homologada como comando aceito; operação real desligada |
+| Coleta e recepção de eventos | detectada no terminal; não implementada |
+| Gerenciamento de pessoas, sincronização, consulta e revogação de credencial | detectadas no terminal; não implementadas |
+| Credencial facial | bloqueada pelo ADR-013 |
+
+## 21.4 Comando aceito não é passagem física
+
+- o terminal respondeu ao comando de abertura da porta 1 com status de sucesso e o relé foi
+  ouvido na bancada;
+- o SDV registra esse resultado como **aceito**, nunca como passagem ou acesso realizado;
+- a confirmação física exigirá sensor (porta, laço, fim de curso ou evento equivalente do
+  ponto) integrado e homologado;
+- a abertura operacional permanece **desligada** até a validação do contato seco na entrada
+  de comando da cancela ou catraca real (§11, passo 9; PEN-ADR-016-005).
+
+## 21.5 Situação das pendências
+
+| Identificador | Situação após a bancada |
+|---|---|
+| PEN-ADR-016-001 | Resolvida para a build V3.18.0 build 250115 |
+| PEN-ADR-016-002 | Parcial: endpoints de informações, capacidades, captura e porta validados; eventos, pessoas e sincronização pendentes |
+| PEN-ADR-016-003 | Pendente: o terminal declara suporte a eventos, sem implementação |
+| PEN-ADR-016-004 | Pendente (ADR-008) |
+| PEN-ADR-016-005 | Parcial: pulso do relé ouvido em bancada; contato seco na central não validado |
+| PEN-ADR-016-006 | Pendente (ADR-013) |
+| PEN-ADR-016-007 | Pendente |
+
+A homologação dos endpoints **não autoriza** sincronização facial nem uso com pessoas reais.
+ADR-008 e ADR-013 continuam não resolvidos.

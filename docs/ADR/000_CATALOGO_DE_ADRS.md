@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.23
+**Versão:** 1.0.24
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -39,6 +39,7 @@
 | 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
 | 1.0.22 | 11/08/2026 | Product Owner | Criação e aprovação retrospectiva do ADR-015 (integração externa de consulta de CEP) |
 | 1.0.23 | 27/09/2026 | Product Owner | Inclusão e aprovação do ADR-016 para integração direta dos terminais faciais (aprovado em 27/09/2026 como ADR-015 na branch `codex/fundacao-mvp` e renumerado por colisão com o ADR-015 da `main`) |
+| 1.0.24 | 27/09/2026 | Soluções do Vale | ADR-016 atualizado para 1.1.0 com a evidência técnica de bancada (DS-K1T673DX-BR, firmware V3.18.0, módulo seguro RS-485); ADR-016 segue como decisão vigente dos terminais; ADR-008 e ADR-013 continuam adiados; numeração inalterada |
 
 ---
 
@@ -264,7 +265,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
-| [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita |
+| [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita (v1.1.0: bancada homologada, operação real desligada) |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
