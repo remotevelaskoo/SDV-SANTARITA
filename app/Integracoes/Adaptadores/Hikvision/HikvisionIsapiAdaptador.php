@@ -11,21 +11,28 @@ use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
 use App\Integracoes\Dominio\Enums\Capacidade;
+use App\Integracoes\Dominio\Enums\EstadoHomologacao;
 use App\Integracoes\Dominio\Enums\ResultadoEquipamento;
 use DateTimeImmutable;
+use SimpleXMLElement;
 
 /**
  * Adaptador do terminal Hikvision DS-K1T673DX-BR (ADR-016), atrás da porta
  * de equipamentos (ADR-007). Único lugar do sistema onde ISAPI aparece.
  *
- * Implementa somente o que foi validado em bancada contra o terminal real
- * (docs/016): informações do dispositivo, captura de imagem estática e
- * comando remoto de abertura da porta 1. Sincronização de credenciais,
- * eventos e consulta de resultado de comando continuam ausentes.
+ * Endpoints usados, todos validados contra o terminal real (docs/016):
+ * - GET  /ISAPI/System/deviceInfo                       informações e firmware
+ * - GET  /ISAPI/AccessControl/capabilities              o que o terminal declara
+ * - GET  /ISAPI/Streaming/channels                      descoberta do canal de vídeo
+ * - GET  /ISAPI/Streaming/channels/{canal}/picture      imagem estática (JPEG)
+ * - PUT  /ISAPI/AccessControl/RemoteControl/door/{porta} comando `open` do relé
  *
- * Uma capacidade só é declarada quando está em IMPLEMENTADAS e também no
- * perfil do firmware em `integracoes.hikvision.perfis_homologados`. O
- * firmware usado é o informado pelo próprio terminal em deviceInfo.
+ * Matriz de homologação: cada capacidade tem um estado por firmware
+ * (`integracoes.hikvision.perfis_homologados`). Só executa o que está
+ * implementado aqui E marcado como homologado ou em homologação para o
+ * firmware informado pelo terminal. O restante é classificado como não
+ * implementado, não suportado ou detectado, conforme o próprio terminal
+ * declara em AccessControl/capabilities.
  *
  * HTTP 200 nunca é tratado isoladamente como sucesso: o comando de abertura
  * só vira `aceito` quando o terminal devolve ResponseStatus com statusCode 1,
@@ -35,20 +42,37 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
 {
     public const CODIGO = 'hikvision-isapi';
 
-    public const VERSAO_CONTRATO = '1.0.0';
+    public const VERSAO_CONTRATO = '1.1.0';
 
     public const CAMINHO_INFO = '/ISAPI/System/deviceInfo';
+
+    public const CAMINHO_CAPACIDADES = '/ISAPI/AccessControl/capabilities';
+
+    public const CAMINHO_CANAIS = '/ISAPI/Streaming/channels';
 
     public const CAMINHO_IMAGEM = '/ISAPI/Streaming/channels/%d/picture';
 
     public const CAMINHO_PORTA = '/ISAPI/AccessControl/RemoteControl/door/%d';
 
-    /** @var list<Capacidade> */
+    /** @var list<Capacidade> capacidades que ESTE código sabe executar */
     private const IMPLEMENTADAS = [
         Capacidade::TestarConexao,
+        Capacidade::ConsultarInformacoes,
         Capacidade::ConsultarCapacidades,
         Capacidade::CapturarImagem,
         Capacidade::AberturaRemota,
+    ];
+
+    /** Indicador em AccessControl/capabilities que o terminal usa para cada capacidade. */
+    private const INDICADORES = [
+        'abertura_remota' => 'isSupportRemoteControlDoor',
+        'coletar_eventos' => 'isSupportAcsEvent',
+        'receber_eventos' => 'isSupportAcsEvent',
+        'gerenciar_pessoas' => 'isSupportUserInfo',
+        'sincronizar_credencial' => 'isSupportUserInfo',
+        'consultar_sincronizacao' => 'isSupportUserInfo',
+        'revogar_credencial' => 'isSupportUserInfoDetailDelete',
+        'credencial_facial' => 'isSupportFDLib',
     ];
 
     private const TIPOS_IMAGEM = ['image/jpeg' => "\xFF\xD8\xFF", 'image/png' => "\x89PNG"];
@@ -80,34 +104,48 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
     {
         try {
             $info = $this->informacoes($equipamento);
+            $declarado = $this->declaradoPeloTerminal($equipamento);
+            $canal = $this->canalDeVideo($equipamento);
         } catch (FalhaIsapi $e) {
             return new CapacidadesDeclaradas(
                 $e->resultado,
                 self::VERSAO_CONTRATO,
                 $equipamento->firmwareVersao,
                 [],
-                $this->motivos([], "terminal não consultado: {$e->getMessage()}"),
+                array_fill_keys(array_map(fn (Capacidade $c) => $c->value, Capacidade::cases()), "terminal não consultado: {$e->getMessage()}"),
                 $e->getMessage(),
             );
         }
 
         $firmware = $info['firmware'];
         $perfil = $this->perfil($firmware);
-        $suportadas = array_values(array_filter(
-            self::IMPLEMENTADAS,
-            fn (Capacidade $c) => in_array($c->value, $perfil ?? [], true),
-        ));
+        $evidencia = [
+            ...$declarado,
+            'testar_conexao' => true,
+            'consultar_informacoes' => true,
+            'consultar_capacidades' => true,
+            'capturar_imagem' => $canal !== null,
+        ];
+
+        $estados = [];
+        $motivos = [];
+        foreach (Capacidade::cases() as $capacidade) {
+            [$estado, $motivo] = $this->classificar($capacidade, $perfil, $evidencia[$capacidade->value] ?? null, $firmware);
+            $estados[$capacidade->value] = $estado;
+            if ($motivo !== null) {
+                $motivos[$capacidade->value] = $motivo;
+            }
+        }
 
         return new CapacidadesDeclaradas(
             resultado: ResultadoEquipamento::Confirmado,
             versaoContrato: self::VERSAO_CONTRATO,
             firmwareVersao: $firmware,
-            suportadas: $suportadas,
-            motivosAusencia: $this->motivos($suportadas, $perfil === null
-                ? "firmware {$firmware} sem homologação registrada"
-                : 'capacidade não homologada para este firmware ou não implementada no adaptador'),
+            suportadas: array_values(array_filter(Capacidade::cases(), fn (Capacidade $c) => $estados[$c->value]->executavel())),
+            motivosAusencia: $motivos,
             mensagem: "Consultado no terminal {$info['modelo']} (firmware {$firmware}).",
             consultadoNoEquipamento: true,
+            estados: $estados,
         );
     }
 
@@ -118,7 +156,9 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         }
 
         try {
-            $resposta = $this->cliente->get($equipamento, sprintf(self::CAMINHO_IMAGEM, $this->canal()));
+            $canal = $this->canalDeVideo($equipamento)
+                ?? throw new FalhaIsapi(ResultadoEquipamento::FalhaTecnica, 'imagem_indisponivel', 'O terminal não informou canal de vídeo ativo.');
+            $resposta = $this->cliente->get($equipamento, sprintf(self::CAMINHO_IMAGEM, $canal));
         } catch (FalhaIsapi $e) {
             return ImagemCapturada::falha($e->resultado, $e->codigo, $e->getMessage());
         }
@@ -127,11 +167,12 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         $tipo = strtolower(trim(explode(';', (string) $resposta->header('Content-Type'))[0]));
         $assinatura = self::TIPOS_IMAGEM[$tipo] ?? null;
 
-        if ($assinatura === null || ! str_starts_with($conteudo, $assinatura)) {
-            return ImagemCapturada::falha(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal não devolveu uma imagem reconhecida.');
-        }
-
-        return ImagemCapturada::capturada($conteudo, $tipo, new DateTimeImmutable);
+        return match (true) {
+            $conteudo === '' => ImagemCapturada::falha(ResultadoEquipamento::FalhaTecnica, 'imagem_indisponivel', 'O terminal devolveu uma imagem vazia.'),
+            strlen($conteudo) > (int) config('integracoes.captura.tamanho_maximo_bytes') => ImagemCapturada::falha(ResultadoEquipamento::FalhaTecnica, 'imagem_grande_demais', 'A imagem excede o tamanho máximo aceito.'),
+            $assinatura === null || ! str_starts_with($conteudo, $assinatura) => ImagemCapturada::falha(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal não devolveu uma imagem reconhecida.'),
+            default => ImagemCapturada::capturada($conteudo, $tipo, new DateTimeImmutable),
+        };
     }
 
     public function solicitarAbertura(ContextoEquipamento $equipamento, ComandoAbertura $comando): ResultadoOperacao
@@ -163,7 +204,7 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
                 ResultadoEquipamento::Aceito,
                 'comando_aceito',
                 'O terminal aceitou o comando de abertura. A abertura física não é comprovada por esta resposta.',
-                dados: ['status_terminal' => $sub ?? 'ok'],
+                dados: ['status_terminal' => $sub ?? 'ok', 'porta' => $this->porta()],
             ),
             '' => ResultadoOperacao::desconhecido('resposta_invalida', 'O terminal respondeu sem o status do comando; não é possível afirmar se o relé foi acionado.'),
             default => new ResultadoOperacao(
@@ -228,6 +269,90 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         ];
     }
 
+    /**
+     * O que o terminal declara em AccessControl/capabilities, por capacidade.
+     * Ausência do indicador é "não sei" (null), nunca "sim".
+     *
+     * @return array<string, bool|null>
+     */
+    private function declaradoPeloTerminal(ContextoEquipamento $equipamento): array
+    {
+        try {
+            $xml = $this->cliente->xml($this->cliente->get($equipamento, self::CAMINHO_CAPACIDADES));
+        } catch (FalhaIsapi $e) {
+            if ($e->codigo === 'nao_suportado') {
+                return [];
+            }
+            throw $e;
+        }
+
+        $declarado = [];
+        foreach (self::INDICADORES as $capacidade => $indicador) {
+            $valor = isset($xml->{$indicador}) ? strtolower(trim((string) $xml->{$indicador})) : null;
+            $declarado[$capacidade] = $valor === null ? null : $valor === 'true';
+        }
+
+        return $declarado;
+    }
+
+    /** Primeiro canal de streaming habilitado com vídeo ativo (o DS-K1T673DX-BR usa 101). */
+    private function canalDeVideo(ContextoEquipamento $equipamento): ?int
+    {
+        $fixo = config('integracoes.hikvision.canal_imagem');
+        if ($fixo !== null) {
+            return (int) $fixo;
+        }
+
+        try {
+            $lista = $this->cliente->xml($this->cliente->get($equipamento, self::CAMINHO_CANAIS));
+        } catch (FalhaIsapi $e) {
+            if ($e->codigo === 'nao_suportado') {
+                return null;
+            }
+            throw $e;
+        }
+
+        foreach ($lista->StreamingChannel ?? [] as $canal) {
+            /** @var SimpleXMLElement $canal */
+            $habilitado = strtolower((string) $canal->enabled) !== 'false' && strtolower((string) $canal->Video->enabled) !== 'false';
+            if ($habilitado && ctype_digit(trim((string) $canal->id))) {
+                return (int) $canal->id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, EstadoHomologacao>|null  $perfil
+     * @return array{0: EstadoHomologacao, 1: ?string}
+     */
+    private function classificar(Capacidade $capacidade, ?array $perfil, ?bool $terminalDeclara, string $firmware): array
+    {
+        $implementada = in_array($capacidade, self::IMPLEMENTADAS, true);
+        $registrado = $perfil[$capacidade->value] ?? null;
+
+        if ($registrado === EstadoHomologacao::Bloqueada) {
+            return [$registrado, 'bloqueada por decisão de projeto'];
+        }
+        if ($terminalDeclara === false) {
+            return [EstadoHomologacao::NaoSuportada, 'o terminal informa que não oferece esta capacidade'];
+        }
+        if ($implementada && $registrado !== null && $registrado->executavel()) {
+            return [$registrado, null];
+        }
+        if (! $implementada) {
+            return $terminalDeclara === true
+                ? [EstadoHomologacao::Detectada, 'o terminal oferece, mas o adaptador ainda não implementa']
+                : [EstadoHomologacao::NaoImplementada, 'não implementada no adaptador nesta entrega'];
+        }
+
+        return [
+            EstadoHomologacao::Detectada,
+            $perfil === null ? "firmware {$firmware} sem homologação registrada" : 'ainda não validada em bancada para este firmware',
+        ];
+    }
+
     private function ausencia(Capacidade $capacidade, ContextoEquipamento $equipamento): ?string
     {
         if ($equipamento->firmwareVersao === null) {
@@ -235,43 +360,32 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         }
 
         $perfil = $this->perfil($equipamento->firmwareVersao);
+        $estado = $perfil[$capacidade->value] ?? null;
 
         return match (true) {
             $perfil === null => "firmware {$equipamento->firmwareVersao} sem homologação registrada",
-            ! in_array($capacidade->value, $perfil, true) => 'capacidade não homologada para este firmware',
+            $estado === null || ! $estado->executavel() => 'capacidade não homologada para este firmware',
             default => null,
         };
     }
 
-    /**
-     * @param  list<Capacidade>  $suportadas
-     * @return array<string, string>
-     */
-    private function motivos(array $suportadas, string $motivo): array
-    {
-        $motivos = [];
-        foreach (Capacidade::cases() as $capacidade) {
-            if (! in_array($capacidade, $suportadas, true)) {
-                $motivos[$capacidade->value] = in_array($capacidade, self::IMPLEMENTADAS, true)
-                    ? $motivo
-                    : 'não implementada no adaptador nesta entrega';
-            }
-        }
-
-        return $motivos;
-    }
-
-    /** @return list<string>|null */
+    /** @return array<string, EstadoHomologacao>|null */
     private function perfil(?string $firmware): ?array
     {
         $perfis = (array) config('integracoes.hikvision.perfis_homologados');
+        if ($firmware === null || ! isset($perfis[$firmware])) {
+            return null;
+        }
 
-        return $firmware !== null && isset($perfis[$firmware]) ? array_values((array) $perfis[$firmware]) : null;
-    }
+        $perfil = [];
+        foreach ((array) $perfis[$firmware] as $capacidade => $estado) {
+            $estado = $estado instanceof EstadoHomologacao ? $estado : EstadoHomologacao::tryFrom((string) $estado);
+            if ($estado !== null) {
+                $perfil[(string) $capacidade] = $estado;
+            }
+        }
 
-    private function canal(): int
-    {
-        return (int) config('integracoes.hikvision.canal_imagem', 1);
+        return $perfil;
     }
 
     private function porta(): int

@@ -310,7 +310,7 @@ class ProcessadorOperacoes
 
         if ($preenchidos !== []) {
             if (isset($preenchidos['firmware_versao'])) {
-                $equipamento->capacidades()->update(['suportada' => false, 'motivo_ausencia' => 'firmware alterado; verificar novamente']);
+                $equipamento->capacidades()->update(['suportada' => false, 'estado_homologacao' => null, 'motivo_ausencia' => 'firmware alterado; verificar novamente']);
             }
             $equipamento->versao++;
             $this->audit->record(
@@ -335,7 +335,8 @@ class ProcessadorOperacoes
                 ['equipamento_id' => $equipamento->id, 'capacidade' => $capacidade->value],
                 [
                     'suportada' => $resultado->suporta($capacidade),
-                    'origem' => 'declarada_adaptador',
+                    'estado_homologacao' => $resultado->estado($capacidade),
+                    'origem' => $resultado->consultadoNoEquipamento ? 'consultada_equipamento' : 'declarada_adaptador',
                     'versao_contrato' => $resultado->versaoContrato,
                     'firmware_versao' => $resultado->firmwareVersao,
                     'motivo_ausencia' => $resultado->suporta($capacidade) ? null : ($resultado->motivosAusencia[$capacidade->value] ?? 'não declarada'),

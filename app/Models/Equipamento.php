@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\Direcao;
+use App\Integracoes\Dominio\Enums\EstadoHomologacao;
 use App\Integracoes\Dominio\Enums\EstadoSaude;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
 use App\Integracoes\Dominio\Enums\TipoEquipamento;
@@ -88,12 +89,19 @@ class Equipamento extends Model
         return $this->hasMany(EquipamentoCapacidade::class);
     }
 
+    /**
+     * Capacidade verificada e liberada para este terminal. Capacidade ainda
+     * "em homologação" só vale com o terminal em homologação (bancada).
+     */
     public function suporta(Capacidade $capacidade): bool
     {
-        return $this->capacidades()
+        $registro = $this->capacidades()
             ->where('capacidade', $capacidade->value)
             ->where('suportada', true)
-            ->exists();
+            ->first();
+
+        return $registro !== null
+            && ($registro->estado_homologacao !== EstadoHomologacao::EmHomologacao || $this->status === StatusEquipamento::EmHomologacao);
     }
 
     /** @return HasMany<OperacaoIntegracao, $this> */

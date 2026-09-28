@@ -78,13 +78,28 @@ return [
     'tolerancia_relogio_segundos' => 120,
 
     'hikvision' => [
-        // Perfis de firmware homologados: firmware informado pelo terminal em
-        // deviceInfo ("versão build") => capacidades comprovadas em bancada
-        // (docs/016). Firmware fora desta lista não tem capacidade declarada.
-        'perfis_homologados' => [],
+        // Matriz de homologação: firmware informado pelo terminal em
+        // deviceInfo ("versão build") => estado de cada capacidade, com a
+        // evidência registrada em docs/016. Só `homologada` e
+        // `em_homologacao` executam; `em_homologacao` somente com o terminal
+        // em homologação (bancada). Capacidade fora da lista é classificada
+        // pelo adaptador (não implementada, não suportada ou detectada).
+        // Firmware fora desta lista não executa nada.
+        'perfis_homologados' => [
+            'V3.18.0 build 250115' => [
+                'testar_conexao' => 'homologada',
+                'consultar_informacoes' => 'homologada',
+                'consultar_capacidades' => 'homologada',
+                'capturar_imagem' => 'homologada',
+                'abertura_remota' => 'em_homologacao',
+                // Biometria depende do ADR-013.
+                'credencial_facial' => 'bloqueada',
+            ],
+        ],
 
-        // Canal da câmera e número da porta (relé) usados pelo terminal.
-        'canal_imagem' => 1,
+        // Canal de vídeo da captura. Nulo = descobrir em /Streaming/channels.
+        'canal_imagem' => null,
+        // Porta (relé) acionada pelo comando remoto.
         'porta_rele' => 1,
     ],
 

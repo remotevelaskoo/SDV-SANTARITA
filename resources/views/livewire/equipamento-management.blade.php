@@ -219,14 +219,27 @@
                 </x-ui.card>
             @endif
 
-            <x-ui.card title="Capacidades detectadas">
+            <x-ui.card title="Capacidades detectadas" description="Matriz de homologação do firmware verificado. Só executa o que está homologado ou, na bancada, em homologação.">
+                <x-slot:headerAction>
+                    <x-ui.button variant="secondary" size="sm" wire:click="consultarCapacidades" wire:loading.attr="disabled" wire:target="consultarCapacidades">Consultar capacidades</x-ui.button>
+                </x-slot:headerAction>
                 @if ($detalhe['capacidades']->isEmpty())
                     <p class="equipamento-management-aviso">Ainda não consultadas.</p>
                 @else
                     <ul class="equipamento-management-capacidades">
                         @foreach ($detalhe['capacidades'] as $capacidade)
                             <li>
-                                <x-ui.badge :variant="$capacidade->suportada ? 'success' : 'neutral'">{{ $capacidade->suportada ? 'Sim' : 'Não' }}</x-ui.badge>
+                                @php
+                                    $estado = $capacidade->estado_homologacao;
+                                    $variante = match ($estado?->value) {
+                                        'homologada' => 'success',
+                                        'em_homologacao' => 'info',
+                                        'detectada' => 'warning',
+                                        'bloqueada' => 'danger',
+                                        default => 'neutral',
+                                    };
+                                @endphp
+                                <x-ui.badge :variant="$variante">{{ $estado?->rotulo() ?? ($capacidade->suportada ? 'Liberada' : 'Não verificada') }}</x-ui.badge>
                                 <span>{{ str_replace('_', ' ', $capacidade->capacidade) }}</span>
                                 @if (! $capacidade->suportada && $capacidade->motivo_ausencia)
                                     <small>{{ $capacidade->motivo_ausencia }}</small>

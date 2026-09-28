@@ -219,6 +219,7 @@ class CadastroEquipamentos
                 // firmware exige nova verificação (ADR-016, CA-ADR-016-008).
                 $equipamento->capacidades()->update([
                     'suportada' => false,
+                    'estado_homologacao' => null,
                     'motivo_ausencia' => 'firmware alterado; verificar novamente',
                 ]);
             }
