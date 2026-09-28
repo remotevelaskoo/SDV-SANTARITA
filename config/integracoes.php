@@ -91,7 +91,9 @@ return [
                 'consultar_informacoes' => 'homologada',
                 'consultar_capacidades' => 'homologada',
                 'capturar_imagem' => 'homologada',
-                'abertura_remota' => 'em_homologacao',
+                // Relé acionado em bancada em 27/09/2026 (docs/016 §5). A abertura
+                // operacional continua desligada (SDV_INTEGRACAO_ABERTURA_REMOTA).
+                'abertura_remota' => 'homologada',
                 // Biometria depende do ADR-013.
                 'credencial_facial' => 'bloqueada',
             ],
