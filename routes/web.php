@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EquipamentoImagemController;
 use App\Http\Controllers\ProtectedFileController;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
@@ -10,6 +11,7 @@ use App\Livewire\CatalogoManagement;
 use App\Livewire\CompanyManagement;
 use App\Livewire\ConfiguracaoManagement;
 use App\Livewire\Dashboard;
+use App\Livewire\EquipamentoManagement;
 use App\Livewire\ForgotPassword;
 use App\Livewire\ImplantacaoSelection;
 use App\Livewire\Login;
@@ -70,6 +72,10 @@ Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:u
 Route::get('/perfis', PerfilManagement::class)->middleware(['auth', 'permissao:perfis.administrar'])->name('profiles');
 Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth', 'permissao:configuracoes.gerenciar'])->name('settings');
 Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permissao:catalogos.gerenciar'])->name('catalogs');
+Route::get('/equipamentos', EquipamentoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('equipment');
+Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::class)
+    ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])
+    ->name('equipment.image');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
 Route::get('/auditoria', AuditLog::class)->middleware(['auth', 'permissao:auditoria.consultar'])->name('audit-log');
 Route::get('/arquivos/{arquivo}/visualizar', ProtectedFileController::class)

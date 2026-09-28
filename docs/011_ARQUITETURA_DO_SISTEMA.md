@@ -2,7 +2,7 @@
 ## Arquitetura lógica, modular, operacional e de implantação
 
 **Documento:** SDV-ARQ-011
-**Versão:** 1.1.0
+**Versão:** 1.2.0
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -18,6 +18,7 @@
 | 1.0.0 | Julho/2026 | Soluções do Vale | Definição inicial da arquitetura do sistema |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da arquitetura do sistema |
 | 1.1.0 | 12/08/2026 | Product Owner | Fluxos protegidos de conferência, importação assistida e limite da integração biométrica |
+| 1.2.0 | 27/09/2026 | Soluções do Vale | §20.4: implementação vigente da integração com terminais faciais (ADR-016) e homologação em bancada; texto aprovado das demais seções inalterado |
 
 ---
 
@@ -560,6 +561,38 @@ Cada adaptador deverá declarar:
 - integração específica só será implementada após inventário técnico.
 
 O equipamento BRAVAS atualmente considerado pela implantação será tratado como adaptador externo, sem dependência do núcleo. A visualização humana de uma selfie no pré-cadastro não cria uma operação de sincronização. O eventual envio de foto ou template exigirá fluxo próprio, fila, idempotência, confirmação, revogação e reconciliação, e permanece bloqueado enquanto a ADR-013 estiver adiada.
+
+> Nota 1.2.0: o ADR-016 retirou a BRAVAS do recorte de terminais faciais da implantação Santa Rita (integração direta terminal → relé → ponto). O parágrafo acima permanece como registro da versão aprovada.
+
+## 20.4 Implementação vigente: terminais faciais (ADR-016)
+
+Implementado em `app/Integracoes` (fundação em SDV-INT-015, bancada em SDV-INT-016):
+
+```text
+Livewire /equipamentos (administração)
+  → casos de uso (CadastroEquipamentos, DiagnosticoEquipamento,
+    CapturaImagemEquipamento, ComandosAbertura)
+    → outbox + ProcessadorOperacoes (lease, idempotência, auditoria)
+      → PortaEquipamentoAcesso (Dominio, sem Laravel e sem fabricante)
+        → HikvisionIsapiAdaptador + ClienteIsapi   |   SimuladorEquipamento
+```
+
+- **Fabricante isolado:** ISAPI e Hikvision só existem em `app/Integracoes/Adaptadores/Hikvision`,
+  verificado por teste de arquitetura.
+- **Matriz por capacidade:** cada capacidade tem estado por firmware (`nao_implementada`,
+  `nao_suportada`, `detectada`, `em_homologacao`, `homologada`, `bloqueada`) em
+  `config/integracoes.php`. Só executa o que está implementado e homologado, ou em homologação
+  com o terminal em bancada.
+- **Segredo:** senha técnica cifrada com `APP_KEY` somente fora de produção; não substitui o
+  cofre exigido pelo ADR-009 em produção. Alternativa `env:NOME` mantida.
+- **TLS:** chave pública do certificado fixada por equipamento, aplicada apenas no cliente do
+  adaptador; a validação TLS global não é alterada.
+- **Imagem:** capturada pelo backend, validada, guardada cifrada por poucos minutos e servida
+  por rota autenticada; nunca vira credencial biométrica.
+- **Comando:** o resultado mais forte do terminal é `aceito`; passagem física exige sensor.
+  Abertura operacional desligada por configuração até validar o contato seco (ADR-016 §21.4).
+- **Pendentes:** eventos, pessoas, sincronização e revogação (detectados, não implementados);
+  biometria bloqueada pelo ADR-013; contingência pelo ADR-008.
 
 ---
 

@@ -28,6 +28,11 @@ return [
     // Abertura remota fica desligada até a homologação em bancada (ADR-016 §11, passos 8 e 9).
     'abertura_remota_habilitada' => (bool) env('SDV_INTEGRACAO_ABERTURA_REMOTA', false),
 
+    // Teste do relé em bancada, com o terminal "Em homologação" e sem cancela
+    // ou catraca ligada (ADR-016 §11, passo 8). Independe da abertura remota
+    // operacional acima, que continua desligada.
+    'teste_rele_habilitado' => (bool) env('SDV_INTEGRACAO_TESTE_RELE', false),
+
     // Validade máxima de um comando de abertura antes de expirar sem envio.
     'abertura_validade_segundos' => 15,
 
@@ -35,6 +40,30 @@ return [
     // reservado até a escolha do cofre de produção.
     'segredos' => [
         'prefixos' => ['env'],
+        // Senha digitada na tela e cifrada com APP_KEY. Permitida fora de
+        // produção; produção exige cofre (ADR-009 §3, PEN-ADR-009-001).
+        'cifrado_permitido' => (bool) env('SDV_INTEGRACAO_SEGREDO_CIFRADO', env('APP_ENV') !== 'production'),
+    ],
+
+    // Imagem estática da câmera: só em memória e em cache cifrado de curta
+    // duração; não há arquivo nem histórico de imagens (sem política aprovada).
+    'captura' => [
+        'tamanho_maximo_bytes' => 3 * 1024 * 1024,
+        'retencao_segundos' => 300,
+    ],
+
+    // Valores sugeridos no formulário de cadastro da bancada de homologação.
+    'homologacao_padrao' => [
+        'nome' => 'Facial Homologação 01',
+        'fabricante' => 'Hikvision',
+        'modelo' => 'DS-K1T673DX-BR',
+        'endereco_rede' => env('SDV_HOMOLOGACAO_FACIAL_HOST', ''),
+        'esquema' => 'https',
+        'protocolo' => 'isapi',
+        'adaptador' => 'hikvision-isapi',
+        'usuario_tecnico' => 'admin',
+        'ponto_codigo' => 'BANCADA-01',
+        'ponto_nome' => 'Bancada de testes',
     ],
 
     'outbox' => [
@@ -49,11 +78,31 @@ return [
     'tolerancia_relogio_segundos' => 120,
 
     'hikvision' => [
-        // Perfis de firmware homologados: firmware => capacidades comprovadas em bancada.
-        // Vazio até existir documentação ISAPI compatível com o firmware instalado
-        // (PEN-ADR-016-001 e PEN-ADR-016-002). Enquanto vazio, o adaptador
-        // declara todas as capacidades como ausentes.
-        'perfis_homologados' => [],
+        // Matriz de homologação: firmware informado pelo terminal em
+        // deviceInfo ("versão build") => estado de cada capacidade, com a
+        // evidência registrada em docs/016. Só `homologada` e
+        // `em_homologacao` executam; `em_homologacao` somente com o terminal
+        // em homologação (bancada). Capacidade fora da lista é classificada
+        // pelo adaptador (não implementada, não suportada ou detectada).
+        // Firmware fora desta lista não executa nada.
+        'perfis_homologados' => [
+            'V3.18.0 build 250115' => [
+                'testar_conexao' => 'homologada',
+                'consultar_informacoes' => 'homologada',
+                'consultar_capacidades' => 'homologada',
+                'capturar_imagem' => 'homologada',
+                // Relé acionado em bancada em 27/09/2026 (docs/016 §5). A abertura
+                // operacional continua desligada (SDV_INTEGRACAO_ABERTURA_REMOTA).
+                'abertura_remota' => 'homologada',
+                // Biometria depende do ADR-013.
+                'credencial_facial' => 'bloqueada',
+            ],
+        ],
+
+        // Canal de vídeo da captura. Nulo = descobrir em /Streaming/channels.
+        'canal_imagem' => null,
+        // Porta (relé) acionada pelo comando remoto.
+        'porta_rele' => 1,
     ],
 
 ];

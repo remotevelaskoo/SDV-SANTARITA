@@ -14,7 +14,11 @@ use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\Equipamento;
 use App\Models\Implantacao;
 use App\Models\OperacaoIntegracao;
+use App\Models\Perfil;
+use App\Models\Permissao;
 use App\Models\PontoAcesso;
+use App\Models\User;
+use App\Models\UsuarioPerfil;
 use App\Support\ImplantacaoContext;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Queue;
@@ -59,6 +63,36 @@ trait MontaCenarioIntegracao
     protected function usarFilaReal(): void
     {
         Queue::swap($this->filaReal);
+    }
+
+    protected function usuarioCom(string ...$permissoes): User
+    {
+        $usuario = User::factory()->create();
+        $perfil = Perfil::factory()->create();
+
+        foreach ($permissoes as $chave) {
+            $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'integracoes', 'descricao' => $chave]);
+            $perfil->permissoes()->attach($permissao->id, [
+                'id' => (string) Str::uuid7(),
+                'implantacao_id' => ImplantacaoContext::current()->id,
+            ]);
+        }
+
+        UsuarioPerfil::factory()->for($usuario)->for($perfil)->create();
+
+        return $usuario;
+    }
+
+    /** Terminal do simulador em homologação na bancada, com capacidades verificadas. */
+    protected function terminalEmHomologacao(array $dados = []): Equipamento
+    {
+        $ponto = $this->novoPonto(['tipo' => 'bancada', 'codigo' => 'BANCADA-'.Str::upper(Str::random(4)), 'nome' => 'Bancada de testes']);
+        $equipamento = $this->novoEquipamento($dados);
+        $this->cadastro()->vincularAoPonto($equipamento, $ponto);
+        $this->cadastro()->definirSenhaTecnica($equipamento, 'admin', 'Senha-Cifrada-Teste-321');
+        $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($equipamento));
+
+        return $this->cadastro()->alterarStatus($equipamento->refresh(), StatusEquipamento::EmHomologacao, 'bancada');
     }
 
     protected function simulador(): SimuladorEquipamento

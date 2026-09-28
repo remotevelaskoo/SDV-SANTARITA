@@ -15,4 +15,10 @@ enum CenarioSimulador: string
     case CapacidadeAusente = 'capacidade_ausente';
     case ConfirmacaoDesconhecida = 'confirmacao_desconhecida';
     case Excecao = 'excecao';
+    // Homologação da facial em bancada.
+    case CredencialInvalida = 'credencial_invalida';
+    case CertificadoInvalido = 'certificado_invalido';
+    case CapturaIndisponivel = 'captura_indisponivel';
+    // O terminal aceitou o comando, sem prova de execução física.
+    case Aceito = 'aceito';
 }

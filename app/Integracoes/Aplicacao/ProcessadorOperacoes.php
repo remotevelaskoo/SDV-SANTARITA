@@ -135,11 +135,19 @@ class ProcessadorOperacoes
     {
         $tipo = $operacao->operacao;
         $diagnostico = in_array($tipo, [OperacaoIntegracao::TestarConexao, OperacaoIntegracao::ConsultarCapacidades], true);
+        $testeBancada = $tipo === OperacaoIntegracao::AberturaRemota && $operacao->origem === ComandosAbertura::ORIGEM_TESTE_BANCADA;
 
         if ($equipamento->status === StatusEquipamento::Inativo) {
             return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'equipamento_inativo', 'Equipamento inativo.');
         }
-        if (! $diagnostico && $equipamento->status !== StatusEquipamento::Ativo) {
+        if ($testeBancada) {
+            if ($equipamento->status !== StatusEquipamento::EmHomologacao) {
+                return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'equipamento_fora_de_homologacao', 'O teste do relé só é feito com o terminal em homologação.');
+            }
+            if (! config('integracoes.teste_rele_habilitado')) {
+                return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'teste_rele_desabilitado', 'Teste do relé em bancada desabilitado nesta instalação.');
+            }
+        } elseif (! $diagnostico && $equipamento->status !== StatusEquipamento::Ativo) {
             return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'equipamento_nao_ativo', 'O terminal ainda não está ativo.');
         }
         if (! $this->adaptadores->permitido($equipamento->adaptador)) {
@@ -148,7 +156,7 @@ class ProcessadorOperacoes
         if ($operacao->expira_em !== null && $operacao->expira_em < now()) {
             return new ResultadoOperacao(ResultadoEquipamento::Expirado, 'expirado', 'A operação expirou antes do envio.');
         }
-        if ($tipo === OperacaoIntegracao::AberturaRemota && ! config('integracoes.abertura_remota_habilitada')) {
+        if ($tipo === OperacaoIntegracao::AberturaRemota && ! $testeBancada && ! config('integracoes.abertura_remota_habilitada')) {
             return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'abertura_remota_desabilitada', 'Abertura remota desabilitada até a homologação em bancada.');
         }
         if ($tipo === OperacaoIntegracao::SincronizarCredencial && ($operacao->payload['tipo'] ?? null) === 'face') {
@@ -191,7 +199,7 @@ class ProcessadorOperacoes
                 OperacaoIntegracao::AberturaRemota => $porta->solicitarAbertura($contexto, new ComandoAbertura(
                     comandoId: $operacao->id,
                     pontoAcessoId: $p['ponto_acesso_id'],
-                    decisaoReferencia: $p['decisao_referencia'],
+                    decisaoReferencia: $p['decisao_referencia'] ?? (string) $operacao->agregado_id,
                     chaveIdempotencia: $operacao->chave_idempotencia,
                     solicitadoEm: DateTimeImmutable::createFromInterface($operacao->created_at),
                     expiraEm: DateTimeImmutable::createFromInterface($operacao->expira_em),
@@ -243,6 +251,10 @@ class ProcessadorOperacoes
         if (in_array($estado, [ResultadoEquipamento::FalhaTecnica, ResultadoEquipamento::Indisponivel, ResultadoEquipamento::ConfirmacaoDesconhecida], true)) {
             $equipamento->ultimo_erro_sanitizado = $this->mensagem($resultado);
         }
+        if ($contatouEquipamento && ($estado->naoAlcancouEquipamento() || in_array($estado, [ResultadoEquipamento::FalhaTecnica, ResultadoEquipamento::ConfirmacaoDesconhecida], true)
+            || ($resultado instanceof ResultadoOperacao && $resultado->codigo === 'autenticacao_recusada'))) {
+            $equipamento->ultima_falha_at = now();
+        }
 
         $equipamento->save();
     }
@@ -260,8 +272,55 @@ class ProcessadorOperacoes
 
         if ($resultado->resultado === ResultadoEquipamento::Confirmado) {
             $equipamento->ultimo_erro_sanitizado = null;
+            $this->registrarInventarioDetectado($equipamento, $resultado);
         } elseif ($resultado->resultado !== ResultadoEquipamento::Indisponivel) {
             $equipamento->ultimo_erro_sanitizado = $this->mensagem($resultado);
+        }
+    }
+
+    /**
+     * O terminal informa firmware e série no teste de conexão. Campo vazio no
+     * inventário é preenchido (auditado); divergência nunca sobrescreve o
+     * inventário, só vira alerta (CA-ADR-016-008).
+     */
+    private function registrarInventarioDetectado(Equipamento $equipamento, ResultadoOperacao $resultado): void
+    {
+        $detectados = array_filter([
+            'firmware_versao' => $resultado->dados['firmware'] ?? null,
+            'numero_serie' => $resultado->dados['numero_serie'] ?? null,
+        ], fn ($valor) => is_string($valor) && $valor !== '');
+
+        $preenchidos = [];
+        $divergencias = [];
+        foreach ($detectados as $campo => $valor) {
+            $atual = $equipamento->getAttribute($campo);
+            if ($atual === null || $atual === '') {
+                $equipamento->setAttribute($campo, $valor);
+                $preenchidos[$campo] = ['old' => null, 'new' => $valor];
+            } elseif ($atual !== $valor) {
+                $divergencias[] = $campo === 'firmware_versao'
+                    ? "firmware informado pelo terminal ({$valor}) diverge do inventário"
+                    : "número de série informado pelo terminal ({$valor}) diverge do inventário";
+            }
+        }
+
+        if ($divergencias !== []) {
+            $equipamento->ultimo_erro_sanitizado = $this->sanitizador->texto(ucfirst(implode('; ', $divergencias)).'.');
+        }
+
+        if ($preenchidos !== []) {
+            if (isset($preenchidos['firmware_versao'])) {
+                $equipamento->capacidades()->update(['suportada' => false, 'estado_homologacao' => null, 'motivo_ausencia' => 'firmware alterado; verificar novamente']);
+            }
+            $equipamento->versao++;
+            $this->audit->record(
+                action: 'equipamento_inventario_detectado',
+                module: 'integracoes',
+                entityType: 'equipamentos',
+                entityId: $equipamento->id,
+                changes: $preenchidos,
+                implantacaoId: $equipamento->implantacao_id,
+            );
         }
     }
 
@@ -276,7 +335,8 @@ class ProcessadorOperacoes
                 ['equipamento_id' => $equipamento->id, 'capacidade' => $capacidade->value],
                 [
                     'suportada' => $resultado->suporta($capacidade),
-                    'origem' => 'declarada_adaptador',
+                    'estado_homologacao' => $resultado->estado($capacidade),
+                    'origem' => $resultado->consultadoNoEquipamento ? 'consultada_equipamento' : 'declarada_adaptador',
                     'versao_contrato' => $resultado->versaoContrato,
                     'firmware_versao' => $resultado->firmwareVersao,
                     'motivo_ausencia' => $resultado->suporta($capacidade) ? null : ($resultado->motivosAusencia[$capacidade->value] ?? 'não declarada'),
@@ -414,8 +474,10 @@ class ProcessadorOperacoes
 
         $estadoOutbox = match (true) {
             $vaiRepetir => EstadoOutbox::FalhaTemporaria,
+            // Diagnóstico manual de tentativa única: a falha é o próprio resultado do teste.
             in_array($estado, [ResultadoEquipamento::FalhaTecnica, ResultadoEquipamento::Indisponivel], true)
-                && $operacao->operacao->permiteRetentativaAutomatica() => EstadoOutbox::IntervencaoNecessaria,
+                && $operacao->operacao->permiteRetentativaAutomatica()
+                && ! ($operacao->origem === 'manual' && $operacao->max_tentativas === 1) => EstadoOutbox::IntervencaoNecessaria,
             $estado === ResultadoEquipamento::ConfirmacaoDesconhecida
                 && $operacao->operacao === OperacaoIntegracao::AberturaRemota
                 && ! $operacao->equipamento->suporta(Capacidade::ConsultarResultadoComando) => EstadoOutbox::IntervencaoNecessaria,
@@ -487,6 +549,8 @@ class ProcessadorOperacoes
             entityId: $operacao->equipamento_id,
             result: match ($resultado->resultado) {
                 ResultadoEquipamento::Confirmado => 'sucesso',
+                // Aceito pelo terminal não é execução comprovada (RN-080).
+                ResultadoEquipamento::Aceito => 'aceito',
                 ResultadoEquipamento::ConfirmacaoDesconhecida => 'desconhecido',
                 default => 'falha',
             },

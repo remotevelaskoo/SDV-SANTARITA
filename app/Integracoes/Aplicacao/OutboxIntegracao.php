@@ -41,6 +41,7 @@ class OutboxIntegracao
         ?string $correlationId = null,
         ?string $causationId = null,
         string $origem = 'sistema',
+        ?int $maxTentativas = null,
     ): Operacao {
         $this->garantirPayloadSeguro($payload);
         $hash = $this->hash($equipamento->id, $operacao, $payload);
@@ -67,7 +68,9 @@ class OutboxIntegracao
                 'causation_id' => $causationId,
                 'estado' => EstadoOutbox::Pendente,
                 'resultado' => ResultadoEquipamento::Pendente,
-                'max_tentativas' => $operacao->permiteRetentativaAutomatica() ? (int) config('integracoes.outbox.max_tentativas') : 1,
+                'max_tentativas' => $operacao->permiteRetentativaAutomatica()
+                    ? max(1, $maxTentativas ?? (int) config('integracoes.outbox.max_tentativas'))
+                    : 1,
                 'disponivel_em' => now(),
                 'expira_em' => $expiraEm,
                 'origem' => $origem,

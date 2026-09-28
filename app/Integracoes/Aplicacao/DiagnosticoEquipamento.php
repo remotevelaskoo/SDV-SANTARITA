@@ -47,6 +47,9 @@ class DiagnosticoEquipamento
                 agregadoId: $equipamento->id,
                 ator: $ator,
                 origem: $ator ? 'manual' : 'sistema',
+                // Diagnóstico pedido na tela mostra o resultado real da tentativa,
+                // sem retentativa silenciosa em segundo plano.
+                maxTentativas: $ator ? 1 : null,
             );
 
             if ($operacao->wasRecentlyCreated) {

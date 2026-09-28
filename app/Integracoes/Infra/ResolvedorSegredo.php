@@ -4,12 +4,19 @@ namespace App\Integracoes\Infra;
 
 use App\Integracoes\Dominio\Dados\SegredoTecnico;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
+use App\Models\EquipamentoCredencial;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 /**
- * Resolve a referência de um segredo técnico no momento do uso (ADR-009 §6
- * e §9). O banco guarda apenas a referência; o valor vem do ambiente de
- * execução. `vault:` ficará disponível quando o cofre de produção for
- * escolhido (ADR-009 §3, fornecedor definido na infraestrutura).
+ * Resolve o segredo técnico no momento do uso (ADR-009 §6 e §9).
+ *
+ * Dois mecanismos:
+ * - `env:NOME`: o banco guarda só a referência; o valor vem do ambiente;
+ * - `cifrado:BANCO`: o valor foi digitado pelo administrador na tela e está
+ *   cifrado com a chave da aplicação (APP_KEY). Aceito para desenvolvimento
+ *   e homologação; produção continua exigindo o cofre (ADR-009 §3).
+ *
+ * `vault:` ficará disponível quando o cofre de produção for escolhido.
  */
 class ResolvedorSegredo
 {
@@ -20,7 +27,7 @@ class ResolvedorSegredo
         if (! preg_match(self::FORMATO, $referencia, $partes)) {
             throw new RegraIntegracaoViolada(
                 'referencia_segredo_invalida',
-                'Informe somente a referência do segredo, no formato env:NOME_DA_VARIAVEL. O valor da senha nunca é cadastrado no SDV.'
+                'Informe somente a referência do segredo, no formato env:NOME_DA_VARIAVEL.'
             );
         }
 
@@ -30,6 +37,26 @@ class ResolvedorSegredo
                 "O mecanismo de segredo '{$partes['prefixo']}' ainda não está habilitado nesta instalação."
             );
         }
+    }
+
+    public function resolverCredencial(EquipamentoCredencial $credencial): ?SegredoTecnico
+    {
+        if (! $credencial->cifrada()) {
+            return $this->resolver($credencial->referencia_segredo);
+        }
+
+        if (! (bool) config('integracoes.segredos.cifrado_permitido')) {
+            return null;
+        }
+
+        try {
+            $valor = $credencial->segredo_cifrado;
+        } catch (DecryptException) {
+            // Chave da aplicação trocada: falha segura, sem repetir o conteúdo.
+            return null;
+        }
+
+        return is_string($valor) && $valor !== '' ? new SegredoTecnico($valor) : null;
     }
 
     public function resolver(string $referencia): ?SegredoTecnico

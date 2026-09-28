@@ -8,6 +8,7 @@ use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
 use App\Integracoes\Dominio\Dados\EventoEquipamento;
+use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
 use App\Integracoes\Dominio\Enums\Capacidade;
@@ -22,8 +23,9 @@ use RuntimeException;
  * Mantém em memória, por equipamento, as credenciais "gravadas", os
  * eventos pendentes e as aberturas executadas, e reproduz os cenários de
  * sucesso, recusa, timeout, callback tardio, duplicidade, indisponibilidade,
- * payload inválido, capacidade ausente, confirmação desconhecida e exceção
- * interna. Serve a testes e desenvolvimento; não substitui homologação
+ * payload inválido, capacidade ausente, confirmação desconhecida, exceção
+ * interna, credencial inválida, certificado inválido, captura disponível ou
+ * indisponível e comando somente aceito. Serve a testes e desenvolvimento; não substitui homologação
  * com o terminal real e só é aceito fora de produção.
  *
  * O estado é do processo (registrado como singleton); não há persistência.
@@ -52,6 +54,12 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
     /** @var array<string, int> */
     private array $chamadas = [];
 
+    /** @var array<string, CenarioSimulador> equipamento => cenário da captura de imagem */
+    private array $cenariosCaptura = [];
+
+    /** PNG 1x1 sintético: o simulador nunca devolve imagem de pessoa. */
+    private const IMAGEM_SINTETICA = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
     public function codigo(): string
     {
         return self::CODIGO;
@@ -67,6 +75,11 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
     public function definirCenario(string $equipamentoId, CenarioSimulador $cenario, ?OperacaoIntegracao $operacao = null): void
     {
         $this->cenarios[$equipamentoId][$operacao?->value ?? '*'] = $cenario;
+    }
+
+    public function definirCenarioCaptura(string $equipamentoId, CenarioSimulador $cenario): void
+    {
+        $this->cenariosCaptura[$equipamentoId] = $cenario;
     }
 
     /** @param  list<Capacidade>  $capacidades */
@@ -99,7 +112,7 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
 
     public function reiniciar(): void
     {
-        $this->cenarios = $this->capacidades = $this->credenciais = $this->eventos = $this->aberturas = $this->chamadas = [];
+        $this->cenarios = $this->capacidades = $this->credenciais = $this->eventos = $this->aberturas = $this->chamadas = $this->cenariosCaptura = [];
     }
 
     // ---- Porta ------------------------------------------------------------
@@ -214,8 +227,28 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
         return $this->executar($equipamento, OperacaoIntegracao::AberturaRemota, Capacidade::AberturaRemota, function () use ($equipamento, $comando) {
             $this->abrir($equipamento->equipamentoId, $comando->comandoId);
 
+            if ($this->cenario($equipamento->equipamentoId, OperacaoIntegracao::AberturaRemota) === CenarioSimulador::Aceito) {
+                return new ResultadoOperacao(ResultadoEquipamento::Aceito, 'comando_aceito', 'O terminal aceitou o comando; abertura física não comprovada.');
+            }
+
             return ResultadoOperacao::confirmado(dados: ['comando' => $comando->comandoId]);
         }, efeitoTardio: fn () => $this->abrir($equipamento->equipamentoId, $comando->comandoId));
+    }
+
+    public function capturarImagem(ContextoEquipamento $equipamento): ImagemCapturada
+    {
+        $cenario = $this->cenariosCaptura[$equipamento->equipamentoId] ?? $this->cenario($equipamento->equipamentoId, OperacaoIntegracao::TestarConexao);
+
+        if ($cenario === CenarioSimulador::CapturaIndisponivel) {
+            return ImagemCapturada::falha(ResultadoEquipamento::FalhaTecnica, 'imagem_indisponivel', 'A câmera do terminal não devolveu imagem.');
+        }
+
+        $falha = $this->resultadoDeFalha($cenario, $equipamento, Capacidade::CapturarImagem);
+        if ($falha !== null) {
+            return ImagemCapturada::falha($falha->resultado, (string) $falha->codigo, (string) $falha->mensagem);
+        }
+
+        return ImagemCapturada::capturada((string) base64_decode(self::IMAGEM_SINTETICA, true), 'image/png', new DateTimeImmutable);
     }
 
     public function consultarResultadoComando(ContextoEquipamento $equipamento, string $comandoId): ResultadoOperacao
@@ -268,6 +301,8 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
             CenarioSimulador::Indisponivel => new ResultadoOperacao(ResultadoEquipamento::Indisponivel, 'conexao_recusada', 'Terminal inalcançável na rede.'),
             CenarioSimulador::PayloadInvalido => new ResultadoOperacao(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'Resposta do terminal fora do contrato.'),
             CenarioSimulador::CapacidadeAusente => ResultadoOperacao::capacidadeAusente($capacidade ?? Capacidade::TestarConexao, 'cenário de capacidade ausente'),
+            CenarioSimulador::CredencialInvalida => new ResultadoOperacao(ResultadoEquipamento::Recusado, 'autenticacao_recusada', 'O terminal recusou o usuário ou a senha técnica.'),
+            CenarioSimulador::CertificadoInvalido => new ResultadoOperacao(ResultadoEquipamento::FalhaTecnica, 'certificado_invalido', 'O certificado do terminal não é confiável.'),
             default => null,
         };
     }

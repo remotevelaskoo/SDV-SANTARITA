@@ -10,7 +10,11 @@ namespace App\Integracoes\Dominio\Enums;
 enum Capacidade: string
 {
     case TestarConexao = 'testar_conexao';
+    // Inventário: modelo, série e firmware informados pelo terminal.
+    case ConsultarInformacoes = 'consultar_informacoes';
     case ConsultarCapacidades = 'consultar_capacidades';
+    // Cadastro de pessoas no terminal (fora desta entrega).
+    case GerenciarPessoas = 'gerenciar_pessoas';
     case SincronizarCredencial = 'sincronizar_credencial';
     case RevogarCredencial = 'revogar_credencial';
     case ConsultarSincronizacao = 'consultar_sincronizacao';
@@ -20,4 +24,6 @@ enum Capacidade: string
     case ConsultarResultadoComando = 'consultar_resultado_comando';
     case CredencialFacial = 'credencial_facial';
     case IdempotenciaNativa = 'idempotencia_nativa';
+    // Imagem estática da câmera para conferência visual; nunca vira credencial biométrica.
+    case CapturarImagem = 'capturar_imagem';
 }

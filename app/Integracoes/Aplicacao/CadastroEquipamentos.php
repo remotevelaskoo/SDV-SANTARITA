@@ -29,8 +29,12 @@ use Illuminate\Support\Facades\DB;
 class CadastroEquipamentos
 {
     private const CAMPOS_INVENTARIO = [
-        'nome', 'numero_serie', 'endereco_rede', 'porta_rede', 'firmware_versao', 'direcao', 'timeout_segundos',
+        'nome', 'numero_serie', 'endereco_rede', 'porta_rede', 'esquema', 'firmware_versao', 'direcao',
+        'modulo_seguro_rs485', 'timeout_segundos',
     ];
+
+    /** Trocar o destino da conexão invalida o certificado confiado. */
+    private const CAMPOS_DESTINO = ['endereco_rede', 'porta_rede', 'esquema'];
 
     public function __construct(
         private AuditService $audit,
@@ -82,6 +86,9 @@ class CadastroEquipamentos
             if ($anterior === StatusPontoAcesso::Inativo) {
                 throw new RegraIntegracaoViolada('ponto_inativo', 'Ponto inativo não é reativado por alteração de situação; cadastre um novo ponto.');
             }
+            if ($novo === StatusPontoAcesso::Ativo && $ponto->tipo === TipoPontoAcesso::Bancada) {
+                throw new RegraIntegracaoViolada('ponto_bancada', 'A bancada de testes não é ativada como ponto de acesso real.');
+            }
 
             if ($novo === StatusPontoAcesso::Inativo) {
                 $this->encerrarVinculoVigente(ponto: $ponto, motivo: "ponto inativado: {$motivo}", ator: $ator);
@@ -119,10 +126,11 @@ class CadastroEquipamentos
         }
 
         $this->validarRede($dados['endereco_rede'] ?? '', $dados['porta_rede'] ?? null);
+        $esquema = $this->validarEsquema($dados['esquema'] ?? 'https');
         $timeout = (int) ($dados['timeout_segundos'] ?? 5);
         $this->validarTimeout($timeout);
 
-        return DB::transaction(function () use ($dados, $tipo, $direcao, $timeout, $ator): Equipamento {
+        return DB::transaction(function () use ($dados, $tipo, $direcao, $esquema, $timeout, $ator): Equipamento {
             $this->garantirSerieUnica($dados['numero_serie'] ?? null);
 
             $equipamento = Equipamento::query()->create([
@@ -133,10 +141,12 @@ class CadastroEquipamentos
                 'numero_serie' => $dados['numero_serie'] ?? null,
                 'endereco_rede' => $dados['endereco_rede'],
                 'porta_rede' => $dados['porta_rede'] ?? null,
+                'esquema' => $esquema,
                 'protocolo' => $dados['protocolo'],
                 'firmware_versao' => $dados['firmware_versao'] ?? null,
                 'adaptador' => $dados['adaptador'],
                 'direcao' => $direcao,
+                'modulo_seguro_rs485' => (bool) ($dados['modulo_seguro_rs485'] ?? false),
                 'timeout_segundos' => $timeout,
                 'status' => StatusEquipamento::NaoConfigurado,
                 'estado_saude' => EstadoSaude::Desconhecido,
@@ -146,7 +156,7 @@ class CadastroEquipamentos
 
             $this->auditar('equipamento_cadastrado', 'equipamentos', $equipamento->id, collect([
                 'nome', 'tipo', 'fabricante', 'modelo', 'numero_serie', 'endereco_rede',
-                'porta_rede', 'protocolo', 'firmware_versao', 'adaptador', 'direcao',
+                'porta_rede', 'esquema', 'protocolo', 'firmware_versao', 'adaptador', 'direcao', 'modulo_seguro_rs485',
             ])->mapWithKeys(fn (string $campo) => [$campo => ['old' => null, 'new' => $this->valor($equipamento->getAttribute($campo))]])->all());
 
             return $equipamento;
@@ -160,6 +170,12 @@ class CadastroEquipamentos
 
         if (array_key_exists('endereco_rede', $dados) || array_key_exists('porta_rede', $dados)) {
             $this->validarRede($dados['endereco_rede'] ?? $equipamento->endereco_rede, $dados['porta_rede'] ?? $equipamento->porta_rede);
+        }
+        if (array_key_exists('esquema', $dados)) {
+            $dados['esquema'] = $this->validarEsquema((string) $dados['esquema']);
+        }
+        if (array_key_exists('modulo_seguro_rs485', $dados)) {
+            $dados['modulo_seguro_rs485'] = (bool) $dados['modulo_seguro_rs485'];
         }
         if (array_key_exists('timeout_segundos', $dados)) {
             $this->validarTimeout((int) $dados['timeout_segundos']);
@@ -191,6 +207,11 @@ class CadastroEquipamentos
                 return $equipamento;
             }
 
+            if (array_intersect(array_keys($mudancas), self::CAMPOS_DESTINO) !== [] && $equipamento->tls_pin_sha256 !== null) {
+                $mudancas['tls_pin_sha256'] = ['old' => 'confiado', 'new' => null];
+                $equipamento->tls_pin_sha256 = null;
+            }
+
             $equipamento->forceFill(['versao' => $equipamento->versao + 1, 'updated_by' => $ator?->id])->save();
 
             if (isset($mudancas['firmware_versao'])) {
@@ -198,6 +219,7 @@ class CadastroEquipamentos
                 // firmware exige nova verificação (ADR-016, CA-ADR-016-008).
                 $equipamento->capacidades()->update([
                     'suportada' => false,
+                    'estado_homologacao' => null,
                     'motivo_ausencia' => 'firmware alterado; verificar novamente',
                 ]);
             }
@@ -273,17 +295,25 @@ class CadastroEquipamentos
     {
         $this->segredos->validarReferencia($referenciaSegredo);
 
-        return DB::transaction(function () use ($equipamento, $referenciaSegredo, $usuarioTecnico, $ator): EquipamentoCredencial {
+        return $this->substituirCredencial($equipamento, [
+            'usuario_tecnico' => $usuarioTecnico,
+            'referencia_segredo' => $referenciaSegredo,
+        ], $ator);
+    }
+
+    /** @param  array{usuario_tecnico: ?string, referencia_segredo: string, segredo_cifrado?: string}  $dados */
+    private function substituirCredencial(Equipamento $equipamento, array $dados, ?User $ator): EquipamentoCredencial
+    {
+        return DB::transaction(function () use ($equipamento, $dados, $ator): EquipamentoCredencial {
             $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($equipamento->id);
             $anterior = $equipamento->credencialTecnicaAtiva();
 
             $anterior?->forceFill(['status' => 'substituida', 'substituida_em' => now()])->save();
 
             $credencial = EquipamentoCredencial::query()->create([
+                ...$dados,
                 'equipamento_id' => $equipamento->id,
                 'finalidade' => 'administracao',
-                'usuario_tecnico' => $usuarioTecnico,
-                'referencia_segredo' => $referenciaSegredo,
                 'status' => 'ativa',
                 'definida_em' => now(),
                 'created_by' => $ator?->id,
@@ -294,11 +324,67 @@ class CadastroEquipamentos
                 'equipamentos',
                 $equipamento->id,
                 ['referencia_segredo' => ['old' => $anterior ? 'anterior' : null, 'new' => 'nova']],
-                metadata: ['credencial_tecnica_id' => $credencial->id],
+                metadata: ['credencial_tecnica_id' => $credencial->id, 'mecanismo' => $credencial->cifrada() ? 'cifrado' : 'referencia'],
                 classification: 'restrita',
             );
 
             return $credencial;
+        });
+    }
+
+    /**
+     * Grava a senha técnica digitada pelo administrador, cifrada com a chave
+     * da aplicação (ADR-009 §10: campo mascarado, nunca devolvida, troca por
+     * substituição, auditoria sem valor). Fora de produção somente.
+     */
+    public function definirSenhaTecnica(Equipamento $equipamento, string $usuarioTecnico, #[\SensitiveParameter] string $senha, ?User $ator = null): EquipamentoCredencial
+    {
+        if (! (bool) config('integracoes.segredos.cifrado_permitido')) {
+            throw new RegraIntegracaoViolada('segredo_cifrado_desabilitado', 'Nesta instalação a senha técnica deve vir do cofre de segredos; informe a referência.');
+        }
+        if (! preg_match('/^[A-Za-z0-9._@-]{1,32}$/', $usuarioTecnico)) {
+            throw new RegraIntegracaoViolada('usuario_tecnico_invalido', 'Informe o usuário técnico do terminal (até 32 letras, números, ponto, hífen ou sublinhado).');
+        }
+        if ($senha === '' || mb_strlen($senha) > 128 || trim($senha) === '') {
+            throw new RegraIntegracaoViolada('senha_tecnica_invalida', 'Informe a senha técnica do terminal (até 128 caracteres).');
+        }
+
+        return $this->substituirCredencial($equipamento, [
+            'usuario_tecnico' => $usuarioTecnico,
+            'referencia_segredo' => EquipamentoCredencial::REFERENCIA_CIFRADA,
+            'segredo_cifrado' => $senha,
+        ], $ator);
+    }
+
+    /**
+     * Confia no certificado HTTPS apresentado pelo terminal (autoassinado),
+     * fixando o hash da chave pública. Vale somente para este equipamento e
+     * somente dentro do adaptador; a validação TLS global não muda.
+     */
+    public function confiarCertificado(Equipamento $equipamento, string $pinSha256, string $impressaoCertificado, ?User $ator = null): Equipamento
+    {
+        if (! preg_match('#^[A-Za-z0-9+/]{43}=$#', $pinSha256)) {
+            throw new RegraIntegracaoViolada('certificado_invalido', 'Impressão da chave pública inválida.');
+        }
+
+        return DB::transaction(function () use ($equipamento, $pinSha256, $impressaoCertificado, $ator): Equipamento {
+            $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($equipamento->id);
+            if ($equipamento->esquema !== 'https') {
+                throw new RegraIntegracaoViolada('esquema_sem_tls', 'O terminal está configurado sem HTTPS.');
+            }
+
+            $anterior = $equipamento->tls_pin_sha256;
+            $equipamento->forceFill([
+                'tls_pin_sha256' => $pinSha256,
+                'versao' => $equipamento->versao + 1,
+                'updated_by' => $ator?->id,
+            ])->save();
+
+            $this->auditar('equipamento_certificado_confiado', 'equipamentos', $equipamento->id, [
+                'tls_pin_sha256' => ['old' => $anterior, 'new' => $pinSha256],
+            ], metadata: ['certificado_sha256' => $impressaoCertificado], classification: 'restrita');
+
+            return $equipamento;
         });
     }
 
@@ -314,6 +400,9 @@ class CadastroEquipamentos
 
             if ($novo === StatusEquipamento::Ativo) {
                 $this->garantirProntoParaAtivar($equipamento);
+            }
+            if ($novo === StatusEquipamento::EmHomologacao) {
+                $this->garantirProntoParaHomologar($equipamento);
             }
 
             if ($novo === StatusEquipamento::Inativo) {
@@ -337,10 +426,23 @@ class CadastroEquipamentos
 
     // ---- Regras ------------------------------------------------------------
 
+    private function garantirProntoParaHomologar(Equipamento $equipamento): void
+    {
+        if ($equipamento->vinculoVigente === null) {
+            throw new RegraIntegracaoViolada('sem_ponto', 'Vincule o terminal a um ponto (a bancada de testes) antes da homologação.');
+        }
+        if ($equipamento->adaptador !== 'simulador' && $equipamento->credencialTecnicaAtiva() === null) {
+            throw new RegraIntegracaoViolada('sem_credencial_tecnica', 'Cadastre a credencial técnica antes da homologação.');
+        }
+    }
+
     private function garantirProntoParaAtivar(Equipamento $equipamento): void
     {
         if ($equipamento->vinculoVigente === null) {
             throw new RegraIntegracaoViolada('sem_ponto', 'Vincule o terminal a um ponto de acesso antes de ativá-lo.');
+        }
+        if ($equipamento->pontoVigente()?->tipo === TipoPontoAcesso::Bancada) {
+            throw new RegraIntegracaoViolada('ponto_bancada', 'Terminal ligado à bancada de testes não é ativado para operação real.');
         }
         if ($equipamento->adaptador !== 'simulador' && $equipamento->credencialTecnicaAtiva() === null) {
             throw new RegraIntegracaoViolada('sem_credencial_tecnica', 'Defina a referência da credencial técnica antes de ativar o terminal.');
@@ -397,6 +499,13 @@ class CadastroEquipamentos
         if ($porta !== null && (! is_int($porta) || $porta < 1 || $porta > 65535)) {
             throw new RegraIntegracaoViolada('porta_invalida', 'Porta de rede deve estar entre 1 e 65535.');
         }
+    }
+
+    private function validarEsquema(string $esquema): string
+    {
+        return in_array($esquema, ['http', 'https'], true)
+            ? $esquema
+            : throw new RegraIntegracaoViolada('esquema_invalido', 'Informe HTTP ou HTTPS.');
     }
 
     private function validarTimeout(int $timeout): void

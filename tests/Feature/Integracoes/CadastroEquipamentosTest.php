@@ -17,12 +17,14 @@ use App\Support\ImplantacaoContext;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\Feature\Integracoes\Concerns\MontaCenarioIntegracao;
+use Tests\Feature\Integracoes\Concerns\RespostasIsapi;
 use Tests\TestCase;
 
 class CadastroEquipamentosTest extends TestCase
 {
-    use MontaCenarioIntegracao, RefreshDatabase;
+    use MontaCenarioIntegracao, RefreshDatabase, RespostasIsapi;
 
     protected function setUp(): void
     {
@@ -198,8 +200,10 @@ class CadastroEquipamentosTest extends TestCase
         $this->cadastro()->vincularAoPonto($terminal, $this->novoPonto());
         $this->assertRegraViolada('sem_credencial_tecnica', $ativar);
 
-        $this->cadastro()->definirCredencialTecnica($terminal, 'env:SDV_TESTE_TERMINAL_SENHA');
+        $this->cadastro()->definirCredencialTecnica($terminal, 'env:SDV_TESTE_TERMINAL_SENHA', 'admin');
         $this->assertRegraViolada('capacidades_nao_verificadas', $ativar);
+
+        $this->fingirTerminal('V9.9.9', ['*/ISAPI/System/deviceInfo' => Http::response($this->xmlDeviceInfo('V9.9.9', 'build 990101'), 200)]);
 
         $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($terminal));
         $this->assertRegraViolada('firmware_nao_inventariado', $ativar);
@@ -251,17 +255,22 @@ class CadastroEquipamentosTest extends TestCase
         $this->assertRegraViolada('ponto_inativo', fn () => $this->cadastro()->vincularAoPonto($this->novoEquipamento(), $ponto->refresh()));
     }
 
-    public function test_hikvision_sem_firmware_homologado_nao_declara_capacidades(): void
+    public function test_hikvision_com_firmware_nao_homologado_nao_declara_capacidades(): void
     {
-        $terminal = $this->novoEquipamento(['adaptador' => 'hikvision-isapi']);
+        config(['integracoes.hikvision.perfis_homologados' => []]);
+        $this->fingirTerminal('V9.9.9', ['*/ISAPI/System/deviceInfo' => Http::response($this->xmlDeviceInfo('V9.9.9', 'build 990101'), 200)]);
+        $terminal = $this->novoEquipamento(['adaptador' => 'hikvision-isapi', 'firmware_versao' => null]);
+        $this->cadastro()->definirCredencialTecnica($terminal, 'env:SDV_TESTE_TERMINAL_SENHA', 'admin');
 
-        $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($terminal));
         $teste = $this->processar(app(DiagnosticoEquipamento::class)->testarConexao($terminal));
+        $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($terminal->refresh()));
 
+        $this->assertSame('confirmado', $teste->resultado->value);
+        $this->assertSame('V9.9.9 build 990101', $terminal->refresh()->firmware_versao);
+        $this->assertTrue(AuditoriaEvento::query()->where('action', 'equipamento_inventario_detectado')->exists());
         $this->assertSame(0, $terminal->capacidades()->where('suportada', true)->count());
         $this->assertSame(count(Capacidade::cases()), $terminal->capacidades()->count());
-        $this->assertSame('capacidade_ausente', $teste->resultado->value);
-        $this->assertNull($terminal->refresh()->ultima_comunicacao_at);
-        $this->assertSame('desconhecido', $terminal->estado_saude->value);
+        $this->assertStringContainsString('sem homologação registrada', (string) $terminal->capacidades()->where('capacidade', 'abertura_remota')->value('motivo_ausencia'));
+        $this->assertSame('conectado', $terminal->estado_saude->value);
     }
 }
