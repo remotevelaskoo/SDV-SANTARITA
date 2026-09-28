@@ -1824,6 +1824,33 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .configuracao-management-form footer { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .configuracao-management-form__hint { margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
 
+.equipamento-management, .equipamento-management-detail { display: grid; gap: 1rem; }
+.equipamento-management-list { display: grid; padding: 0; margin: 0; list-style: none; }
+.equipamento-management-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--neutral-200); }
+.equipamento-management-list li:last-child { border-bottom: 0; }
+.equipamento-management-list__info { display: grid; gap: 0.25rem; }
+.equipamento-management-list__info small { color: var(--neutral-600); font-size: 0.65rem; }
+.equipamento-management-list__estado { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.equipamento-management-form { display: grid; gap: 0.75rem; padding: 1rem; }
+.equipamento-management-form footer { display: flex; justify-content: flex-end; gap: 0.6rem; }
+.equipamento-management-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.equipamento-management-segredo { display: grid; gap: 0.5rem; margin: 0; padding: 0.85rem; border: 1px solid var(--neutral-200); border-radius: 0.5rem; }
+.equipamento-management-segredo legend { padding: 0 0.3rem; font-size: 0.72rem; font-weight: 700; }
+.equipamento-management-segredo p { margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
+.equipamento-management-estado, .equipamento-management-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0 1rem 1rem; }
+.equipamento-management-dados { display: grid; gap: 0.6rem 1rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 0; padding: 0 1rem 1rem; }
+.equipamento-management-dados dt { color: var(--neutral-600); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
+.equipamento-management-dados dd { margin: 0.15rem 0 0; font-size: 0.75rem; overflow-wrap: anywhere; }
+.equipamento-management-mono { font-family: ui-monospace, monospace; font-size: 0.65rem !important; }
+.equipamento-management-resultado { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0; padding: 0 1rem 1rem; font-size: 0.72rem; }
+.equipamento-management-aviso { margin: 0; padding: 0 1rem 1rem; color: var(--neutral-600); font-size: 0.72rem; }
+.equipamento-management-imagem { display: grid; gap: 0.4rem; margin: 0; padding: 0 1rem 1rem; }
+.equipamento-management-imagem img { width: 100%; max-width: 40rem; height: auto; border: 1px solid var(--neutral-200); border-radius: 0.5rem; }
+.equipamento-management-imagem figcaption { color: var(--neutral-600); font-size: 0.65rem; }
+.equipamento-management-capacidades, .equipamento-management-historico { display: grid; gap: 0.45rem; margin: 0; padding: 0 1rem 1rem; list-style: none; font-size: 0.72rem; }
+.equipamento-management-capacidades li, .equipamento-management-historico li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.equipamento-management-capacidades small, .equipamento-management-historico time { color: var(--neutral-600); font-size: 0.65rem; }
+
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 @media (min-width: 40rem) {

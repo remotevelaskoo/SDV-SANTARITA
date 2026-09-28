@@ -18,6 +18,7 @@
             ['label' => 'Perfis e permissões', 'icon' => 'key', 'route' => 'profiles'],
             ['label' => 'Configurações', 'icon' => 'settings', 'route' => 'settings'],
             ['label' => 'Motivos de negativa', 'icon' => 'file', 'route' => 'catalogs'],
+            ['label' => 'Equipamentos', 'icon' => 'shield', 'route' => 'equipment'],
             ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],
