@@ -6,6 +6,7 @@ use App\Integracoes\Dominio\Dados\CapacidadesDeclaradas;
 use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
+use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
 
@@ -43,4 +44,10 @@ interface PortaEquipamentoAcesso
 
     /** Consulta o resultado de um comando anterior quando o equipamento oferece essa prova. */
     public function consultarResultadoComando(ContextoEquipamento $equipamento, string $comandoId): ResultadoOperacao;
+
+    /**
+     * Imagem estática da câmera, para conferência na administração. Sem
+     * streaming e sem uso biométrico; a imagem só atravessa a porta em memória.
+     */
+    public function capturarImagem(ContextoEquipamento $equipamento): ImagemCapturada;
 }

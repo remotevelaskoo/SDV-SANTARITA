@@ -12,7 +12,11 @@ use Closure;
  */
 final readonly class ContextoEquipamento
 {
-    /** @param  Closure(): ?SegredoTecnico  $obterSegredo */
+    /**
+     * @param  Closure(): ?SegredoTecnico  $obterSegredo
+     * @param  string  $esquema  'http' ou 'https'
+     * @param  ?string  $tlsPinSha256  SHA-256 em base64 da chave pública confiada pelo operador
+     */
     public function __construct(
         public string $implantacaoId,
         public string $equipamentoId,
@@ -28,6 +32,8 @@ final readonly class ContextoEquipamento
         public ?string $usuarioTecnico,
         private Closure $obterSegredo,
         public string $correlationId,
+        public string $esquema = 'https',
+        public ?string $tlsPinSha256 = null,
     ) {}
 
     public function segredo(): ?SegredoTecnico
