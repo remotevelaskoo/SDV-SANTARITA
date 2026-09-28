@@ -1,7 +1,7 @@
 # ADR-016 — INTEGRAÇÃO DIRETA ENTRE TERMINAL FACIAL E PONTO DE ACESSO
 
 **Identificador:** ADR-016  
-**Versão:** 1.1.0  
+**Versão:** 1.1.1  
 **Status:** Aprovado  
 **Prioridade:** P1 — Obrigatório para a integração facial  
 **Produto:** SDV Access — Implantação Santa Rita  
@@ -18,6 +18,7 @@
 | 1.0.0 | 27/09/2026 | Product Owner | Aprovação da integração direta entre terminal facial Hikvision e ponto de acesso |
 | 1.0.1 | 27/09/2026 | Soluções do Vale | Renumeração de ADR-015 para ADR-016 ao incorporar à `main`, onde ADR-015 já identifica a consulta de CEP (ViaCEP); conteúdo aprovado inalterado |
 | 1.1.0 | 27/09/2026 | Soluções do Vale | Registro da evidência técnica de bancada (§21) e da topologia com módulo seguro RS-485; decisão, alternativas e critérios de aceite das seções 1 a 20 inalterados |
+| 1.1.1 | 27/09/2026 | Product Owner | Numeração consolidada: este é o ADR vigente dos terminais; o ADR-015 provisório da branch `codex/fundacao-mvp` está substituído por este documento e não será integrado (catálogo §18.4) |
 
 # 1. Contexto
 
