@@ -102,6 +102,7 @@ Variáveis do `.env` (nunca coloque a senha do terminal no `.env` nem no Git):
 | `SDV_INTEGRACAO_SEGREDO_CIFRADO` | `true` fora de produção | aceita a senha técnica digitada na tela, cifrada com `APP_KEY`; produção exige cofre (ADR-009) |
 | `SDV_HOMOLOGACAO_FACIAL_HOST` | vazio | IP sugerido no formulário; cada equipamento guarda o seu |
 | `SDV_INTEGRACAO_TESTE_RELE` | `false` | libera "Liberar acesso" somente na bancada, durante o teste do relé |
-| `SDV_INTEGRACAO_ABERTURA_REMOTA` | `false` | abertura operacional; permanece desligada até validar o contato seco |
+| `SDV_INTEGRACAO_ABERTURA_REMOTA` | `false` | abertura automática decidida pelo SDV; permanece desligada até validar o contato seco |
+| `SDV_INTEGRACAO_LIBERACAO_OPERACIONAL` | `false` | liberação manual no Modo Portaria ([SDV-OPE-017](docs/017_LIBERACAO_MANUAL_OPERACIONAL.md), ADR-017); desligada até homologação e aprovação formal |
 
 Depois de alterar o `.env`, rode `php artisan config:clear`. Firmwares e capacidades homologados ficam em `config/integracoes.php` (`hikvision.perfis_homologados`).

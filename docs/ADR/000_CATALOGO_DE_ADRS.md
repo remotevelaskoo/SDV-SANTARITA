@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.25
+**Versão:** 1.0.26
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -41,6 +41,7 @@
 | 1.0.23 | 27/09/2026 | Product Owner | Inclusão e aprovação do ADR-016 para integração direta dos terminais faciais (aprovado em 27/09/2026 como ADR-015 na branch `codex/fundacao-mvp` e renumerado por colisão com o ADR-015 da `main`) |
 | 1.0.24 | 27/09/2026 | Soluções do Vale | ADR-016 atualizado para 1.1.0 com a evidência técnica de bancada (DS-K1T673DX-BR, firmware V3.18.0, módulo seguro RS-485); ADR-016 segue como decisão vigente dos terminais; ADR-008 e ADR-013 continuam adiados; numeração inalterada |
 | 1.0.25 | 27/09/2026 | Product Owner | Consolidação da numeração (§18.4): ADR-015 permanece ViaCEP; ADR-016 é a decisão vigente dos terminais; o ADR-015 provisório de `codex/fundacao-mvp` fica substituído e não será integrado |
+| 1.0.26 | 10/10/2026 | Product Owner | Inclusão e aprovação do ADR-017: separação entre teste técnico do relé e liberação manual operacional, postos e designação de operadores; operação desligada por padrão |
 
 ---
 
@@ -267,6 +268,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
 | [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita (v1.1.1: bancada homologada, operação real desligada) |
+| [ADR-017](ADR-017_LIBERACAO_MANUAL_OPERACIONAL_E_TESTE_TECNICO_DO_RELE.md) | Liberação manual operacional e teste técnico do relé | P1 | Aprovado | ADR-016 | liberação manual no Modo Portaria (desligada até homologação) |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -316,6 +318,9 @@ ADR-007 Portas e adaptadores
 
 ADR-008 + ADR-013
 └── ADR-016 produção e contingência
+
+ADR-016 Integração direta do terminal facial
+└── ADR-017 Liberação manual operacional e teste técnico do relé
 
 ADR-004 + ADR-005 + ADR-009
 └── ADR-012 Deploy e rollback

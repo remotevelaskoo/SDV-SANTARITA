@@ -2,7 +2,7 @@
 ## UX/UI de usuários, permissões, configurações, equipamentos e auditoria
 
 **Documento:** SDV-ADM-008  
-**Versão:** 1.2.0
+**Versão:** 1.3.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -19,6 +19,7 @@
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação de Administração |
 | 1.1.0 | 12/08/2026 | Product Owner | Auditoria de visualização de arquivos e revelação controlada de dados sensíveis |
 | 1.2.0 | 27/09/2026 | Soluções do Vale | §23.6: tela de equipamentos implementada na homologação da facial (ADR-016); especificação aprovada inalterada |
+| 1.3.0 | 10/10/2026 | Soluções do Vale | §23.7: postos, designação de operadores e permissões da liberação manual (ADR-017) |
 
 ---
 
@@ -953,6 +954,22 @@ Permissões: `integracoes.gerenciar` para a tela, o diagnóstico e a imagem;
 própria: o ponto "Bancada de testes" (tipo `bancada`, que nunca é ativado) é criado pelo
 cadastro do equipamento. Sincronizar, pausar, reativar e logs por equipamento (§23.4) e as
 sincronizações (§25) continuam pendentes.
+
+## 23.7 Postos, operadores e liberação manual (versão 1.3.0)
+
+Tela **Gestão › Postos e operadores** (`/postos`, componente `PostoManagement`, permissão
+`integracoes.gerenciar`): cadastro de postos, pontos de acesso atendidos e designação de
+operadores, com início e fim e auditoria. Define quais terminais cada operador aciona na
+**Liberação manual** do Modo Portaria (SDV-OPE-017, ADR-017).
+
+Permissões novas:
+
+| Permissão | Uso |
+|---|---|
+| `acessos.liberar-manualmente` | liberação manual no Modo Portaria |
+| `acessos.liberar-excepcionalmente` | liberação excepcional sem cadastro, com justificativa |
+
+`equipamentos.liberar-acesso` continua restrita ao teste técnico do relé e não libera acesso.
 
 ---
 

@@ -296,4 +296,5 @@ porta do relé, online/offline, situação da homologação, última comunicaç�
 9. Ao terminar, volte `SDV_INTEGRACAO_TESTE_RELE=false` e rode `php artisan config:clear`.
 
 A abertura operacional (`SDV_INTEGRACAO_ABERTURA_REMOTA`) continua desligada: este roteiro é só
-homologação em bancada.
+homologação em bancada. A liberação de pessoas pela portaria é outro fluxo, com permissão e
+configuração próprias: ver [SDV-OPE-017](017_LIBERACAO_MANUAL_OPERACIONAL.md) e o ADR-017.

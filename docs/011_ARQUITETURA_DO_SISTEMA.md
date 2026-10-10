@@ -2,7 +2,7 @@
 ## Arquitetura lógica, modular, operacional e de implantação
 
 **Documento:** SDV-ARQ-011
-**Versão:** 1.2.0
+**Versão:** 1.3.0
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -19,6 +19,7 @@
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da arquitetura do sistema |
 | 1.1.0 | 12/08/2026 | Product Owner | Fluxos protegidos de conferência, importação assistida e limite da integração biométrica |
 | 1.2.0 | 27/09/2026 | Soluções do Vale | §20.4: implementação vigente da integração com terminais faciais (ADR-016) e homologação em bancada; texto aprovado das demais seções inalterado |
+| 1.3.0 | 10/10/2026 | Soluções do Vale | §20.5: liberação manual operacional separada do teste do relé (ADR-017) |
 
 ---
 
@@ -593,6 +594,22 @@ Livewire /equipamentos (administração)
   Abertura operacional desligada por configuração até validar o contato seco (ADR-016 §21.4).
 - **Pendentes:** eventos, pessoas, sincronização e revogação (detectados, não implementados);
   biometria bloqueada pelo ADR-013; contingência pelo ADR-008.
+
+## 20.5 Liberação manual operacional (ADR-017)
+
+```text
+Modo Portaria (LiberacaoManualPortaria)
+  → LiberacaoManual: relê posto, pessoa e equipamento; valida posto do operador,
+    situação, online, certificado, firmware, relé e direção
+    → historico_acessos (origem liberacao_manual) + outbox (mesma chave idempotente)
+      → ProcessadorOperacoes → porta → adaptador
+        → resultado_tecnico no evento de acesso
+```
+
+Três caminhos para o mesmo comando técnico, cada um com permissão e configuração próprias:
+teste do relé (`teste_bancada`), liberação manual (`liberacao_manual`) e abertura automática.
+Postos (`postos`, `posto_pontos_acesso`, `operador_postos`) limitam o que cada operador aciona.
+Detalhes em SDV-OPE-017.
 
 ---
 
