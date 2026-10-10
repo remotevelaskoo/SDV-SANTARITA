@@ -1,7 +1,7 @@
 # SDV Access — Homologação em bancada da facial Hikvision
 
 **Documento:** SDV-INT-016
-**Versão:** 1.1.0
+**Versão:** 1.2.0
 **Status:** Bancada concluída para conexão, inventário, capacidades, captura e porta 1; operação real desligada
 **Data:** 27/09/2026
 **Decisões de origem:** [ADR-016](ADR/ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) (§21), ADR-004, ADR-005, ADR-007, ADR-009, ADR-010 e ADR-013
@@ -17,6 +17,7 @@ equipamento (senha cifrada) e no `.env` local, fora do Git.
 |---|---|---|
 | 1.0.0 | 27/09/2026 | Primeira integração real: endpoints, matriz e teste do relé |
 | 1.1.0 | 27/09/2026 | Reorganização com objetivo, ambiente, formatos sanitizados, testes e evidências |
+| 1.2.0 | 09/10/2026 | Teste individual de relés por facial (§14), porta do relé por equipamento e endereço mascarado nas telas |
 
 ## 1. Objetivo
 
@@ -243,7 +244,56 @@ acionamento do relé autorizado pelo responsável.
 4. **Testar conexão**: deve mostrar modelo e firmware; série e firmware vazios são preenchidos.
 5. **Consultar capacidades**: confira a matriz da §8.
 6. **Atualizar imagem**: a imagem aparece com data e hora e expira em 5 minutos.
-7. **Liberar acesso** (exige `equipamentos.liberar-acesso` e a flag): informe o motivo, confirme
-   que não há carga no relé e confirme uma vez. O resultado esperado é "Aceito pelo terminal".
+7. **Testar relé** (exige `equipamentos.liberar-acesso` e a flag): siga o roteiro da §14.
 8. Confira o **Histórico auditável** do equipamento e **Logs e auditoria**.
 9. Volte `SDV_INTEGRACAO_TESTE_RELE=false` e rode `php artisan config:clear`.
+
+## 14. Teste individual de relés
+
+Cada facial aciona somente o seu relé. A tela **Gestão › Equipamentos** tem a seção
+**Teste individual de relés**, com todas as faciais da implantação: nome, ponto, direção,
+porta do relé, online/offline, situação da homologação, última comunicação e o botão
+**Testar relé**. O botão fica desabilitado, com o motivo, enquanto faltar qualquer requisito.
+
+### 14.1 Regras
+
+- **Requisitos:** permissão `equipamentos.liberar-acesso`, `SDV_INTEGRACAO_TESTE_RELE=true`,
+  terminal "Em homologação" e vinculado a um ponto, online, certificado confiado, abertura remota
+  homologada para o firmware atual e confirmada no terminal.
+- **Equipamento resolvido no backend:** a tela envia só o id da facial. O SDV relê o
+  equipamento na implantação atual e monta endereço, porta do relé, certificado, credencial e
+  adaptador a partir do cadastro dele. Nada disso vem do navegador.
+- **Porta do relé por equipamento:** `equipamentos.porta_rele`, padrão 1. Trocar a porta ou o
+  firmware desfaz a homologação do relé.
+- **Proteções:** uma chave idempotente por confirmação (clique duplo e reenvio devolvem a mesma
+  operação); a mesma chave para outra facial é recusada; uma tentativa só, sem reenvio
+  automático; equipamento de outra implantação não é encontrado.
+- **Resultado:** solicitado, enviado, aceito pelo terminal, recusado, desconhecido ou falha.
+  Nenhuma entrada ou saída de pessoa é registrada; "aceito" não comprova o acionamento físico.
+- **Auditoria:** `liberacao_remota_solicitada` (operador, implantação, equipamento, ponto, porta,
+  motivo, data e hora, correlation ID, chave idempotente, IP do operador) e
+  `integracao_abertura_remota` (resultado, código, latência, correlation ID, chave). Nunca a
+  senha técnica.
+- **Endereço mascarado:** listas, detalhe e confirmação mostram o IP como `192.•••.•••.8`; o valor
+  completo fica só no backend e no formulário de cadastro.
+
+### 14.2 Roteiro de homologação manual (repetir para cada facial)
+
+1. Ligue `SDV_INTEGRACAO_TESTE_RELE=true` no `.env` local e rode `php artisan config:clear`.
+2. Em **Gestão › Equipamentos › Teste individual de relés**, localize a facial. Se o botão
+   estiver desabilitado, resolva o motivo exibido (por exemplo: testar a conexão, confiar no
+   certificado ou consultar as capacidades).
+3. Clique em **Testar relé** e confira na confirmação: nome, fabricante e modelo, número de série,
+   ponto, direção, endereço mascarado, porta do relé e o aviso de teste em bancada. Confirme que é
+   o terminal à sua frente.
+4. Informe o motivo, marque a confirmação e clique em **Confirmar teste do relé** uma vez.
+5. Observe o relé e anote se houve clique/acionamento. O SDV deve mostrar "Aceito pelo terminal".
+6. Clique em **Testar de novo** e repita uma vez para confirmar a estabilidade.
+7. Com dois testes aceitos e o clique observado, clique em **Registrar relé homologado**, marque
+   "Observei o clique/acionamento" e descreva o que foi observado. A facial passa a mostrar
+   "Relé homologado".
+8. Passe para a próxima facial e repita do passo 2.
+9. Ao terminar, volte `SDV_INTEGRACAO_TESTE_RELE=false` e rode `php artisan config:clear`.
+
+A abertura operacional (`SDV_INTEGRACAO_ABERTURA_REMOTA`) continua desligada: este roteiro é só
+homologação em bancada.

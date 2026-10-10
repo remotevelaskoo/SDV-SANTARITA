@@ -945,8 +945,8 @@ com a homologação em bancada da facial (SDV-INT-016, ADR-016 §21):
 | Conexão (§23.2) | IP local, porta, HTTP/HTTPS, timeout, certificado confiado (chave fixada) e credencial protegida; módulo seguro RS-485 |
 | Segredos (§23.2) | senha digitada uma vez, cifrada, nunca devolvida ao navegador, substituída por ação própria ("Trocar credencial") e auditada sem valor |
 | Estado técnico (§23.3) | online/offline, última comunicação, última falha com erro sanitizado, firmware e matriz de capacidades |
-| Ações (§23.4) | Testar conexão, Consultar capacidades, Ler e confiar no certificado, Atualizar imagem, Trocar credencial, Liberar acesso (teste do relé) e histórico auditável |
-| Teste (§23.5) | "Liberar acesso" só funciona na bancada, com terminal em homologação, permissão explícita, motivo e confirmação; registra "aceito", nunca acesso realizado; não cadastra pessoas |
+| Ações (§23.4) | Testar conexão, Consultar capacidades, Ler e confiar no certificado, Atualizar imagem, Trocar credencial, Testar relé (seção "Teste individual de relés", SDV-INT-016 §14) e histórico auditável |
+| Teste (§23.5) | "Testar relé" só funciona na bancada, com terminal em homologação, permissão explícita, motivo e confirmação; registra "aceito", nunca acesso realizado; não cadastra pessoas |
 
 Permissões: `integracoes.gerenciar` para a tela, o diagnóstico e a imagem;
 `equipamentos.liberar-acesso` (nova) para o teste do relé. Pontos de acesso ainda não têm tela
