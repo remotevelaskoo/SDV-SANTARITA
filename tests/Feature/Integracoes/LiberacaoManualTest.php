@@ -342,6 +342,20 @@ class LiberacaoManualTest extends TestCase
         $this->assertSame(1, $this->simulador()->totalAberturasFisicas($equipamento->id));
     }
 
+    public function test_tela_explica_o_que_falta_quando_nenhum_equipamento_esta_pronto(): void
+    {
+        $equipamento = $this->terminalOperacional('Facial Entrada Principal');
+        $operador = $this->operador();
+        $this->posto($equipamento, $operador);
+        $equipamento->forceFill(['rele_homologado_em' => null])->save();
+
+        Livewire::actingAs($operador)->test(LiberacaoManualPortaria::class)
+            ->assertSee('O que falta')
+            ->assertSee('Facial Entrada Principal')
+            ->assertSee('O relé deste terminal ainda não foi homologado.')
+            ->assertDontSee($equipamento->endereco_rede);
+    }
+
     public function test_tela_sem_permissao_ou_com_flag_desligada_nao_oferece_liberacao(): void
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');

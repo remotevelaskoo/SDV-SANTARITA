@@ -6,6 +6,7 @@ use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\LiberacaoManual;
 use App\Integracoes\Aplicacao\ProcessadorOperacoes;
 use App\Integracoes\Dominio\Enums\Direcao;
+use App\Integracoes\Dominio\Enums\TipoPontoAcesso;
 use App\Integracoes\Dominio\Excecoes\PayloadDivergente;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\Equipamento;
@@ -200,6 +201,7 @@ class LiberacaoManualPortaria extends Component
             'podeExcepcional' => $operador->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL),
             'postos' => $podeLiberar ? $liberacoes->postosDoOperador($operador) : collect(),
             'permitidos' => $permitidos,
+            'indisponiveis' => $posto && $podeLiberar && $permitidos === [] ? $this->indisponiveis($liberacoes, $operador, $posto) : [],
             'escolhido' => $escolhido,
             'resultadosBusca' => $this->modo === 'pessoa' && $this->pessoaId === null ? $this->buscarPessoas() : collect(),
             'pessoa' => $this->modo === 'pessoa' && $this->pessoaId ? $this->resumoPessoa($liberacoes, $operador) : null,
@@ -290,5 +292,31 @@ class LiberacaoManualPortaria extends Component
         abort_unless($usuario instanceof User, 403);
 
         return $usuario;
+    }
+
+    /**
+     * Por que cada terminal do posto não aparece, para o operador saber o que
+     * falta (nunca mostra IP, série ou dado técnico sensível).
+     *
+     * @return list<array{nome: string, ponto: string, motivos: list<string>}>
+     */
+    private function indisponiveis(LiberacaoManual $liberacoes, User $operador, Posto $posto): array
+    {
+        $lista = [];
+        foreach ($posto->pontosVigentes()->orderBy('nome')->get() as $ponto) {
+            if ($ponto->tipo === TipoPontoAcesso::Bancada) {
+                continue;
+            }
+            $equipamento = $ponto->vinculoVigente?->equipamento;
+            $lista[] = [
+                'nome' => $equipamento?->nome ?? 'Sem terminal',
+                'ponto' => $ponto->nome,
+                'motivos' => $equipamento
+                    ? array_values($liberacoes->bloqueios($equipamento, $operador, $posto, $this->direcaoEnum()))
+                    : ['O ponto não tem terminal vinculado.'],
+            ];
+        }
+
+        return $lista;
     }
 }

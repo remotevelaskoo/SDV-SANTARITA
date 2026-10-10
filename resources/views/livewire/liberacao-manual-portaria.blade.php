@@ -110,7 +110,16 @@
                     <x-ui.badge :variant="$escolhido['equipamento']->estado_saude->value === 'conectado' ? 'success' : 'neutral'">{{ $escolhido['equipamento']->estado_saude->value === 'conectado' ? 'Online' : 'Offline' }}</x-ui.badge>
                 </p>
             @elseif ($postoId && $permitidos === [])
-                <p class="equipamento-management-aviso">Nenhum equipamento deste posto atende a direção escolhida com todos os requisitos (ativo, online, homologado e com relé homologado).</p>
+                <div class="equipamento-management-aviso">
+                    <p>Nenhum equipamento deste posto está pronto para esta direção. O que falta:</p>
+                    <ul>
+                        @forelse ($indisponiveis as $item)
+                            <li><strong>{{ $item['nome'] }}</strong> ({{ $item['ponto'] }}): {{ implode(' ', $item['motivos']) }}</li>
+                        @empty
+                            <li>O posto não atende nenhum ponto de acesso real.</li>
+                        @endforelse
+                    </ul>
+                </div>
             @endif
 
             <x-ui.field id="lib-motivo" label="Motivo da liberação" wire:model="motivo" :error="$errors->first('motivo')" required />
