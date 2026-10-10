@@ -361,6 +361,17 @@ class EquipamentoManagement extends Component
         }
     }
 
+    /** Abre direto o registro da homologação do relé de uma facial (sem precisar testar de novo). */
+    public function abrirHomologacaoRele(string $id): void
+    {
+        $this->autorizarLiberacao();
+        $this->releEquipamentoId = $this->equipamento($id)->id;
+        $this->chaveLiberacao = null;
+        $this->operacaoLiberacaoId = null;
+        $this->feedback = null;
+        $this->iniciarHomologacaoRele();
+    }
+
     public function iniciarHomologacaoRele(): void
     {
         $this->autorizarLiberacao();

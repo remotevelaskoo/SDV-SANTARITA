@@ -137,14 +137,24 @@ class TesteReleBancada
         });
     }
 
-    /** Testes de bancada do relé deste terminal que o terminal aceitou. */
+    /** Testes do relé deste terminal, aceitos pelo terminal, no ponto em que ele está hoje. */
     public function testesAceitos(Equipamento $equipamento): int
     {
+        // Só contam os testes feitos no ponto atual, desde o vínculo vigente:
+        // os da bancada não homologam o contato seco da cancela.
+        $vinculo = $equipamento->vinculoVigente;
+        if ($vinculo === null) {
+            return 0;
+        }
+
         return Operacao::query()
             ->where('equipamento_id', $equipamento->id)
             ->where('operacao', OperacaoIntegracao::AberturaRemota->value)
             ->where('origem', ComandosAbertura::ORIGEM_TESTE_BANCADA)
             ->whereIn('resultado', [ResultadoEquipamento::Aceito->value, ResultadoEquipamento::Confirmado->value])
+            ->where('created_at', '>=', $vinculo->started_at)
+            ->get(['payload'])
+            ->filter(fn (Operacao $operacao) => ($operacao->payload['ponto_acesso_id'] ?? null) === $vinculo->ponto_acesso_id)
             ->count();
     }
 

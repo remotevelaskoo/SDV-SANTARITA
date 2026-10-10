@@ -6,6 +6,7 @@ use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\TesteReleBancada;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
 use App\Integracoes\Dominio\Enums\StatusPontoAcesso;
+use App\Livewire\EquipamentoManagement;
 use App\Livewire\PontoAcessoManagement;
 use App\Models\AuditoriaEvento;
 use App\Models\PontoAcesso;
@@ -117,6 +118,38 @@ class PontosAcessoTest extends TestCase
             ->call('alterarSituacaoPonto', $bancada->id, 'ativo')
             ->assertSet('feedback.variant', 'danger');
         $this->assertNotSame(StatusPontoAcesso::Ativo, $bancada->refresh()->status);
+    }
+
+    public function test_testes_da_bancada_nao_contam_e_homologacao_pode_ser_registrada_depois_de_ativar(): void
+    {
+        $terminal = $this->terminalEmHomologacao();
+        $operador = $this->usuarioCom('integracoes.gerenciar', ComandosAbertura::PERMISSAO_LIBERAR);
+        $testes = app(TesteReleBancada::class);
+        foreach (range(1, 2) as $i) {
+            $this->processar($testes->solicitar($terminal, 'rele:'.Str::uuid7(), $operador, 'Teste na bancada'));
+        }
+
+        $ponto = $this->novoPonto(['codigo' => 'CANCELA-01', 'nome' => 'Entrada Principal']);
+        $this->cadastro()->desvincularDoPonto($terminal, 'Instalação');
+        $this->cadastro()->vincularAoPonto($terminal->refresh(), $ponto);
+        $this->assertSame(0, $testes->testesAceitos($terminal->refresh()), 'Testes da bancada não valem no ponto real.');
+
+        foreach (range(1, 2) as $i) {
+            $this->processar($testes->solicitar($terminal, 'rele:'.Str::uuid7(), $operador, 'Contato seco'));
+        }
+        $this->assertSame(2, $testes->testesAceitos($terminal->refresh()));
+
+        // Ativou antes de registrar: o registro continua possível pela lista.
+        $this->cadastro()->alterarStatus($terminal, StatusEquipamento::Ativo, 'ativação');
+        Livewire::actingAs($operador)->test(EquipamentoManagement::class)
+            ->assertSee('Registrar relé homologado')
+            ->call('abrirHomologacaoRele', $terminal->id)
+            ->set('acionamentoObservado', true)
+            ->set('observacaoRele', 'Cancela abriu nos dois testes')
+            ->call('registrarHomologacaoRele')
+            ->assertSet('feedback.variant', 'success');
+
+        $this->assertNotNull($terminal->refresh()->rele_homologado_em);
     }
 
     public function test_vincular_sem_escolher_terminal_explica_em_vez_de_404(): void

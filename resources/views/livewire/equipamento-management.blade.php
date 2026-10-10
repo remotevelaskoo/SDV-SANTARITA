@@ -22,7 +22,9 @@
                 <div><dt>Testes aceitos</dt><dd>{{ $releTestesAceitos }} de {{ $releTestesParaHomologar }} para homologar{{ $releSelecionado->rele_homologado_em ? ' · relé homologado em '.$releSelecionado->rele_homologado_em->format('d/m/Y H:i') : '' }}</dd></div>
             </dl>
 
-            @if ($releSituacao)
+            @if ($registrandoHomologacaoRele)
+                <p class="equipamento-management-aviso">Testes aceitos neste ponto: {{ $releTestesAceitos }}. Registre somente se o clique/acionamento foi observado.</p>
+            @elseif ($releSituacao)
                 <p class="equipamento-management-resultado">
                     <strong>Resultado:</strong>
                     <x-ui.badge :variant="$releSituacao['variant']">{{ $releSituacao['rotulo'] }}</x-ui.badge>
@@ -118,6 +120,9 @@
                                     <x-ui.badge variant="info">{{ $facial->status->rotulo() }}</x-ui.badge>
                                     <x-ui.badge :variant="$facial->rele_homologado_em ? 'success' : 'warning'">{{ $facial->rele_homologado_em ? 'Relé homologado' : 'Relé em homologação ('.$linha['testes_aceitos'].' aceitos)' }}</x-ui.badge>
                                     <x-ui.button variant="danger" size="sm" wire:click="prepararTesteRele('{{ $facial->id }}')" :disabled="$linha['bloqueios'] !== []" title="{{ $linha['bloqueios'] === [] ? 'Testar o relé desta facial' : reset($linha['bloqueios']) }}">Testar relé</x-ui.button>
+                                    @if (! $facial->rele_homologado_em && $linha['testes_aceitos'] >= $releTestesParaHomologar)
+                                        <x-ui.button variant="primary" size="sm" wire:click="abrirHomologacaoRele('{{ $facial->id }}')">Registrar relé homologado</x-ui.button>
+                                    @endif
                                 </div>
                             </li>
                         @endforeach
