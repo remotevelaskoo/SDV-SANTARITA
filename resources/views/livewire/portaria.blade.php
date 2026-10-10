@@ -60,6 +60,12 @@
         </x-ui.card>
     </section>
 
+    @if (auth()->user()?->hasPermission('acessos.liberar-manualmente'))
+        <section aria-label="Liberação manual">
+            <livewire:liberacao-manual-portaria />
+        </section>
+    @endif
+
     <section aria-label="Atendimentos recentes">
         <x-ui.card title="Atendimentos recentes" description="Últimas interações realizadas nesta portaria">
             <x-ui.responsive-table
