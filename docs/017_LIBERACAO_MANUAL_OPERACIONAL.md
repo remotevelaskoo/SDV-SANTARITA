@@ -50,8 +50,18 @@ firmware atual, relé homologado (SDV-INT-016 §14) e direção compatível. Os 
 se nenhum cumprir, a tela informa.
 
 Hoje a facial de homologação está na bancada (ponto do tipo `bancada`, nunca ativado), portanto
-não aparece: é preciso vinculá-la ao ponto real (cancela ou catraca) e ativá-la depois da
-validação do contato seco.
+não aparece. Para levá-la ao ponto real, use **Gestão › Pontos de acesso**:
+
+1. cadastre a cancela ou catraca (começa "em implantação");
+2. informe o motivo e **desvincule** a facial da bancada; a homologação do relé é desfeita,
+   porque vale só para o ponto em que foi feita;
+3. **vincule** a facial ao ponto real; ela continua "Em homologação";
+4. em Gestão › Equipamentos, faça o **Testar relé** duas vezes no ponto real, observando a central
+   da cancela (contato seco), e registre o relé como homologado (SDV-INT-016 §14);
+5. com o motivo, **ative o ponto** e **ative o terminal**;
+6. em Postos e operadores, vincule o ponto ao posto e designe os operadores.
+
+Um terminal ativo não pode ser desvinculado: volte-o antes para homologação.
 
 ## 5. Fluxo operacional
 

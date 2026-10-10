@@ -971,6 +971,12 @@ Permissões novas:
 
 `equipamentos.liberar-acesso` continua restrita ao teste técnico do relé e não libera acesso.
 
+Tela **Gestão › Pontos de acesso** (`/pontos-acesso`, componente `PontoAcessoManagement`,
+permissão `integracoes.gerenciar`), que implementa §21: cadastro de cancela ou catraca,
+ativação e manutenção do ponto, vínculo e desvínculo do terminal e ativação do terminal, sempre
+com motivo auditado. Desvincular desfaz a homologação do relé; terminal ativo não é
+desvinculado; a bancada nunca é ativada.
+
 ---
 
 # 24. Adaptadores e desacoplamento

@@ -295,6 +295,10 @@ porta do relé, online/offline, situação da homologação, última comunicaç�
 8. Passe para a próxima facial e repita do passo 2.
 9. Ao terminar, volte `SDV_INTEGRACAO_TESTE_RELE=false` e rode `php artisan config:clear`.
 
+O mesmo roteiro vale com o terminal já vinculado ao ponto real (ainda "Em homologação"): é assim
+que o contato seco na central da cancela é homologado (ADR-016 §11, passo 9). Mudar o terminal de
+ponto desfaz a homologação do relé.
+
 A abertura operacional (`SDV_INTEGRACAO_ABERTURA_REMOTA`) continua desligada: este roteiro é só
 homologação em bancada. A liberação de pessoas pela portaria é outro fluxo, com permissão e
 configuração próprias: ver [SDV-OPE-017](017_LIBERACAO_MANUAL_OPERACIONAL.md) e o ADR-017.
