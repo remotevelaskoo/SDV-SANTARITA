@@ -1859,6 +1859,9 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .liberacao-manual__pessoa .ui-alert, .liberacao-manual__pessoa > button { grid-column: 1 / -1; }
 .liberacao-manual__avatar { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 999px; background: var(--blue-100, #dbeafe); color: var(--blue-700, #1d4ed8); font-weight: 700; }
 .liberacao-manual__resultado { display: grid; gap: 0.75rem; padding: 0 1rem 1rem; }
+.liberacao-manual__excepcional { margin: 0 1rem 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid var(--red-300, #fda29b); border-radius: 0.5rem; background: var(--red-50, #fef3f2); }
+.posto-selecao { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.posto-ativo { text-decoration: none; }
 .liberacao-manual .ui-alert { margin: 0 1rem 1rem; }
 .liberacao-manual .ui-field { margin: 0 1rem 0.75rem; }
 .liberacao-manual .equipamento-management-grid { padding: 0 1rem 0.75rem; }

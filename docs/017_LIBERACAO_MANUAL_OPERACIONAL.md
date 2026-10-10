@@ -20,14 +20,15 @@ gera evento de acesso e usa outra permissão e outra configuração (ADR-017 §3
 
 | Permissão | Uso | Concedida por padrão |
 |---|---|---|
-| `acessos.liberar-manualmente` | liberação manual de pessoa cadastrada | Administrador |
+| `acessos.liberar-reles-do-posto` | liberação manual pelos relés do posto ativo (substitui `acessos.liberar-manualmente`) | Administrador |
+| `acessos.liberar-outros-reles` | seção "Outros pontos de acesso", com confirmação destacada | Administrador |
 | `acessos.liberar-excepcionalmente` | liberação excepcional sem cadastro | Administrador |
 | `integracoes.gerenciar` | cadastro de postos, pontos atendidos e designação de operadores | Administrador |
 | `dados-sensiveis.revelar` | ver o documento sem máscara (a revelação é auditada) | conforme perfil |
 | `arquivos.sensiveis.visualizar` | abrir a foto/documento protegidos da pessoa | conforme perfil |
 | `equipamentos.liberar-acesso` | somente o teste técnico do relé; **não** libera acesso | Administrador |
 
-Para operar, conceda `acessos.liberar-manualmente` ao perfil de portaria em **Gestão › Perfis e
+Para operar, conceda `acessos.liberar-reles-do-posto` (e, se for o caso, `acessos.liberar-outros-reles`) ao perfil de portaria em **Gestão › Perfis e
 permissões**, depois da aprovação formal.
 
 ## 3. Postos e operadores
@@ -47,7 +48,15 @@ ao posto ativo.
 Devem ser diferenciadas as permissões de liberação dos relés do posto e de liberação de outros
 relés da implantação. Toda troca de posto e todo acionamento externo ao posto são auditados.
 
-Tabelas: `postos`, `posto_pontos_acesso` e `operador_postos` (vínculos com início e fim).
+Tabelas: `postos` (com `tipo`: principal, veiculos ou pedestres), `posto_pontos_acesso`,
+`operador_postos` (vínculos com início e fim) e `operador_turnos` (posto assumido no turno, com
+início, término e motivo: troca de posto, encerramento ou saída do sistema). O Modo Portaria
+leva o operador designado a escolher o posto (`/selecionar-posto`) antes de operar, e o posto
+ativo fica no cabeçalho. Os postos iniciais são criados pelo `PostoSeeder`.
+
+Ordem dos relés: os do posto primeiro; no posto de Veículos, cancelas antes de catracas; no de
+Pedestres, catracas antes de cancelas. A Guarita Principal mostra todos os relés aptos como do
+posto. O evento registra `operador_turno_id` e `fora_do_posto`.
 As câmeras USB são associadas localmente por navegador e posto, conforme SDV-OPE-018.
 
 ## 4. Requisitos para um equipamento aparecer

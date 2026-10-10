@@ -1,7 +1,7 @@
 # ADR-017 — LIBERAÇÃO MANUAL OPERACIONAL E TESTE TÉCNICO DO RELÉ
 
 **Identificador:** ADR-017  
-**Versão:** 1.1.0  
+**Versão:** 1.1.1  
 **Status:** Aprovado — implementação liberada; operação condicionada à homologação e à aprovação formal  
 **Prioridade:** P1 — Obrigatório antes de acionar pontos reais pela portaria  
 **Produto:** SDV Access — Implantação Santa Rita  
@@ -17,6 +17,7 @@
 |---|---|---|---|
 | 1.0.0 | 10/10/2026 | Product Owner | Separação entre teste técnico do relé e liberação manual operacional; postos e designação de operadores |
 | 1.1.0 | 10/10/2026 | Product Owner | Postos passam a definir equipamentos preferenciais, com alcance ampliado por permissão; exceção simplificada por checkbox |
+| 1.1.1 | 11/10/2026 | Soluções do Vale | Precisão de implementação: nomes das permissões de liberação (`acessos.liberar-reles-do-posto` substitui `acessos.liberar-manualmente`; `acessos.liberar-outros-reles`); decisão inalterada |
 
 # 1. Contexto
 
@@ -43,7 +44,7 @@ Manter **dois fluxos distintos**, com permissões, configurações e registros p
 |---|---|---|
 | Onde | Gestão › Equipamentos | Modo Portaria |
 | Para quê | bancada e manutenção | liberar entrada ou saída |
-| Permissão | `equipamentos.liberar-acesso` | `acessos.liberar-manualmente` (e `acessos.liberar-excepcionalmente` para o fluxo excepcional) |
+| Permissão | `equipamentos.liberar-acesso` | `acessos.liberar-reles-do-posto`, `acessos.liberar-outros-reles` (alcance ampliado) e `acessos.liberar-excepcionalmente` (checkbox excepcional) |
 | Configuração | `SDV_INTEGRACAO_TESTE_RELE` | `SDV_INTEGRACAO_LIBERACAO_OPERACIONAL` |
 | Terminal | "Em homologação" | "Ativo", em ponto real ativo |
 | Origem da operação | `teste_bancada` | `liberacao_manual` |

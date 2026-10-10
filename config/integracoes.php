@@ -38,6 +38,10 @@ return [
     // aprovação formal.
     'liberacao_operacional_habilitada' => (bool) env('SDV_INTEGRACAO_LIBERACAO_OPERACIONAL', false),
 
+    // Liberação excepcional por checkbox (ADR-017 §3.6): a observação é
+    // opcional; a administração pode torná-la obrigatória.
+    'liberacao_excepcional_observacao_obrigatoria' => (bool) env('SDV_LIBERACAO_EXCEPCIONAL_OBSERVACAO_OBRIGATORIA', false),
+
     // Validade máxima de um comando de abertura antes de expirar sem envio.
     'abertura_validade_segundos' => 15,
 

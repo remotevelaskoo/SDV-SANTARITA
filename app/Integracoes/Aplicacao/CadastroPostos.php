@@ -20,7 +20,7 @@ class CadastroPostos
 {
     public function __construct(private AuditService $audit) {}
 
-    public function criarPosto(string $codigo, string $nome, ?User $ator = null): Posto
+    public function criarPosto(string $codigo, string $nome, ?User $ator = null, string $tipo = Posto::TIPO_PRINCIPAL): Posto
     {
         $codigo = mb_strtoupper(trim($codigo));
         if (! preg_match('/^[A-Z0-9_-]{2,60}$/', $codigo) || mb_strlen(trim($nome)) < 3) {
@@ -30,8 +30,12 @@ class CadastroPostos
             throw new RegraIntegracaoViolada('posto_duplicado', 'Já existe um posto com este código nesta implantação.');
         }
 
-        $posto = Posto::query()->create(['codigo' => $codigo, 'nome' => trim($nome), 'status' => 'ativo', 'created_by' => $ator?->id]);
-        $this->auditar('posto_cadastrado', $posto->id, ['codigo' => $codigo, 'nome' => $posto->nome]);
+        if (! in_array($tipo, [Posto::TIPO_PRINCIPAL, Posto::TIPO_VEICULOS, Posto::TIPO_PEDESTRES], true)) {
+            throw new RegraIntegracaoViolada('posto_tipo_invalido', 'Tipo de posto inválido.');
+        }
+
+        $posto = Posto::query()->create(['codigo' => $codigo, 'nome' => trim($nome), 'tipo' => $tipo, 'status' => 'ativo', 'created_by' => $ator?->id]);
+        $this->auditar('posto_cadastrado', $posto->id, ['codigo' => $codigo, 'nome' => $posto->nome, 'tipo' => $tipo]);
 
         return $posto;
     }

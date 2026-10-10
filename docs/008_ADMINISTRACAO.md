@@ -966,7 +966,8 @@ Permissões novas:
 
 | Permissão | Uso |
 |---|---|
-| `acessos.liberar-manualmente` | liberação manual no Modo Portaria |
+| `acessos.liberar-reles-do-posto` | liberação manual pelos relés do posto ativo |
+| `acessos.liberar-outros-reles` | liberação manual de relés de outros pontos, com confirmação destacada |
 | `acessos.liberar-excepcionalmente` | liberação excepcional sem cadastro, com justificativa |
 
 `equipamentos.liberar-acesso` continua restrita ao teste técnico do relé e não libera acesso.

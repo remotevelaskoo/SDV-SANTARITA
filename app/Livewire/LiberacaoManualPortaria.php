@@ -5,14 +5,15 @@ namespace App\Livewire;
 use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\LiberacaoManual;
 use App\Integracoes\Aplicacao\ProcessadorOperacoes;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Integracoes\Dominio\Enums\Direcao;
 use App\Integracoes\Dominio\Enums\TipoPontoAcesso;
 use App\Integracoes\Dominio\Excecoes\PayloadDivergente;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
-use App\Models\Equipamento;
 use App\Models\HistoricoAcesso;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
+use App\Models\PontoAcesso;
 use App\Models\Posto;
 use App\Models\PreRegistration;
 use App\Models\User;
@@ -25,51 +26,40 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 
 /**
- * Área "Liberação manual" do Modo Portaria (ADR-017).
+ * Área "Liberação manual" do Modo Portaria (ADR-017 1.1.0, SDV-OPE-018).
  *
- * O componente só guarda ids e dados operacionais. A cada ação o backend
- * relê posto, pessoa e equipamento na implantação atual; endereço, porta,
- * certificado e credencial nunca passam pelo navegador.
+ * O posto vem do turno ativo. O componente guarda só ids e dados
+ * operacionais; a cada ação o backend relê pessoa e equipamento na
+ * implantação atual. Endereço, porta, certificado e credencial nunca passam
+ * pelo navegador.
  */
 class LiberacaoManualPortaria extends Component
 {
-    /** 'pessoa' (liberação normal) ou 'excepcional' (sem cadastro, auditoria reforçada) */
-    public string $modo = 'pessoa';
-
     public string $busca = '';
 
     public ?string $pessoaId = null;
-
-    public ?string $postoId = null;
 
     public string $direcao = 'entrada';
 
     public ?string $equipamentoId = null;
 
+    /** Mostra "Outros pontos de acesso" (permissão ampliada). */
+    public bool $mostrarOutros = false;
+
     public string $motivo = '';
 
-    public string $identificacao = '';
+    /** Checkbox "Liberação excepcional — prosseguir sem autorização regular confirmada". */
+    public bool $excepcional = false;
 
-    public string $justificativa = '';
+    public string $observacao = '';
+
+    public string $identificacao = '';
 
     public bool $confirmando = false;
 
     public ?string $chave = null;
 
     public ?string $historicoId = null;
-
-    public function mount(LiberacaoManual $liberacoes): void
-    {
-        $postos = $liberacoes->postosDoOperador($this->operador());
-        $this->postoId = $postos->count() === 1 ? $postos->first()->id : null;
-    }
-
-    public function alterarModo(string $modo): void
-    {
-        $this->modo = $modo === 'excepcional' ? 'excepcional' : 'pessoa';
-        $this->pessoaId = null;
-        $this->confirmando = false;
-    }
 
     public function selecionarPessoa(string $id, AuditService $audit): void
     {
@@ -90,44 +80,54 @@ class LiberacaoManualPortaria extends Component
         }
     }
 
-    public function updatedPostoId(): void
-    {
-        $this->equipamentoId = null;
-        $this->confirmando = false;
-    }
-
     public function updatedDirecao(): void
     {
         $this->equipamentoId = null;
         $this->confirmando = false;
     }
 
-    public function revisar(LiberacaoManual $liberacoes): void
+    public function updatedEquipamentoId(): void
+    {
+        $this->confirmando = false;
+    }
+
+    public function updatedExcepcional(): void
+    {
+        $this->confirmando = false;
+        if ($this->excepcional && ! $this->operador()->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL)) {
+            $this->excepcional = false;
+            $this->addError('excepcional', 'Você não tem a permissão de liberação excepcional.');
+        }
+    }
+
+    public function revisar(LiberacaoManual $liberacoes, TurnosOperacionais $turnos): void
     {
         $operador = $this->operador();
+        $posto = $turnos->turnoAtivo($operador)?->posto;
+        if ($posto === null) {
+            $this->addError('liberacao', 'Selecione o posto em que você está trabalhando.');
+
+            return;
+        }
 
         $this->validate(array_merge([
-            'postoId' => ['required', 'string'],
             'direcao' => ['required', 'in:entrada,saida'],
             'equipamentoId' => ['required', 'string'],
-            'motivo' => ['required', 'string', 'min:5', 'max:500'],
-        ], $this->modo === 'excepcional' ? [
-            'identificacao' => ['required', 'string', 'min:3', 'max:200'],
-            'justificativa' => ['required', 'string', 'min:20', 'max:1000'],
+            'observacao' => ['nullable', 'string', 'max:1000'],
+        ], $this->excepcional ? [
+            'identificacao' => ['nullable', 'string', 'max:200'],
         ] : [
             'pessoaId' => ['required', 'string'],
+            'motivo' => ['required', 'string', 'min:5', 'max:500'],
         ]), [
-            'pessoaId.required' => 'Selecione a pessoa. Sem cadastro, use a liberação excepcional.',
+            'pessoaId.required' => 'Selecione a pessoa ou marque a liberação excepcional.',
             'equipamentoId.required' => 'Escolha o ponto e o equipamento que serão acionados.',
-        ], [
-            'postoId' => 'posto', 'equipamentoId' => 'equipamento', 'identificacao' => 'identificação',
-        ]);
+        ], ['equipamentoId' => 'equipamento']);
 
-        // O equipamento escolhido precisa estar entre os permitidos agora.
-        $permitido = collect($liberacoes->equipamentosPermitidos($operador, $this->posto(), $this->direcaoEnum()))
-            ->contains(fn (array $item) => $item['equipamento']->id === $this->equipamentoId);
-        if (! $permitido) {
-            $this->addError('equipamentoId', 'Este equipamento não está disponível para o seu posto e a direção escolhida.');
+        $disponiveis = $liberacoes->equipamentosDisponiveis($operador, $posto, $this->direcaoEnum());
+        $todos = [...$disponiveis['preferenciais'], ...$disponiveis['outros']];
+        if (! collect($todos)->contains(fn (array $i) => $i['equipamento']->id === $this->equipamentoId)) {
+            $this->addError('equipamentoId', 'Este equipamento não está disponível para você nesta direção.');
 
             return;
         }
@@ -142,23 +142,24 @@ class LiberacaoManualPortaria extends Component
         $this->chave = null;
     }
 
-    public function confirmar(LiberacaoManual $liberacoes, ProcessadorOperacoes $processador): void
+    public function confirmar(LiberacaoManual $liberacoes, ProcessadorOperacoes $processador, TurnosOperacionais $turnos): void
     {
         $operador = $this->operador();
-        if (! $this->confirmando || $this->chave === null) {
+        if (! $this->confirmando || $this->chave === null || $this->equipamentoId === null) {
             return;
         }
 
         try {
             $evento = $liberacoes->solicitar($operador, [
-                'posto_id' => (string) $this->postoId,
-                'equipamento_id' => (string) $this->equipamentoId,
+                'equipamento_id' => $this->equipamentoId,
                 'direcao' => $this->direcao,
-                'pessoa_id' => $this->modo === 'pessoa' ? $this->pessoaId : null,
+                'pessoa_id' => $this->pessoaId,
                 'motivo' => $this->motivo,
-                'excepcional' => $this->modo === 'excepcional',
+                'excepcional' => $this->excepcional,
+                'observacao' => $this->observacao,
                 'identificacao' => $this->identificacao,
-                'justificativa' => $this->justificativa,
+                // A tela só chega aqui depois de mostrar a confirmação destacada.
+                'confirmou_fora_do_posto' => true,
             ], $this->chave);
 
             if ($evento->operacao_integracao_id !== null) {
@@ -177,34 +178,39 @@ class LiberacaoManualPortaria extends Component
 
     public function novaLiberacao(): void
     {
-        $this->reset(['busca', 'pessoaId', 'equipamentoId', 'motivo', 'identificacao', 'justificativa', 'confirmando', 'chave', 'historicoId']);
-        $this->modo = 'pessoa';
+        $this->reset(['busca', 'pessoaId', 'equipamentoId', 'motivo', 'observacao', 'identificacao', 'excepcional', 'mostrarOutros', 'confirmando', 'chave', 'historicoId']);
         $this->resetErrorBag();
     }
 
-    public function render(LiberacaoManual $liberacoes): View
+    public function render(LiberacaoManual $liberacoes, TurnosOperacionais $turnos): View
     {
         $operador = $this->operador();
         $podeLiberar = $operador->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL);
-        $posto = $this->postoId ? Posto::query()->find($this->postoId) : null;
-        $permitidos = $posto && $podeLiberar ? $liberacoes->equipamentosPermitidos($operador, $posto, $this->direcaoEnum()) : [];
+        $turno = $podeLiberar ? $turnos->turnoAtivo($operador) : null;
+        $posto = $turno?->posto;
+        $disponiveis = $posto ? $liberacoes->equipamentosDisponiveis($operador, $posto, $this->direcaoEnum()) : ['preferenciais' => [], 'outros' => []];
 
-        // Um único equipamento compatível vem pré-selecionado, sempre visível.
-        if ($this->equipamentoId === null && count($permitidos) === 1) {
-            $this->equipamentoId = $permitidos[0]['equipamento']->id;
+        // Um único preferencial compatível vem pré-selecionado, sempre visível.
+        if ($this->equipamentoId === null && count($disponiveis['preferenciais']) === 1) {
+            $this->equipamentoId = $disponiveis['preferenciais'][0]['equipamento']->id;
         }
-        $escolhido = collect($permitidos)->first(fn (array $item) => $item['equipamento']->id === $this->equipamentoId);
+        $escolhido = collect([...$disponiveis['preferenciais'], ...$disponiveis['outros']])
+            ->first(fn (array $i) => $i['equipamento']->id === $this->equipamentoId);
 
         return view('livewire.liberacao-manual-portaria', [
             'habilitada' => (bool) config('integracoes.liberacao_operacional_habilitada'),
             'podeLiberar' => $podeLiberar,
+            'podeOutros' => $operador->hasPermission(ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES),
             'podeExcepcional' => $operador->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL),
-            'postos' => $podeLiberar ? $liberacoes->postosDoOperador($operador) : collect(),
-            'permitidos' => $permitidos,
-            'indisponiveis' => $posto && $podeLiberar && $permitidos === [] ? $this->indisponiveis($liberacoes, $operador, $posto) : [],
+            'observacaoObrigatoria' => (bool) config('integracoes.liberacao_excepcional_observacao_obrigatoria'),
+            'turno' => $turno,
+            'posto' => $posto,
+            'preferenciais' => $disponiveis['preferenciais'],
+            'outros' => $disponiveis['outros'],
             'escolhido' => $escolhido,
-            'resultadosBusca' => $this->modo === 'pessoa' && $this->pessoaId === null ? $this->buscarPessoas() : collect(),
-            'pessoa' => $this->modo === 'pessoa' && $this->pessoaId ? $this->resumoPessoa($liberacoes, $operador) : null,
+            'indisponiveis' => $posto && $disponiveis['preferenciais'] === [] ? $this->indisponiveis($liberacoes, $operador, $posto) : [],
+            'resultadosBusca' => $this->pessoaId === null ? $this->buscarPessoas() : collect(),
+            'pessoa' => $this->pessoaId ? $this->resumoPessoa($liberacoes, $operador) : null,
             'evento' => $this->historicoId ? HistoricoAcesso::query()->with(['operacaoIntegracao', 'equipamento', 'pontoAcessoRegistro'])->find($this->historicoId) : null,
         ]);
     }
@@ -240,11 +246,9 @@ class LiberacaoManualPortaria extends Component
         $revelar = $operador->hasPermission('dados-sensiveis.revelar');
 
         return [
-            'pessoa' => $pessoa,
             'nome' => $pessoa->nomeExibicao(),
             'iniciais' => collect(explode(' ', $pessoa->nome))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode(''),
             'documento' => $documento === null ? 'Não informado' : ($revelar ? $documento : $this->mascarar($documento)),
-            'documentoRevelado' => $revelar,
             'perfil' => $vinculo ? ucfirst((string) $vinculo->tipo) : 'Sem vínculo',
             'imovel' => $vinculo?->imovel?->label() ?? 'Não vinculado',
             'autorizacao' => $vinculo && $vinculo->ativo() ? 'Vínculo vigente' : 'Sem autorização vigente',
@@ -269,41 +273,17 @@ class LiberacaoManualPortaria extends Component
         ];
     }
 
-    private function mascarar(string $documento): string
-    {
-        $digitos = preg_replace('/\D/', '', $documento) ?? '';
-
-        return strlen($digitos) === 11 ? '***.***.'.substr($digitos, 6, 3).'-**' : 'Documento protegido';
-    }
-
-    private function posto(): Posto
-    {
-        return Posto::query()->findOrFail($this->postoId);
-    }
-
-    private function direcaoEnum(): Direcao
-    {
-        return $this->direcao === 'saida' ? Direcao::Saida : Direcao::Entrada;
-    }
-
-    private function operador(): User
-    {
-        $usuario = Auth::user();
-        abort_unless($usuario instanceof User, 403);
-
-        return $usuario;
-    }
-
     /**
-     * Por que cada terminal do posto não aparece, para o operador saber o que
-     * falta (nunca mostra IP, série ou dado técnico sensível).
+     * Por que cada terminal do posto não aparece (nunca IP, série ou dado técnico sensível).
      *
      * @return list<array{nome: string, ponto: string, motivos: list<string>}>
      */
     private function indisponiveis(LiberacaoManual $liberacoes, User $operador, Posto $posto): array
     {
+        $pontos = $posto->principal() ? PontoAcesso::query()->orderBy('nome')->get() : $posto->pontosVigentes()->orderBy('nome')->get();
+
         $lista = [];
-        foreach ($posto->pontosVigentes()->orderBy('nome')->get() as $ponto) {
+        foreach ($pontos as $ponto) {
             if ($ponto->tipo === TipoPontoAcesso::Bancada) {
                 continue;
             }
@@ -318,5 +298,25 @@ class LiberacaoManualPortaria extends Component
         }
 
         return $lista;
+    }
+
+    private function mascarar(string $documento): string
+    {
+        $digitos = preg_replace('/\D/', '', $documento) ?? '';
+
+        return strlen($digitos) === 11 ? '***.***.'.substr($digitos, 6, 3).'-**' : 'Documento protegido';
+    }
+
+    private function direcaoEnum(): Direcao
+    {
+        return $this->direcao === 'saida' ? Direcao::Saida : Direcao::Entrada;
+    }
+
+    private function operador(): User
+    {
+        $usuario = Auth::user();
+        abort_unless($usuario instanceof User, 403);
+
+        return $usuario;
     }
 }

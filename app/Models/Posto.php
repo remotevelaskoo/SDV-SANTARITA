@@ -10,15 +10,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Posto ou guarita da portaria (ADR-017). Define quais pontos de acesso, e
- * portanto quais terminais, um operador pode acionar na liberação manual.
+ * Posto operacional da portaria (ADR-017 1.1.0, SDV-OPE-018). Define os
+ * pontos e equipamentos PREFERENCIAIS do turno, não um bloqueio absoluto:
+ * o posto principal alcança todos os relés autorizados; os demais mostram
+ * primeiro os seus e o restante depende de permissão ampliada.
  */
-#[Fillable(['implantacao_id', 'codigo', 'nome', 'status', 'created_by'])]
+#[Fillable(['implantacao_id', 'codigo', 'nome', 'tipo', 'status', 'created_by'])]
 class Posto extends Model
 {
     use BelongsToImplantacao, HasUuids;
 
+    public const TIPO_PRINCIPAL = 'principal';
+
+    public const TIPO_VEICULOS = 'veiculos';
+
+    public const TIPO_PEDESTRES = 'pedestres';
+
+    /** Postos iniciais da implantação Santa Rita (SDV-OPE-018 §2). */
+    public const INICIAIS = [
+        ['codigo' => 'GUARITA-PRINCIPAL', 'nome' => 'Guarita Principal', 'tipo' => self::TIPO_PRINCIPAL],
+        ['codigo' => 'GUARITA-VEICULOS', 'nome' => 'Guarita — Atendimento de Veículos', 'tipo' => self::TIPO_VEICULOS],
+        ['codigo' => 'GUARITA-PEDESTRES', 'nome' => 'Guarita — Atendimento de Pedestres', 'tipo' => self::TIPO_PEDESTRES],
+    ];
+
     protected $table = 'postos';
+
+    public function principal(): bool
+    {
+        return $this->tipo === self::TIPO_PRINCIPAL;
+    }
 
     /** @return HasMany<PostoPontoAcesso, $this> */
     public function pontosVinculados(): HasMany

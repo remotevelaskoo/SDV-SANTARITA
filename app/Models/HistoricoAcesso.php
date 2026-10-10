@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'ponto_acesso', 'tipo', 'resultado', 'motivo_negacao',
     'operator_id', 'protocol', 'notes', 'occurred_at',
     'origem', 'excepcional', 'identificacao_excepcional', 'justificativa_excepcional', 'motivo',
-    'posto_id', 'ponto_acesso_id', 'equipamento_id', 'operacao_integracao_id',
+    'posto_id', 'operador_turno_id', 'fora_do_posto', 'ponto_acesso_id', 'equipamento_id', 'operacao_integracao_id',
     'resultado_tecnico', 'correlation_id', 'chave_idempotencia',
 ])]
 class HistoricoAcesso extends Model
@@ -29,6 +29,7 @@ class HistoricoAcesso extends Model
         return [
             'occurred_at' => 'datetime',
             'excepcional' => 'boolean',
+            'fora_do_posto' => 'boolean',
         ];
     }
 

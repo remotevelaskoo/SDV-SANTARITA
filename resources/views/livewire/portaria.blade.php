@@ -60,7 +60,7 @@
         </x-ui.card>
     </section>
 
-    @if (auth()->user()?->hasPermission('acessos.liberar-manualmente'))
+    @if (auth()->user()?->hasPermission('acessos.liberar-reles-do-posto'))
         <section aria-label="Liberação manual">
             <livewire:liberacao-manual-portaria />
         </section>

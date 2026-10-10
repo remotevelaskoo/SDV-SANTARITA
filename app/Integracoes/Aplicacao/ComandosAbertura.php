@@ -34,9 +34,15 @@ class ComandosAbertura
     // Permissão administrativa do teste do relé; não serve para liberar acesso.
     public const PERMISSAO_LIBERAR = 'equipamentos.liberar-acesso';
 
-    public const PERMISSAO_LIBERACAO_MANUAL = 'acessos.liberar-manualmente';
+    // Liberação manual (ADR-017 1.1.0): relés do posto ativo; outros relés da
+    // implantação exigem a permissão ampliada e confirmação destacada.
+    public const PERMISSAO_LIBERACAO_MANUAL = 'acessos.liberar-reles-do-posto';
+
+    public const PERMISSAO_LIBERAR_OUTROS_RELES = 'acessos.liberar-outros-reles';
 
     public const PERMISSAO_LIBERACAO_EXCEPCIONAL = 'acessos.liberar-excepcionalmente';
+
+    public const MOTIVO_EXCEPCIONAL = 'liberacao_excepcional_operador';
 
     public function __construct(private OutboxIntegracao $outbox, private AuditService $audit) {}
 

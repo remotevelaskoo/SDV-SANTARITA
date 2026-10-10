@@ -8,13 +8,18 @@
             <div class="equipamento-management-grid">
                 <x-ui.field id="posto-codigo" label="Código" wire:model="codigo" placeholder="GUARITA-01" required />
                 <x-ui.field id="posto-nome" label="Nome" wire:model="nome" placeholder="Guarita Principal" required />
+                <x-ui.select id="posto-tipo" label="Tipo" wire:model="tipo">
+                    <option value="principal">Principal (todos os relés autorizados)</option>
+                    <option value="veiculos">Atendimento de veículos</option>
+                    <option value="pedestres">Atendimento de pedestres</option>
+                </x-ui.select>
             </div>
             <footer><x-ui.button type="submit" variant="primary">Cadastrar posto</x-ui.button></footer>
         </form>
     </x-ui.card>
 
     @forelse ($postos as $posto)
-        <x-ui.card :title="$posto->nome" :description="$posto->codigo.' · '.($posto->ativo() ? 'ativo' : $posto->status)">
+        <x-ui.card :title="$posto->nome" :description="$posto->codigo.' · '.$posto->tipo.' · '.($posto->ativo() ? 'ativo' : $posto->status)">
             <div class="equipamento-management-grid equipamento-management-form">
                 <section>
                     <h4>Pontos de acesso atendidos</h4>

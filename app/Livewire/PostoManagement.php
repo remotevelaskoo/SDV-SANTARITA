@@ -25,6 +25,8 @@ class PostoManagement extends Component
 
     public string $nome = '';
 
+    public string $tipo = 'principal';
+
     /** @var array<string, string> posto => ponto escolhido */
     public array $pontoEscolhido = [];
 
@@ -36,7 +38,7 @@ class PostoManagement extends Component
 
     public function criarPosto(CadastroPostos $cadastro): void
     {
-        $this->executar(fn () => $cadastro->criarPosto($this->codigo, $this->nome, $this->autorizar()), 'Posto cadastrado');
+        $this->executar(fn () => $cadastro->criarPosto($this->codigo, $this->nome, $this->autorizar(), $this->tipo), 'Posto cadastrado');
         $this->reset(['codigo', 'nome']);
     }
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\EquipamentoImagemController;
 use App\Http\Controllers\ProtectedFileController;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
@@ -26,6 +27,7 @@ use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\Reports;
 use App\Livewire\ResetPassword;
+use App\Livewire\SelecaoPosto;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Services\AuditService;
@@ -37,7 +39,12 @@ Route::redirect('/', '/entrar');
 
 Route::get('/entrar', Login::class)->name('login');
 
-Route::post('/sair', function (Request $request, AuditService $audit) {
+Route::post('/sair', function (Request $request, AuditService $audit, TurnosOperacionais $turnos) {
+    if ($request->user() !== null) {
+        // Sair do sistema encerra o turno no posto (SDV-OPE-018 §2).
+        rescue(fn () => $turnos->encerrar($request->user(), TurnosOperacionais::MOTIVO_SAIDA), report: false);
+    }
+
     $audit->record(
         action: 'saiu',
         module: 'autenticacao',
@@ -59,6 +66,7 @@ Route::get('/redefinir-senha/{token}', ResetPassword::class)->name('password.res
 
 Route::get('/dashboard', Dashboard::class)->middleware('auth')->name('dashboard');
 Route::get('/selecionar-implantacao', ImplantacaoSelection::class)->middleware('auth')->name('implantacao.selecionar');
+Route::get('/selecionar-posto', SelecaoPosto::class)->middleware('auth')->name('posto.selecionar');
 Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria');
 Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
 Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');
