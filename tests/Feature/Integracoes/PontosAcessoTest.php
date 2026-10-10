@@ -118,4 +118,36 @@ class PontosAcessoTest extends TestCase
             ->assertSet('feedback.variant', 'danger');
         $this->assertNotSame(StatusPontoAcesso::Ativo, $bancada->refresh()->status);
     }
+
+    public function test_vincular_sem_escolher_terminal_explica_em_vez_de_404(): void
+    {
+        $ponto = $this->novoPonto(['codigo' => 'CANCELA-ENTRADA', 'nome' => 'Entrada Principal']);
+
+        Livewire::actingAs($this->usuarioCom('integracoes.gerenciar'))->test(PontoAcessoManagement::class)
+            ->call('vincularTerminal', $ponto->id)
+            ->assertOk()
+            ->assertSet('feedback.title', 'Escolha o terminal');
+    }
+
+    public function test_facial_da_bancada_aparece_e_e_movida_direto_para_o_ponto_real(): void
+    {
+        $terminal = $this->terminalEmHomologacao(['nome' => 'Facial Homologação 01']);
+        $terminal->forceFill(['rele_homologado_em' => now()])->save();
+        $ponto = $this->novoPonto(['codigo' => 'CANCELA-ENTRADA', 'nome' => 'Entrada Principal']);
+
+        $tela = Livewire::actingAs($this->usuarioCom('integracoes.gerenciar'))->test(PontoAcessoManagement::class)
+            ->assertSee('Facial Homologação 01')
+            ->assertSee('será movido')
+            ->set('terminalEscolhido.'.$ponto->id, $terminal->id)
+            ->call('vincularTerminal', $ponto->id)
+            ->assertHasErrors('motivo');
+
+        $tela->set('motivo', 'Instalação na cancela real')
+            ->call('vincularTerminal', $ponto->id)
+            ->assertSet('feedback.variant', 'success');
+
+        $this->assertSame($ponto->id, $terminal->refresh()->pontoVigente()->id);
+        $this->assertNull($terminal->rele_homologado_em);
+        $this->assertSame(StatusEquipamento::EmHomologacao, $terminal->status);
+    }
 }

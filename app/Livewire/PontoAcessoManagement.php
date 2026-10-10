@@ -12,6 +12,7 @@ use App\Models\PontoAcesso;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 /**
@@ -66,10 +67,30 @@ class PontoAcessoManagement extends Component
     public function vincularTerminal(string $pontoId, CadastroEquipamentos $cadastro): void
     {
         $ator = $this->autorizar();
-        $terminalId = $this->terminalEscolhido[$pontoId] ?? '';
+        $terminal = Equipamento::query()->find($this->terminalEscolhido[$pontoId] ?? '');
+        $ponto = PontoAcesso::query()->find($pontoId);
+
+        if ($terminal === null || $ponto === null) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Escolha o terminal', 'message' => 'Selecione o terminal na lista antes de clicar em Vincular terminal.'];
+
+            return;
+        }
+
+        // Terminal ainda na bancada: mover exige motivo e desfaz a homologação do relé.
+        $naBancada = $terminal->pontoVigente()?->tipo === TipoPontoAcesso::Bancada;
+        if ($naBancada && ! $this->temMotivo()) {
+            return;
+        }
 
         $this->executar(
-            fn () => $cadastro->vincularAoPonto(Equipamento::query()->findOrFail($terminalId), PontoAcesso::query()->findOrFail($pontoId), $ator),
+            function () use ($cadastro, $terminal, $ponto, $naBancada, $ator) {
+                DB::transaction(function () use ($cadastro, $terminal, $ponto, $naBancada, $ator) {
+                    if ($naBancada) {
+                        $cadastro->desvincularDoPonto($terminal, $this->motivo, $ator);
+                    }
+                    $cadastro->vincularAoPonto($terminal->refresh(), $ponto, $ator);
+                });
+            },
             'Terminal vinculado',
             'Teste o relé neste ponto (Gestão › Equipamentos) e registre a homologação antes de ativar.',
         );
@@ -109,9 +130,12 @@ class PontoAcessoManagement extends Component
 
         return view('livewire.ponto-acesso-management', [
             'pontos' => PontoAcesso::query()->with('vinculoVigente.equipamento')->orderBy('nome')->get(),
+            // Livres ou ainda na bancada (mover para o ponto real).
             'terminaisLivres' => Equipamento::query()
                 ->where('status', '!=', StatusEquipamento::Inativo->value)
-                ->whereDoesntHave('vinculoVigente')
+                ->where(fn ($q) => $q->whereDoesntHave('vinculoVigente')
+                    ->orWhereHas('vinculoVigente.pontoAcesso', fn ($p) => $p->where('tipo', TipoPontoAcesso::Bancada->value)))
+                ->with('vinculoVigente.pontoAcesso')
                 ->orderBy('nome')
                 ->get(),
             'bancada' => TipoPontoAcesso::Bancada,

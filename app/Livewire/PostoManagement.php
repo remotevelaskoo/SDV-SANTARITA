@@ -44,6 +44,11 @@ class PostoManagement extends Component
     {
         $ator = $this->autorizar();
         $pontoId = $this->pontoEscolhido[$postoId] ?? '';
+        if ($pontoId === '') {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Escolha o ponto', 'message' => 'Selecione o ponto de acesso na lista antes de vincular.'];
+
+            return;
+        }
         $this->executar(fn () => $cadastro->vincularPonto(Posto::query()->findOrFail($postoId), PontoAcesso::query()->findOrFail($pontoId), $ator), 'Ponto vinculado ao posto');
     }
 
@@ -57,6 +62,11 @@ class PostoManagement extends Component
     {
         $ator = $this->autorizar();
         $userId = (int) ($this->operadorEscolhido[$postoId] ?? 0);
+        if ($userId === 0) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Escolha o operador', 'message' => 'Selecione o operador na lista antes de designar.'];
+
+            return;
+        }
         $this->executar(fn () => $cadastro->designarOperador(Posto::query()->findOrFail($postoId), $this->usuarioDaImplantacao($userId), $ator), 'Operador designado');
     }
 

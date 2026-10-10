@@ -61,9 +61,9 @@
                     <x-ui.button variant="ghost" size="sm" wire:click="desvincularTerminal('{{ $terminal->id }}')">Desvincular terminal</x-ui.button>
                 @elseif ($ponto->status->value !== 'inativo')
                     <x-ui.select id="terminal-{{ $ponto->id }}" label="Terminal" wire:model="terminalEscolhido.{{ $ponto->id }}">
-                        <option value="">{{ $terminaisLivres->isEmpty() ? 'Nenhum terminal livre' : 'Escolha o terminal' }}</option>
+                        <option value="">{{ $terminaisLivres->isEmpty() ? 'Nenhum terminal disponível' : 'Escolha o terminal' }}</option>
                         @foreach ($terminaisLivres as $livre)
-                            <option value="{{ $livre->id }}">{{ $livre->nome }} ({{ $livre->direcao->value }})</option>
+                            <option value="{{ $livre->id }}">{{ $livre->nome }} ({{ $livre->direcao->value }}){{ $livre->vinculoVigente ? ' — hoje na '.$livre->vinculoVigente->pontoAcesso?->nome.', será movido' : '' }}</option>
                         @endforeach
                     </x-ui.select>
                     <x-ui.button variant="secondary" size="sm" wire:click="vincularTerminal('{{ $ponto->id }}')">Vincular terminal</x-ui.button>
