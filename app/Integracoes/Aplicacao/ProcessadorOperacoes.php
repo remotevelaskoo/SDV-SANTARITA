@@ -77,7 +77,7 @@ class ProcessadorOperacoes
             $this->aplicarEfeitos($operacao, $equipamento, $resultado, contatouEquipamento: $bloqueio === null);
             $this->concluir($operacao, $resultado);
             $this->registrarOcorrencia($operacao, $resultado, $latencia);
-            $this->auditar($operacao, $resultado);
+            $this->auditar($operacao, $resultado, $latencia);
         });
 
         return $operacao->refresh();
@@ -540,7 +540,7 @@ class ProcessadorOperacoes
         ]));
     }
 
-    private function auditar(Operacao $operacao, ResultadoOperacao|CapacidadesDeclaradas|ResultadoColetaEventos $resultado): void
+    private function auditar(Operacao $operacao, ResultadoOperacao|CapacidadesDeclaradas|ResultadoColetaEventos $resultado, int $latencia): void
     {
         $this->audit->record(
             action: 'integracao_'.$operacao->operacao->value,
@@ -551,6 +551,7 @@ class ProcessadorOperacoes
                 ResultadoEquipamento::Confirmado => 'sucesso',
                 // Aceito pelo terminal não é execução comprovada (RN-080).
                 ResultadoEquipamento::Aceito => 'aceito',
+                ResultadoEquipamento::Recusado => 'recusado',
                 ResultadoEquipamento::ConfirmacaoDesconhecida => 'desconhecido',
                 default => 'falha',
             },
@@ -562,6 +563,10 @@ class ProcessadorOperacoes
                 'estado_outbox' => $operacao->estado->value,
                 'tentativa' => $operacao->tentativas,
                 'correlation_id' => $operacao->correlation_id,
+                'chave_idempotencia' => $operacao->chave_idempotencia,
+                'origem' => $operacao->origem,
+                'porta_rele' => $operacao->payload['porta_rele'] ?? null,
+                'latencia_ms' => $latencia,
             ],
             implantacaoId: $operacao->implantacao_id,
         );
