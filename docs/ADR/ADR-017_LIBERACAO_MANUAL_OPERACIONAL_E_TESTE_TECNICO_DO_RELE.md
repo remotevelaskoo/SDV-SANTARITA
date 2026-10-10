@@ -1,7 +1,7 @@
 # ADR-017 — LIBERAÇÃO MANUAL OPERACIONAL E TESTE TÉCNICO DO RELÉ
 
 **Identificador:** ADR-017  
-**Versão:** 1.0.0  
+**Versão:** 1.1.0  
 **Status:** Aprovado — implementação liberada; operação condicionada à homologação e à aprovação formal  
 **Prioridade:** P1 — Obrigatório antes de acionar pontos reais pela portaria  
 **Produto:** SDV Access — Implantação Santa Rita  
@@ -16,6 +16,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | 10/10/2026 | Product Owner | Separação entre teste técnico do relé e liberação manual operacional; postos e designação de operadores |
+| 1.1.0 | 10/10/2026 | Product Owner | Postos passam a definir equipamentos preferenciais, com alcance ampliado por permissão; exceção simplificada por checkbox |
 
 # 1. Contexto
 
@@ -54,16 +55,19 @@ não alterado por este ADR.
 
 ## 3.1 Postos e designação de operadores
 
-- **Posto** (guarita) da implantação atende um conjunto de **pontos de acesso**;
-- o **equipamento permitido** é o terminal vigente de cada ponto (vínculo exclusivo do ADR-016);
-- o **operador** é designado a postos com início e fim; trocar de função encerra a designação;
-- nenhum operador tem acesso global aos equipamentos: só aciona o que o seu posto atende.
+- **Posto** é o contexto operacional e possui pontos e equipamentos preferenciais;
+- o equipamento do posto é o terminal vigente de cada ponto (vínculo exclusivo do ADR-016);
+- o operador é designado a postos com início e fim; trocar de função encerra a designação;
+- a Guarita Principal pode operar todos os relés autorizados da implantação;
+- nos demais postos, os equipamentos locais aparecem primeiro; operador com permissão ampliada
+  pode selecionar outro ponto da implantação mediante confirmação destacada;
+- posto não substitui permissão: o backend combina operador, posto, implantação e equipamento.
 
 ## 3.2 Equipamento elegível para a liberação manual
 
 Somente terminais:
 
-- da implantação ativa, de um ponto atendido por posto em que o operador está designado;
+- da implantação ativa; preferencialmente de um ponto do posto ativo ou, com permissão ampliada, de outro ponto autorizado;
 - com terminal e ponto ativos, terminal online e certificado confiável;
 - com abertura remota **homologada** para o firmware atual e relé homologado;
 - compatíveis com a direção escolhida (terminal e ponto).
@@ -96,24 +100,26 @@ quando houver, identificação e justificativa excepcionais.
 
 ## 3.6 Liberação excepcional
 
-Para quem não tem cadastro ou vínculo: permissão própria, identificação de quem ou do que está
-sendo liberado, justificativa de no mínimo 20 caracteres, evento marcado como excepcional e
-auditoria restrita (`liberacao_manual_excepcional_solicitada`). Não se mistura com o acesso
-normal.
+A excepcionalidade é ativada por checkbox explícito, com permissão própria e confirmação
+destacada. Para agilizar, não exige justificativa textual no fluxo padrão: o sistema grava
+automaticamente o motivo `liberacao_excepcional_operador`. Identificação ou ocorrência é
+associada quando disponível, e uma observação complementar pode ser opcional ou exigida por
+configuração administrativa. O evento permanece marcado como excepcional e gera auditoria
+restrita (`liberacao_manual_excepcional_solicitada`). Não se mistura com acesso normal.
 
 # 4. Alternativas consideradas
 
 | Alternativa | Decisão | Justificativa |
 |---|---|---|
 | Reutilizar o teste do relé na portaria | Rejeitada | sem pessoa, motivo nem evento; permissão administrativa viraria operacional |
-| Permitir qualquer equipamento da implantação | Rejeitada | viola menor privilégio; risco de acionar o ponto errado |
+| Permitir equipamento externo ao posto sem permissão ou confirmação | Rejeitada | viola menor privilégio e aumenta o risco de acionar o ponto errado |
+| Permitir outros equipamentos com permissão ampliada e confirmação destacada | Adotada | garante cobertura entre guaritas sem perder rastreabilidade |
 | Liberar sem pessoa pelo fluxo normal | Rejeitada | mistura exceção com rotina e enfraquece a auditoria |
 | Fluxos separados com postos e designação | Adotada | contexto operacional explícito e rastreável |
 
 # 5. Consequências
 
-**Positivas:** menor privilégio por posto; evento de acesso completo; exceção visível; teste e
-operação com chaves de liberação independentes.
+**Positivas:** equipamentos priorizados por posto; cobertura operacional entre guaritas mediante permissão; evento de acesso completo; exceção visível e rápida; teste e operação com chaves independentes.
 
 **Negativas:** cadastro adicional de postos e designações; nenhum terminal fica elegível até
 existir ponto real ativo, terminal ativo e relé homologado; a autorização exibida ainda é o
@@ -134,13 +140,13 @@ vínculo vigente, porque o módulo de autorizações não existe.
 **CA-ADR-017-001:** teste do relé nunca gera evento de acesso.  
 **CA-ADR-017-002:** liberação manual sempre gera evento de acesso com origem `liberacao_manual`.  
 **CA-ADR-017-003:** a permissão de teste do relé não libera acesso.  
-**CA-ADR-017-004:** operador só vê e aciona terminais dos seus postos.  
+**CA-ADR-017-004:** operador vê primeiro os terminais do posto e somente aciona outros terminais quando possuir permissão ampliada, com confirmação destacada.  
 **CA-ADR-017-005:** nenhum dado de conexão é aceito do navegador.  
 **CA-ADR-017-006:** "aceita pelo terminal" não é apresentada como passagem confirmada.  
-**CA-ADR-017-007:** liberação excepcional exige permissão, identificação e justificativa próprias.  
+**CA-ADR-017-007:** liberação excepcional exige permissão, checkbox e confirmação, grava motivo padronizado e aceita observação opcional conforme configuração.  
 **CA-ADR-017-008:** a funcionalidade fica desligada por padrão.
 
 # 8. Rastreabilidade
 
 ADR-002, ADR-004, ADR-005, ADR-007, ADR-008, ADR-009, ADR-013 e ADR-016; documento
-[SDV-OPE-017](../017_LIBERACAO_MANUAL_OPERACIONAL.md).
+[SDV-OPE-017](../017_LIBERACAO_MANUAL_OPERACIONAL.md) e [SDV-OPE-018](../018_POSTOS_OPERACIONAIS_E_CADASTRO_ASSISTIDO_POR_CAMERA.md).
