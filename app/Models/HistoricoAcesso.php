@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'implantacao_id', 'pessoa_id', 'imovel_id', 'veiculo_id',
     'ponto_acesso', 'tipo', 'resultado', 'motivo_negacao',
     'operator_id', 'protocol', 'notes', 'occurred_at',
+    'origem', 'excepcional', 'identificacao_excepcional', 'justificativa_excepcional', 'motivo',
+    'posto_id', 'ponto_acesso_id', 'equipamento_id', 'operacao_integracao_id',
+    'resultado_tecnico', 'correlation_id', 'chave_idempotencia',
 ])]
 class HistoricoAcesso extends Model
 {
@@ -25,6 +28,7 @@ class HistoricoAcesso extends Model
     {
         return [
             'occurred_at' => 'datetime',
+            'excepcional' => 'boolean',
         ];
     }
 
@@ -50,5 +54,29 @@ class HistoricoAcesso extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operator_id');
+    }
+
+    /** @return BelongsTo<Posto, $this> */
+    public function posto(): BelongsTo
+    {
+        return $this->belongsTo(Posto::class);
+    }
+
+    /** @return BelongsTo<PontoAcesso, $this> */
+    public function pontoAcessoRegistro(): BelongsTo
+    {
+        return $this->belongsTo(PontoAcesso::class, 'ponto_acesso_id');
+    }
+
+    /** @return BelongsTo<Equipamento, $this> */
+    public function equipamento(): BelongsTo
+    {
+        return $this->belongsTo(Equipamento::class);
+    }
+
+    /** @return BelongsTo<OperacaoIntegracao, $this> */
+    public function operacaoIntegracao(): BelongsTo
+    {
+        return $this->belongsTo(OperacaoIntegracao::class);
     }
 }

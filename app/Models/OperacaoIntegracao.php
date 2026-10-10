@@ -54,4 +54,25 @@ class OperacaoIntegracao extends Model
     {
         return $this->hasMany(IntegracaoOcorrencia::class);
     }
+
+    /**
+     * Estado técnico do comando para o operador (ADR-017): solicitada,
+     * enviada, aceita, confirmada, recusada, desconhecida, expirada,
+     * cancelada ou falha. "Aceita" é o terminal ter recebido o comando, não a
+     * passagem física.
+     */
+    public function resultadoTecnico(): string
+    {
+        return match (true) {
+            $this->estado === EstadoOutbox::Cancelado => 'cancelada',
+            $this->estado === EstadoOutbox::Pendente => 'solicitada',
+            $this->estado === EstadoOutbox::Processando => 'enviada',
+            $this->resultado === ResultadoEquipamento::Aceito => 'aceita',
+            $this->resultado === ResultadoEquipamento::Confirmado => 'confirmada',
+            in_array($this->resultado, [ResultadoEquipamento::Recusado, ResultadoEquipamento::CapacidadeAusente], true) => 'recusada',
+            $this->resultado === ResultadoEquipamento::ConfirmacaoDesconhecida => 'desconhecida',
+            $this->resultado === ResultadoEquipamento::Expirado => 'expirada',
+            default => 'falha',
+        };
+    }
 }
