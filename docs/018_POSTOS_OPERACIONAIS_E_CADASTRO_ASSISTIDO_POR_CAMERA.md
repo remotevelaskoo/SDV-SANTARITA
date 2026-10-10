@@ -126,3 +126,37 @@ A captura utilizará APIs `MediaDevices/getUserMedia`, mantendo Blade e Livewire
 - definir limiares de qualidade/confiança;
 - homologar navegadores e computadores;
 - definir perfis com alcance sobre relés externos ao posto.
+
+## 12. Notas de implementação (11/10/2026)
+
+Precisões da primeira implementação, sem alterar as decisões acima.
+
+**Postos.** `postos.tipo` (principal, veiculos, pedestres) e `operador_turnos` (início, término,
+troca, encerramento e saída do sistema). O Modo Portaria leva o operador designado a
+`/selecionar-posto`; o posto ativo aparece no cabeçalho. Permissões: `acessos.liberar-reles-do-posto`,
+`acessos.liberar-outros-reles`, `acessos.liberar-excepcionalmente`. Configuração da observação
+obrigatória na exceção: `SDV_LIBERACAO_EXCEPCIONAL_OBSERVACAO_OBRIGATORIA` (padrão `false`).
+
+**Câmeras locais.** Associação guardada no `localStorage` do navegador com a chave
+`sdv.cameras.{implantação}.{posto}` e as finalidades `documentos` e `placas`
+(`resources/js/camera-preferencias.js`). A tela de seleção do posto tem o painel "Câmeras deste
+computador". `getUserMedia` é sempre chamado com `audio: false`. Câmera ausente, substituída ou
+sem autorização gera aviso e pede nova seleção. Testes em `tests/js` (`npm run test:js`).
+A câmera de placas é só associada nesta entrega; o uso dela fica para a leitura de placas.
+
+**Captura e qualidade.** O Cadastro rápido captura frente e verso pela câmera de documentos ou
+recebe arquivo (contingência). A avaliação roda no servidor, em memória, com GD
+(`App\Documentos\Infra\AvaliadorQualidadeImagem`): resolução, iluminação, reflexo, foco,
+movimento e enquadramento. Inclinação, obstrução e face esperada ainda não são medidas (dependem
+do OCR real). Os limiares em `config/documentos.php` são provisórios até a homologação das
+câmeras. A permissão `documentos.capturar` controla a captura.
+
+**OCR.** Porta `App\Documentos\Dominio\PortaOcrDocumento`; nesta entrega só o simulador
+(`OcrSimulador`), que por padrão responde "documento não identificado". Confiança mínima:
+`SDV_OCR_CONFIANCA_MINIMA` (padrão 0,85). Campos abaixo dela ficam "Requer conferência" e
+impedem salvar até o operador confirmar ou corrigir. Nada é aprovado, autorizado ou liberado pela
+leitura.
+
+**Retenção.** `SDV_CAPTURA_DOCUMENTO_RETENCAO=nao_persistir`: o upload temporário é apagado logo
+após a análise e nenhuma imagem é guardada. A auditoria (`documento_capturado_analisado`) registra
+origem, resultado, códigos de qualidade e nomes de campos, nunca imagem, CPF ou outro valor.

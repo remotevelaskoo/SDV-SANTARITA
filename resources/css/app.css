@@ -1862,6 +1862,18 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .liberacao-manual__excepcional { margin: 0 1rem 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid var(--red-300, #fda29b); border-radius: 0.5rem; background: var(--red-50, #fef3f2); }
 .posto-selecao { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 .posto-ativo { text-decoration: none; }
+.captura-documento { display: grid; gap: 0.75rem; margin-bottom: 1rem; padding: 0.85rem; border: 1px dashed var(--neutral-300); border-radius: 0.5rem; }
+.captura-documento header { display: grid; gap: 0.2rem; }
+.captura-documento header small { color: var(--neutral-600); font-size: 0.65rem; }
+.captura-documento__camera { display: flex; flex-wrap: wrap; align-items: end; gap: 0.5rem; }
+.captura-documento__visor { position: relative; max-width: 32rem; }
+.captura-documento__visor video { display: block; width: 100%; border-radius: 0.5rem; background: #000; }
+.captura-documento__moldura { position: absolute; inset: 12% 8%; border: 3px solid rgb(255 255 255 / 0.85); border-radius: 0.6rem; box-shadow: 0 0 0 999px rgb(0 0 0 / 0.25); pointer-events: none; }
+.captura-documento__miniaturas { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.captura-documento__miniaturas figure { margin: 0; }
+.captura-documento__miniaturas img { width: 9rem; border-radius: 0.4rem; border: 1px solid var(--neutral-200); }
+.captura-documento__miniaturas figcaption, .captura-documento__contingencia summary { font-size: 0.65rem; color: var(--neutral-600); }
+.captura-documento__conferir { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem; }
 .liberacao-manual .ui-alert { margin: 0 1rem 1rem; }
 .liberacao-manual .ui-field { margin: 0 1rem 0.75rem; }
 .liberacao-manual .equipamento-management-grid { padding: 0 1rem 0.75rem; }

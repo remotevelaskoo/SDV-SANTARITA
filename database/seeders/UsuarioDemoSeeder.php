@@ -53,6 +53,7 @@ class UsuarioDemoSeeder extends Seeder
         'equipamentos.liberar-acesso' => ['modulo' => 'integracoes', 'descricao' => 'Liberar acesso remotamente pelo equipamento (teste do relé em homologação)'],
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
         'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],
+        'documentos.capturar' => ['modulo' => 'cadastro', 'descricao' => 'Capturar documento pela câmera do posto no cadastro rápido (sugestão por OCR)'],
         'arquivos.sensiveis.visualizar' => ['modulo' => 'arquivos', 'descricao' => 'Visualizar documentos, fotos e selfies protegidos'],
         'dados-sensiveis.revelar' => ['modulo' => 'dados-sensiveis', 'descricao' => 'Revelar temporariamente documentos pessoais para conferência operacional'],
     ];
@@ -67,6 +68,7 @@ class UsuarioDemoSeeder extends Seeder
         'pre-registro.rejeitar',
         'pre-registro.solicitar-correcao',
         'arquivos.sensiveis.visualizar',
+        'documentos.capturar',
         'dados-sensiveis.revelar',
         'validacao.registrar',
         'imoveis.consultar',

@@ -28,6 +28,31 @@
     @endif
 
     @if ($turno)
+        <x-ui.card title="Câmeras deste computador" description="Associe as câmeras USB deste computador ao posto {{ $turno->posto->nome }}. A escolha fica salva só neste navegador.">
+            <div class="captura-documento" wire:key="cameras-{{ $turno->posto_id }}"
+                x-data="camerasDoPosto({ implantacaoId: @js($turno->implantacao_id), postoId: @js($turno->posto_id), modo: 'configuracao' })">
+                <p class="equipamento-management-aviso" x-show="aviso" x-text="aviso"></p>
+                <div class="equipamento-management-grid">
+                    @foreach (['documentos' => 'Câmera de documentos', 'placas' => 'Câmera de placas'] as $finalidade => $rotulo)
+                        <label class="ui-field">
+                            <span class="ui-field__label">{{ $rotulo }}</span>
+                            <span class="ui-select-control">
+                                <select class="ui-field__control ui-field__select" x-model="escolhas.{{ $finalidade }}" x-on:change="escolher('{{ $finalidade }}', $event.target.value)">
+                                    <option value="">Escolha a câmera</option>
+                                    <template x-for="camera in cameras" :key="camera.deviceId">
+                                        <option :value="camera.deviceId" x-text="camera.label || 'Câmera sem nome (autorize o acesso)'"></option>
+                                    </template>
+                                </select>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+                <div class="equipamento-management-acoes">
+                    <button type="button" class="ui-button ui-button--secondary ui-button--sm" x-on:click="autorizar()"><span class="ui-button__content">Autorizar câmeras</span></button>
+                </div>
+            </div>
+        </x-ui.card>
+
         <div class="equipamento-management-acoes">
             <x-ui.button variant="secondary" wire:click="encerrar">Encerrar turno no posto</x-ui.button>
             <x-ui.button variant="ghost" :href="route('portaria')">Ir para o Modo Portaria</x-ui.button>
