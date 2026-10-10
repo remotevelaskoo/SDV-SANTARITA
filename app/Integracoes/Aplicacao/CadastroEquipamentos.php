@@ -293,6 +293,9 @@ class CadastroEquipamentos
     {
         return DB::transaction(function () use ($equipamento, $motivo, $ator): EquipamentoPontoVinculo {
             $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($equipamento->id);
+            if ($equipamento->status === StatusEquipamento::Ativo) {
+                throw new RegraIntegracaoViolada('equipamento_ativo', 'Volte o terminal para homologação ou manutenção antes de desvinculá-lo do ponto.');
+            }
 
             return $this->encerrarVinculoVigente(equipamento: $equipamento, motivo: $motivo, ator: $ator)
                 ?? throw new RegraIntegracaoViolada('sem_vinculo', 'Este terminal não possui ponto de acesso vigente.');
@@ -480,9 +483,17 @@ class CadastroEquipamentos
             'motivo_encerramento' => $motivo,
         ])->save();
 
-        $this->auditar('equipamento_desvinculado_do_ponto', 'equipamentos', $vinculo->equipamento_id, [
-            'ponto_acesso_id' => ['old' => $vinculo->ponto_acesso_id, 'new' => null],
-        ], $motivo, ['vinculo_id' => $vinculo->id]);
+        $mudancas = ['ponto_acesso_id' => ['old' => $vinculo->ponto_acesso_id, 'new' => null]];
+
+        // A homologação do relé vale para o ponto em que foi feita: em outro
+        // ponto o contato seco precisa ser testado de novo (ADR-016 §11, ADR-017).
+        $terminal = Equipamento::query()->find($vinculo->equipamento_id);
+        if ($terminal?->rele_homologado_em !== null) {
+            $mudancas['rele_homologado_em'] = ['old' => $terminal->rele_homologado_em, 'new' => null];
+            $terminal->forceFill(['rele_homologado_em' => null, 'rele_homologado_por' => null])->save();
+        }
+
+        $this->auditar('equipamento_desvinculado_do_ponto', 'equipamentos', $vinculo->equipamento_id, $mudancas, $motivo, ['vinculo_id' => $vinculo->id]);
 
         return $vinculo;
     }
