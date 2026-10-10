@@ -47,6 +47,8 @@ class UsuarioDemoSeeder extends Seeder
         'configuracoes.gerenciar' => ['modulo' => 'configuracoes', 'descricao' => 'Gerenciar configurações da implantação'],
         'catalogos.gerenciar' => ['modulo' => 'catalogos', 'descricao' => 'Gerenciar catálogos parametrizados'],
         'integracoes.gerenciar' => ['modulo' => 'integracoes', 'descricao' => 'Gerenciar integrações externas'],
+        'acessos.liberar-manualmente' => ['modulo' => 'acessos', 'descricao' => 'Liberar entrada ou saída manualmente pelo equipamento do próprio posto'],
+        'acessos.liberar-excepcionalmente' => ['modulo' => 'acessos', 'descricao' => 'Liberação excepcional sem pessoa cadastrada, com justificativa e auditoria reforçada'],
         'equipamentos.liberar-acesso' => ['modulo' => 'integracoes', 'descricao' => 'Liberar acesso remotamente pelo equipamento (teste do relé em homologação)'],
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
         'auditoria.exportar' => ['modulo' => 'auditoria', 'descricao' => 'Exportar registros de auditoria'],

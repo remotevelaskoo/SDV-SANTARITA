@@ -33,6 +33,11 @@ return [
     // operacional acima, que continua desligada.
     'teste_rele_habilitado' => (bool) env('SDV_INTEGRACAO_TESTE_RELE', false),
 
+    // Liberação manual operacional no Modo Portaria (ADR-017). Independente
+    // do teste do relé e da abertura automática; desligada até homologação e
+    // aprovação formal.
+    'liberacao_operacional_habilitada' => (bool) env('SDV_INTEGRACAO_LIBERACAO_OPERACIONAL', false),
+
     // Validade máxima de um comando de abertura antes de expirar sem envio.
     'abertura_validade_segundos' => 15,
 

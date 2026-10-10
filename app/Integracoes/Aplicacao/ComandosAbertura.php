@@ -25,9 +25,18 @@ use Illuminate\Support\Str;
  */
 class ComandosAbertura
 {
+    // Teste técnico do relé em bancada (ADR-016 §21): sem evento de acesso.
     public const ORIGEM_TESTE_BANCADA = 'teste_bancada';
 
+    // Liberação manual da portaria (ADR-017): sempre com evento de acesso.
+    public const ORIGEM_LIBERACAO_MANUAL = 'liberacao_manual';
+
+    // Permissão administrativa do teste do relé; não serve para liberar acesso.
     public const PERMISSAO_LIBERAR = 'equipamentos.liberar-acesso';
+
+    public const PERMISSAO_LIBERACAO_MANUAL = 'acessos.liberar-manualmente';
+
+    public const PERMISSAO_LIBERACAO_EXCEPCIONAL = 'acessos.liberar-excepcionalmente';
 
     public function __construct(private OutboxIntegracao $outbox, private AuditService $audit) {}
 

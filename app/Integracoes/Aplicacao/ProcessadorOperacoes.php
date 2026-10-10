@@ -20,6 +20,7 @@ use App\Integracoes\Infra\SanitizadorIntegracao;
 use App\Models\CredencialSincronizacao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoCapacidade;
+use App\Models\HistoricoAcesso;
 use App\Models\IntegracaoOcorrencia;
 use App\Models\OperacaoIntegracao as Operacao;
 use App\Models\ReferenciaExterna;
@@ -76,6 +77,10 @@ class ProcessadorOperacoes
 
             $this->aplicarEfeitos($operacao, $equipamento, $resultado, contatouEquipamento: $bloqueio === null);
             $this->concluir($operacao, $resultado);
+            // Liberação manual: o evento de acesso acompanha o resultado técnico (ADR-017).
+            HistoricoAcesso::query()
+                ->where('operacao_integracao_id', $operacao->id)
+                ->update(['resultado_tecnico' => $operacao->resultadoTecnico()]);
             $this->registrarOcorrencia($operacao, $resultado, $latencia);
             $this->auditar($operacao, $resultado, $latencia);
         });
@@ -156,7 +161,12 @@ class ProcessadorOperacoes
         if ($operacao->expira_em !== null && $operacao->expira_em < now()) {
             return new ResultadoOperacao(ResultadoEquipamento::Expirado, 'expirado', 'A operação expirou antes do envio.');
         }
-        if ($tipo === OperacaoIntegracao::AberturaRemota && ! $testeBancada && ! config('integracoes.abertura_remota_habilitada')) {
+        $liberacaoManual = $tipo === OperacaoIntegracao::AberturaRemota && $operacao->origem === ComandosAbertura::ORIGEM_LIBERACAO_MANUAL;
+        if ($liberacaoManual && ! config('integracoes.liberacao_operacional_habilitada')) {
+            // Flag própria da liberação manual (ADR-017), revalidada no envio.
+            return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'liberacao_operacional_desabilitada', 'Liberação manual operacional desligada nesta instalação.');
+        }
+        if ($tipo === OperacaoIntegracao::AberturaRemota && ! $testeBancada && ! $liberacaoManual && ! config('integracoes.abertura_remota_habilitada')) {
             return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'abertura_remota_desabilitada', 'Abertura remota desabilitada até a homologação em bancada.');
         }
         if ($tipo === OperacaoIntegracao::SincronizarCredencial && ($operacao->payload['tipo'] ?? null) === 'face') {
