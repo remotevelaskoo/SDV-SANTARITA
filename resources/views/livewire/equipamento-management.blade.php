@@ -5,6 +5,66 @@
         </x-ui.toast>
     @endif
 
+    @if ($releSelecionado)
+        <x-ui.card variant="default" class="equipamento-management-rele" title="Testar relé: {{ $releSelecionado->nome }}" description="Teste em bancada. Aciona somente o relé desta facial; não registra entrada nem saída de pessoa.">
+            <x-ui.alert variant="warning" title="Teste em bancada">
+                Confira se este é o terminal à sua frente e se não há cancela, catraca ou carga ligada ao relé. "Aceito pelo terminal" não comprova o acionamento físico: observe o clique do relé.
+            </x-ui.alert>
+
+            <dl class="equipamento-management-dados">
+                <div><dt>Facial</dt><dd>{{ $releSelecionado->nome }}</dd></div>
+                <div><dt>Fabricante e modelo</dt><dd>{{ $releSelecionado->fabricante }} {{ $releSelecionado->modelo }}</dd></div>
+                <div><dt>Número de série</dt><dd class="equipamento-management-mono">{{ $releSelecionado->numero_serie ?? 'Não inventariado' }}</dd></div>
+                <div><dt>Ponto de acesso</dt><dd>{{ $releSelecionado->pontoVigente()?->nome ?? 'Sem ponto' }}</dd></div>
+                <div><dt>Direção</dt><dd>{{ $releSelecionado->direcao->value }}</dd></div>
+                <div><dt>Endereço</dt><dd>{{ $releSelecionado->enderecoMascarado() }}</dd></div>
+                <div><dt>Relé acionado</dt><dd>Porta {{ $releSelecionado->porta_rele }}</dd></div>
+                <div><dt>Testes aceitos</dt><dd>{{ $releTestesAceitos }} de {{ $releTestesParaHomologar }} para homologar{{ $releSelecionado->rele_homologado_em ? ' · relé homologado em '.$releSelecionado->rele_homologado_em->format('d/m/Y H:i') : '' }}</dd></div>
+            </dl>
+
+            @if ($releSituacao)
+                <p class="equipamento-management-resultado">
+                    <strong>Resultado:</strong>
+                    <x-ui.badge :variant="$releSituacao['variant']">{{ $releSituacao['rotulo'] }}</x-ui.badge>
+                    {{ $releSituacao['detalhe'] }}
+                </p>
+                <footer class="equipamento-management-acoes">
+                    <x-ui.button variant="secondary" wire:click="cancelarTesteRele">Fechar</x-ui.button>
+                    <x-ui.button variant="secondary" wire:click="repetirTesteRele">Testar de novo</x-ui.button>
+                    @if (! $releSelecionado->rele_homologado_em && $releTestesAceitos >= $releTestesParaHomologar)
+                        <x-ui.button variant="primary" wire:click="iniciarHomologacaoRele">Registrar relé homologado</x-ui.button>
+                    @endif
+                </footer>
+            @elseif ($releBloqueios !== [])
+                <p class="equipamento-management-aviso">{{ reset($releBloqueios) }}</p>
+                <footer class="equipamento-management-acoes">
+                    <x-ui.button variant="secondary" wire:click="cancelarTesteRele">Fechar</x-ui.button>
+                </footer>
+            @else
+                <form wire:submit="testarRele" class="equipamento-management-form">
+                    <x-ui.field id="rele-motivo" label="Motivo" wire:model="motivoLiberacao" placeholder="Ex.: homologação do relé da facial em bancada" :error="$errors->first('motivoLiberacao')" required />
+                    <x-ui.checkbox id="rele-ciente" label="Confirmo que é um teste em bancada desta facial, sem cancela ou catraca ligada" description="O comando é enviado uma única vez para a porta {{ $releSelecionado->porta_rele }} deste terminal." wire:model="cienteLiberacao" />
+                    @error('cienteLiberacao')<small class="ui-field__message ui-field__message--error">{{ $message }}</small>@enderror
+                    <footer>
+                        <x-ui.button type="button" variant="secondary" wire:click="cancelarTesteRele">Cancelar</x-ui.button>
+                        <x-ui.button type="submit" variant="danger" wire:loading.attr="disabled" wire:target="testarRele">Confirmar teste do relé</x-ui.button>
+                    </footer>
+                </form>
+            @endif
+
+            @if ($registrandoHomologacaoRele)
+                <form wire:submit="registrarHomologacaoRele" class="equipamento-management-form">
+                    <x-ui.checkbox id="rele-observado" label="Observei o clique/acionamento do relé nos testes" wire:model="acionamentoObservado" />
+                    <x-ui.field id="rele-observacao" label="Observação" wire:model="observacaoRele" placeholder="Ex.: clique ouvido nos dois testes" required />
+                    <footer>
+                        <x-ui.button type="button" variant="secondary" wire:click="$set('registrandoHomologacaoRele', false)">Cancelar</x-ui.button>
+                        <x-ui.button type="submit" variant="primary">Registrar relé homologado</x-ui.button>
+                    </footer>
+                </form>
+            @endif
+        </x-ui.card>
+    @endif
+
     @if ($mode === 'list')
         <x-ui.card title="Terminais cadastrados" description="Somente equipamentos desta implantação.">
             <x-slot:headerAction>
@@ -33,6 +93,38 @@
                 </ul>
             @endif
         </x-ui.card>
+
+        @if ($podeLiberar)
+            <x-ui.card title="Teste individual de relés" description="Escolha a facial e acione somente o relé dela, em bancada. O botão fica bloqueado enquanto algum requisito de segurança não for atendido.">
+                @if ($faciaisRele === [])
+                    <p class="equipamento-management-aviso">Nenhuma facial cadastrada.</p>
+                @else
+                    <ul class="equipamento-management-list">
+                        @foreach ($faciaisRele as $linha)
+                            @php $facial = $linha['equipamento']; @endphp
+                            <li>
+                                <div class="equipamento-management-list__info">
+                                    <strong>{{ $facial->nome }}</strong>
+                                    <small>
+                                        {{ $facial->vinculoVigente?->pontoAcesso?->nome ?? 'sem ponto' }} · {{ $facial->direcao->value }} · porta {{ $facial->porta_rele }} ·
+                                        última comunicação {{ $facial->ultima_comunicacao_at?->format('d/m/Y H:i') ?? 'nunca' }}
+                                    </small>
+                                    @if ($linha['bloqueios'] !== [])
+                                        <small class="equipamento-management-bloqueio">{{ reset($linha['bloqueios']) }}</small>
+                                    @endif
+                                </div>
+                                <div class="equipamento-management-list__estado">
+                                    <x-ui.badge :variant="$facial->estado_saude->value === 'conectado' ? 'success' : 'neutral'">{{ $facial->estado_saude->value === 'conectado' ? 'Online' : 'Offline' }}</x-ui.badge>
+                                    <x-ui.badge variant="info">{{ $facial->status->rotulo() }}</x-ui.badge>
+                                    <x-ui.badge :variant="$facial->rele_homologado_em ? 'success' : 'warning'">{{ $facial->rele_homologado_em ? 'Relé homologado' : 'Relé em homologação ('.$linha['testes_aceitos'].' aceitos)' }}</x-ui.badge>
+                                    <x-ui.button variant="danger" size="sm" wire:click="prepararTesteRele('{{ $facial->id }}')" :disabled="$linha['bloqueios'] !== []" title="{{ $linha['bloqueios'] === [] ? 'Testar o relé desta facial' : reset($linha['bloqueios']) }}">Testar relé</x-ui.button>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </x-ui.card>
+        @endif
     @elseif ($mode === 'form')
         <x-ui.card title="Novo terminal" description="O terminal é cadastrado em homologação e vinculado à bancada de testes, sem cancela ou catraca.">
             <form wire:submit="salvarEquipamento" class="equipamento-management-form" autocomplete="off">
@@ -103,7 +195,8 @@
                 <dl class="equipamento-management-dados">
                     <div><dt>Ponto</dt><dd>{{ $detalhe['ponto']?->nome ?? 'Sem ponto' }}</dd></div>
                     <div><dt>Direção</dt><dd>{{ $equipamento->direcao->value }}</dd></div>
-                    <div><dt>Endereço</dt><dd>{{ strtoupper($equipamento->esquema) }} {{ $equipamento->endereco_rede }}{{ $equipamento->porta_rede ? ':'.$equipamento->porta_rede : '' }}</dd></div>
+                    <div><dt>Endereço</dt><dd>{{ strtoupper($equipamento->esquema) }} {{ $equipamento->enderecoMascarado() }}{{ $equipamento->porta_rede ? ':'.$equipamento->porta_rede : '' }}</dd></div>
+                    <div><dt>Relé</dt><dd>Porta {{ $equipamento->porta_rele }}{{ $equipamento->rele_homologado_em ? ' · homologado em '.$equipamento->rele_homologado_em->format('d/m/Y H:i') : ' · não homologado' }}</dd></div>
                     <div><dt>Integração</dt><dd>{{ $equipamento->protocolo }} · {{ $equipamento->adaptador }}</dd></div>
                     <div><dt>Firmware</dt><dd>{{ $equipamento->firmware_versao ?? 'Não inventariado' }}</dd></div>
                     <div><dt>Número de série</dt><dd>{{ $equipamento->numero_serie ?? 'Não inventariado' }}</dd></div>
@@ -188,34 +281,10 @@
             </x-ui.card>
 
             @if ($podeLiberar)
-                <x-ui.card title="Liberar acesso (teste do relé)" description="Aciona o relé do terminal em bancada. Não registra entrada e não há cancela ou catraca ligada.">
-                    @if (! $testeReleHabilitado)
-                        <p class="equipamento-management-aviso">Teste do relé desabilitado nesta instalação.</p>
-                    @elseif ($equipamento->status->value !== 'em_homologacao')
-                        <p class="equipamento-management-aviso">Disponível somente com o terminal em homologação.</p>
-                    @elseif (! $detalhe['suportaAbertura'])
-                        <p class="equipamento-management-aviso">Abertura remota não homologada para este terminal. Consulte as capacidades.</p>
-                    @elseif (! $confirmandoLiberacao)
-                        <x-ui.button variant="danger" wire:click="abrirLiberacao">Liberar acesso</x-ui.button>
-                    @else
-                        <form wire:submit="liberarAcesso" class="equipamento-management-form">
-                            <x-ui.field id="lib-motivo" label="Motivo" wire:model="motivoLiberacao" placeholder="Ex.: teste do relé na bancada" :error="$errors->first('motivoLiberacao')" required />
-                            <x-ui.checkbox id="lib-ciente" label="Confirmo que não há cancela ou catraca ligada ao relé" description="O comando será enviado uma única vez." wire:model="cienteLiberacao" />
-                            @error('cienteLiberacao')<small class="ui-field__message ui-field__message--error">{{ $message }}</small>@enderror
-                            <footer>
-                                <x-ui.button type="button" variant="secondary" wire:click="cancelarLiberacao">Cancelar</x-ui.button>
-                                <x-ui.button type="submit" variant="danger" wire:loading.attr="disabled" wire:target="liberarAcesso">Confirmar liberação</x-ui.button>
-                            </footer>
-                        </form>
-                    @endif
-
-                    @if ($detalhe['liberacao'])
-                        <p class="equipamento-management-resultado">
-                            <strong>Última liberação:</strong>
-                            <x-ui.badge :variant="$detalhe['liberacao']['variant']">{{ $detalhe['liberacao']['rotulo'] }}</x-ui.badge>
-                            {{ $detalhe['liberacao']['detalhe'] }}
-                        </p>
-                    @endif
+                <x-ui.card title="Teste do relé" description="Aciona somente o relé desta facial, em bancada, depois de uma confirmação com os dados do terminal.">
+                    <div class="equipamento-management-acoes">
+                        <x-ui.button variant="danger" wire:click="prepararTesteRele('{{ $equipamento->id }}')">Testar relé</x-ui.button>
+                    </div>
                 </x-ui.card>
             @endif
 

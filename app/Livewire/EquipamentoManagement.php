@@ -7,6 +7,7 @@ use App\Integracoes\Aplicacao\CapturaImagemEquipamento;
 use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\DiagnosticoEquipamento;
 use App\Integracoes\Aplicacao\ProcessadorOperacoes;
+use App\Integracoes\Aplicacao\TesteReleBancada;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\EstadoOutbox;
 use App\Integracoes\Dominio\Enums\EstadoSaude;
@@ -60,7 +61,8 @@ class EquipamentoManagement extends Component
     /** @var array<string, mixed>|null */
     public ?array $ultimaCaptura = null;
 
-    public bool $confirmandoLiberacao = false;
+    /** Facial escolhida para o teste do relé; o backend sempre relê o equipamento por este id. */
+    public ?string $releEquipamentoId = null;
 
     public ?string $chaveLiberacao = null;
 
@@ -69,6 +71,12 @@ class EquipamentoManagement extends Component
     public bool $cienteLiberacao = false;
 
     public ?string $operacaoLiberacaoId = null;
+
+    public bool $registrandoHomologacaoRele = false;
+
+    public bool $acionamentoObservado = false;
+
+    public string $observacaoRele = '';
 
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
@@ -280,24 +288,39 @@ class EquipamentoManagement extends Component
             : $this->erro('Imagem indisponível', (string) $this->ultimaCaptura['mensagem']);
     }
 
-    // ---- Liberação remota (teste do relé) -------------------------------------
+    // ---- Teste individual de relés ------------------------------------------
 
-    public function abrirLiberacao(): void
+    /** Abre a confirmação para UMA facial. A chave idempotente vale só para esta confirmação. */
+    public function prepararTesteRele(string $id, TesteReleBancada $testes): void
     {
-        $this->autorizarLiberacao();
-        $this->chaveLiberacao = 'liberacao:'.Str::uuid7();
+        $ator = $this->autorizarLiberacao();
+        $equipamento = $this->equipamento($id);
+
+        if (($bloqueios = $testes->bloqueios($equipamento, $ator)) !== []) {
+            $this->erro('Teste do relé indisponível', reset($bloqueios));
+
+            return;
+        }
+
+        $this->releEquipamentoId = $equipamento->id;
+        $this->chaveLiberacao = 'rele:'.$equipamento->id.':'.Str::uuid7();
         $this->motivoLiberacao = '';
         $this->cienteLiberacao = false;
-        $this->confirmandoLiberacao = true;
+        $this->operacaoLiberacaoId = null;
+        $this->registrandoHomologacaoRele = false;
+        $this->feedback = null;
+        $this->resetErrorBag();
     }
 
-    public function cancelarLiberacao(): void
+    public function cancelarTesteRele(): void
     {
-        $this->confirmandoLiberacao = false;
+        $this->releEquipamentoId = null;
         $this->chaveLiberacao = null;
+        $this->operacaoLiberacaoId = null;
+        $this->registrandoHomologacaoRele = false;
     }
 
-    public function liberarAcesso(ComandosAbertura $comandos, ProcessadorOperacoes $processador): void
+    public function testarRele(TesteReleBancada $testes, ProcessadorOperacoes $processador): void
     {
         $ator = $this->autorizarLiberacao();
 
@@ -305,28 +328,64 @@ class EquipamentoManagement extends Component
             'motivoLiberacao' => ['required', 'string', 'min:5', 'max:500'],
             'cienteLiberacao' => ['accepted'],
         ], [
-            'cienteLiberacao.accepted' => 'Confirme que não há cancela ou catraca ligada ao relé.',
+            'cienteLiberacao.accepted' => 'Confirme que é um teste em bancada, sem cancela ou catraca ligada ao relé.',
         ], ['motivoLiberacao' => 'motivo']);
 
-        if ($this->chaveLiberacao === null) {
+        if ($this->releEquipamentoId === null || $this->chaveLiberacao === null) {
             return;
         }
 
         try {
-            $operacao = $comandos->testarReleEmBancada($this->equipamento(), $this->chaveLiberacao, $ator, $this->motivoLiberacao);
+            // O id escolhido é resolvido de novo no escopo da implantação atual;
+            // endereço, porta, certificado e credencial vêm do cadastro.
+            $operacao = $testes->solicitar($this->equipamento($this->releEquipamentoId), $this->chaveLiberacao, $ator, $this->motivoLiberacao);
             $processador->processar($operacao->id);
         } catch (RegraIntegracaoViolada|PayloadDivergente $e) {
-            $this->erro('Liberação não enviada', $e->getMessage());
+            $this->erro('Teste do relé não enviado', $e->getMessage());
 
             return;
         }
 
         $this->operacaoLiberacaoId = $operacao->id;
-        $this->confirmandoLiberacao = false;
         $situacao = $this->situacaoOperacao($operacao->refresh());
         $situacao['variant'] === 'success'
-            ? $this->sucesso('Liberação: '.$situacao['rotulo'], $situacao['detalhe'])
-            : $this->erro('Liberação: '.$situacao['rotulo'], $situacao['detalhe']);
+            ? $this->sucesso('Teste do relé: '.$situacao['rotulo'], $situacao['detalhe'])
+            : $this->erro('Teste do relé: '.$situacao['rotulo'], $situacao['detalhe']);
+    }
+
+    /** Nova solicitação depois de um resultado: gera outra chave para não repetir a anterior. */
+    public function repetirTesteRele(TesteReleBancada $testes): void
+    {
+        if ($this->releEquipamentoId !== null) {
+            $this->prepararTesteRele($this->releEquipamentoId, $testes);
+        }
+    }
+
+    public function iniciarHomologacaoRele(): void
+    {
+        $this->autorizarLiberacao();
+        $this->registrandoHomologacaoRele = true;
+        $this->acionamentoObservado = false;
+        $this->observacaoRele = '';
+    }
+
+    public function registrarHomologacaoRele(TesteReleBancada $testes): void
+    {
+        $ator = $this->autorizarLiberacao();
+        if ($this->releEquipamentoId === null) {
+            return;
+        }
+
+        try {
+            $equipamento = $testes->registrarHomologacao($this->equipamento($this->releEquipamentoId), $ator, $this->acionamentoObservado, $this->observacaoRele);
+        } catch (RegraIntegracaoViolada $e) {
+            $this->erro('Relé não homologado', $e->getMessage());
+
+            return;
+        }
+
+        $this->registrandoHomologacaoRele = false;
+        $this->sucesso('Relé homologado', "Relé da porta {$equipamento->porta_rele} de \"{$equipamento->nome}\" registrado como homologado em bancada.");
     }
 
     // ---- Render ---------------------------------------------------------------
@@ -335,6 +394,12 @@ class EquipamentoManagement extends Component
     {
         $ator = $this->autorizar();
         $equipamento = $this->mode === 'detail' && $this->selecionadoId ? $this->equipamento() : null;
+        $testes = app(TesteReleBancada::class);
+        $podeLiberar = $ator->hasPermission(ComandosAbertura::PERMISSAO_LIBERAR);
+        $releSelecionado = $this->releEquipamentoId ? Equipamento::query()->find($this->releEquipamentoId) : null;
+        $releOperacao = $releSelecionado && $this->operacaoLiberacaoId
+            ? OperacaoIntegracao::query()->where('equipamento_id', $releSelecionado->id)->find($this->operacaoLiberacaoId)
+            : null;
 
         return view('livewire.equipamento-management', [
             'equipamentos' => $this->mode === 'list' ? Equipamento::query()->with('vinculoVigente.pontoAcesso')->orderBy('nome')->get() : collect(),
@@ -342,8 +407,13 @@ class EquipamentoManagement extends Component
             'adaptadoresDisponiveis' => array_values(array_filter($adaptadores->codigos(), fn (string $c) => $adaptadores->permitido($c))),
             'equipamento' => $equipamento,
             'detalhe' => $equipamento ? $this->detalhe($equipamento) : null,
-            'podeLiberar' => $ator->hasPermission(ComandosAbertura::PERMISSAO_LIBERAR),
-            'testeReleHabilitado' => (bool) config('integracoes.teste_rele_habilitado'),
+            'podeLiberar' => $podeLiberar,
+            'faciaisRele' => $podeLiberar && $this->mode === 'list' ? $this->faciaisParaTeste($testes, $ator) : [],
+            'releSelecionado' => $releSelecionado,
+            'releBloqueios' => $releSelecionado ? $testes->bloqueios($releSelecionado, $ator) : [],
+            'releTestesAceitos' => $releSelecionado ? $testes->testesAceitos($releSelecionado) : 0,
+            'releTestesParaHomologar' => TesteReleBancada::TESTES_PARA_HOMOLOGAR,
+            'releSituacao' => $releOperacao ? $this->situacaoOperacao($releOperacao) : null,
         ])->layout('components.layouts.app', [
             'title' => 'Equipamentos',
             'heading' => match ($this->mode) {
@@ -362,9 +432,6 @@ class EquipamentoManagement extends Component
             ->where('equipamento_id', $equipamento->id)
             ->latest('created_at')->latest('id')
             ->first();
-        $liberacao = $this->operacaoLiberacaoId
-            ? OperacaoIntegracao::query()->where('equipamento_id', $equipamento->id)->find($this->operacaoLiberacaoId)
-            : null;
 
         return [
             'ponto' => $equipamento->pontoVigente(),
@@ -375,7 +442,6 @@ class EquipamentoManagement extends Component
             'suportaImagem' => $equipamento->suporta(Capacidade::CapturarImagem),
             'suportaAbertura' => $equipamento->suporta(Capacidade::AberturaRemota),
             'ultimaOperacao' => $ultimaOperacao ? ['operacao' => $ultimaOperacao, 'situacao' => $this->situacaoOperacao($ultimaOperacao)] : null,
-            'liberacao' => $liberacao ? $this->situacaoOperacao($liberacao) : null,
             'imagemDisponivel' => app(CapturaImagemEquipamento::class)->ultima($equipamento) !== null,
             'historico' => AuditoriaEvento::query()
                 ->where('module', 'integracoes')
@@ -467,6 +533,19 @@ class EquipamentoManagement extends Component
             ], $ator);
     }
 
+    /** @return list<array{equipamento: Equipamento, bloqueios: array<string, string>, testes_aceitos: int}> */
+    private function faciaisParaTeste(TesteReleBancada $testes, User $ator): array
+    {
+        return Equipamento::query()
+            ->where('tipo', 'terminal_facial')
+            ->where('status', '!=', StatusEquipamento::Inativo->value)
+            ->with('vinculoVigente.pontoAcesso')
+            ->orderBy('nome')
+            ->get()
+            ->map(fn (Equipamento $e) => ['equipamento' => $e, 'bloqueios' => $testes->bloqueios($e, $ator), 'testes_aceitos' => $testes->testesAceitos($e)])
+            ->all();
+    }
+
     private function equipamento(?string $id = null): Equipamento
     {
         return Equipamento::query()->findOrFail($id ?? $this->selecionadoId);
@@ -476,9 +555,10 @@ class EquipamentoManagement extends Component
     {
         $this->certificadoLido = null;
         $this->ultimaCaptura = null;
-        $this->confirmandoLiberacao = false;
+        $this->releEquipamentoId = null;
         $this->chaveLiberacao = null;
         $this->operacaoLiberacaoId = null;
+        $this->registrandoHomologacaoRele = false;
         $this->trocandoSenha = false;
         $this->senhaTecnica = '';
         $this->feedback = null;
