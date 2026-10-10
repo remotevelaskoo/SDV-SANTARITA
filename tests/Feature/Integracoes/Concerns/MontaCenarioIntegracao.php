@@ -83,14 +83,19 @@ trait MontaCenarioIntegracao
         return $usuario;
     }
 
-    /** Terminal do simulador em homologação na bancada, com capacidades verificadas. */
-    protected function terminalEmHomologacao(array $dados = []): Equipamento
+    /**
+     * Terminal do simulador em homologação na bancada: certificado confiado,
+     * capacidades verificadas e online (pronto para o teste do relé).
+     */
+    protected function terminalEmHomologacao(array $dados = [], string $senha = 'Senha-Cifrada-Teste-321'): Equipamento
     {
         $ponto = $this->novoPonto(['tipo' => 'bancada', 'codigo' => 'BANCADA-'.Str::upper(Str::random(4)), 'nome' => 'Bancada de testes']);
         $equipamento = $this->novoEquipamento($dados);
         $this->cadastro()->vincularAoPonto($equipamento, $ponto);
-        $this->cadastro()->definirSenhaTecnica($equipamento, 'admin', 'Senha-Cifrada-Teste-321');
-        $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($equipamento));
+        $this->cadastro()->definirSenhaTecnica($equipamento, 'admin', $senha);
+        $this->cadastro()->confiarCertificado($equipamento, str_repeat('A', 43).'=', 'IMPRESSAO-SINTETICA');
+        $this->processar(app(DiagnosticoEquipamento::class)->consultarCapacidades($equipamento->refresh()));
+        $this->processar(app(DiagnosticoEquipamento::class)->testarConexao($equipamento->refresh()));
 
         return $this->cadastro()->alterarStatus($equipamento->refresh(), StatusEquipamento::EmHomologacao, 'bancada');
     }

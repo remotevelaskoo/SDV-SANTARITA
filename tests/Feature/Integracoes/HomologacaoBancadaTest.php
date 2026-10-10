@@ -7,6 +7,7 @@ use App\Integracoes\Aplicacao\CapturaImagemEquipamento;
 use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\DiagnosticoEquipamento;
 use App\Integracoes\Aplicacao\ProcessadorOperacoes;
+use App\Integracoes\Aplicacao\TesteReleBancada;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\EstadoOutbox;
 use App\Integracoes\Dominio\Enums\OperacaoIntegracao;
@@ -51,7 +52,7 @@ class HomologacaoBancadaTest extends TestCase
 
     private function liberar(Equipamento $equipamento, ?User $ator = null, ?string $chave = null, string $motivo = 'Teste do relé na bancada')
     {
-        return $this->processar(app(ComandosAbertura::class)->testarReleEmBancada(
+        return $this->processar(app(TesteReleBancada::class)->solicitar(
             $equipamento, $chave ?? 'liberacao:'.Str::uuid7(), $ator ?? $this->operador(), $motivo,
         ));
     }
@@ -249,28 +250,28 @@ class HomologacaoBancadaTest extends TestCase
     public function test_liberacao_exige_permissao_motivo_homologacao_capacidade_e_habilitacao(): void
     {
         $equipamento = $this->terminalEmHomologacao();
-        $comandos = app(ComandosAbertura::class);
+        $comandos = app(TesteReleBancada::class);
         $chave = fn () => 'liberacao:'.Str::uuid7();
 
-        $this->assertRegraViolada('sem_permissao', fn () => $comandos->testarReleEmBancada($equipamento, $chave(), $this->usuarioCom('integracoes.gerenciar'), 'motivo válido'));
-        $this->assertRegraViolada('sem_motivo', fn () => $comandos->testarReleEmBancada($equipamento, $chave(), $this->operador(), '   '));
+        $this->assertRegraViolada('sem_permissao', fn () => $comandos->solicitar($equipamento, $chave(), $this->usuarioCom('integracoes.gerenciar'), 'motivo válido'));
+        $this->assertRegraViolada('sem_motivo', fn () => $comandos->solicitar($equipamento, $chave(), $this->operador(), '   '));
 
         config(['integracoes.teste_rele_habilitado' => false]);
-        $this->assertRegraViolada('teste_rele_desabilitado', fn () => $comandos->testarReleEmBancada($equipamento, $chave(), $this->operador(), 'motivo válido'));
+        $this->assertRegraViolada('teste_rele_desabilitado', fn () => $comandos->solicitar($equipamento, $chave(), $this->operador(), 'motivo válido'));
         config(['integracoes.teste_rele_habilitado' => true]);
 
         $equipamento->capacidades()->where('capacidade', Capacidade::AberturaRemota->value)->update(['suportada' => false]);
-        $this->assertRegraViolada('capacidade_ausente', fn () => $comandos->testarReleEmBancada($equipamento, $chave(), $this->operador(), 'motivo válido'));
+        $this->assertRegraViolada('capacidade_ausente', fn () => $comandos->solicitar($equipamento, $chave(), $this->operador(), 'motivo válido'));
 
         $this->cadastro()->alterarStatus($equipamento, StatusEquipamento::Manutencao, 'fim do teste');
-        $this->assertRegraViolada('equipamento_fora_de_homologacao', fn () => $comandos->testarReleEmBancada($equipamento->refresh(), $chave(), $this->operador(), 'motivo válido'));
+        $this->assertRegraViolada('equipamento_fora_de_homologacao', fn () => $comandos->solicitar($equipamento->refresh(), $chave(), $this->operador(), 'motivo válido'));
         $this->assertSame(0, $this->simulador()->totalAberturasFisicas($equipamento->id));
     }
 
     public function test_desligar_o_teste_depois_de_enfileirado_impede_o_envio(): void
     {
         $equipamento = $this->terminalEmHomologacao();
-        $operacao = app(ComandosAbertura::class)->testarReleEmBancada($equipamento, 'liberacao:'.Str::uuid7(), $this->operador(), 'Teste do relé');
+        $operacao = app(TesteReleBancada::class)->solicitar($equipamento, 'liberacao:'.Str::uuid7(), $this->operador(), 'Teste do relé');
 
         config(['integracoes.teste_rele_habilitado' => false]);
         $processada = $this->processar($operacao);

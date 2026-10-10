@@ -127,38 +127,41 @@ class TelaEquipamentosTest extends TestCase
         $this->assertStringContainsString('no-store', (string) $resposta->headers->get('Cache-Control'));
     }
 
-    public function test_botao_liberar_so_aparece_com_permissao_explicita(): void
+    public function test_botao_testar_rele_so_aparece_com_permissao_explicita(): void
     {
         $equipamento = $this->terminalEmHomologacao();
 
         Livewire::actingAs($this->usuarioCom('integracoes.gerenciar'))->test(EquipamentoManagement::class)
+            ->assertDontSee('Teste individual de relés')
             ->call('selecionar', $equipamento->id)
-            ->assertDontSee('Liberar acesso (teste do relé)')
-            ->call('abrirLiberacao')
+            ->assertDontSee('Testar relé')
+            ->call('prepararTesteRele', $equipamento->id)
             ->assertForbidden();
     }
 
-    public function test_liberacao_exige_motivo_e_confirmacao_e_clique_duplo_aciona_uma_vez(): void
+    public function test_teste_do_rele_exige_motivo_e_confirmacao_e_clique_duplo_aciona_uma_vez(): void
     {
         $equipamento = $this->terminalEmHomologacao();
         $this->simulador()->definirCenario($equipamento->id, CenarioSimulador::Aceito);
         $operador = $this->usuarioCom('integracoes.gerenciar', 'equipamentos.liberar-acesso');
 
         $tela = Livewire::actingAs($operador)->test(EquipamentoManagement::class)
-            ->call('selecionar', $equipamento->id)
-            ->call('abrirLiberacao')
-            ->call('liberarAcesso')
+            ->assertSee('Teste individual de relés')
+            ->call('prepararTesteRele', $equipamento->id)
+            ->assertSee('192.•••.•••.20')
+            ->assertDontSee('192.168.10.20')
+            ->assertSee('Porta 1')
+            ->call('testarRele')
             ->assertHasErrors(['motivoLiberacao', 'cienteLiberacao']);
 
-        $chave = $tela->get('chaveLiberacao');
         $tela->set('motivoLiberacao', 'Teste do relé na bancada')
             ->set('cienteLiberacao', true)
-            ->call('liberarAcesso')
+            ->call('testarRele')
             ->assertSee('Aceito pelo terminal')
             ->assertSee('não é comprovada');
 
-        // Segundo envio com a mesma chave (clique duplo ou reenvio do navegador).
-        $tela->set('confirmandoLiberacao', true)->set('chaveLiberacao', $chave)->call('liberarAcesso');
+        // Clique duplo ou reenvio do navegador: a mesma chave não aciona de novo.
+        $tela->call('testarRele');
 
         $this->assertSame(1, $this->simulador()->totalAberturasFisicas($equipamento->id));
         $this->assertSame(1, $equipamento->operacoes()->where('operacao', 'abertura_remota')->count());
