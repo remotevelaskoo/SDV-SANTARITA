@@ -101,8 +101,6 @@ return [
 
         // Canal de vídeo da captura. Nulo = descobrir em /Streaming/channels.
         'canal_imagem' => null,
-        // Porta (relé) acionada pelo comando remoto.
-        'porta_rele' => 1,
     ],
 
 ];

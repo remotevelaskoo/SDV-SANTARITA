@@ -32,6 +32,7 @@ class FabricaContextoEquipamento
             correlationId: $correlationId,
             esquema: $equipamento->esquema ?? 'https',
             tlsPinSha256: $equipamento->tls_pin_sha256,
+            portaRele: max(1, (int) ($equipamento->porta_rele ?? 1)),
         );
     }
 

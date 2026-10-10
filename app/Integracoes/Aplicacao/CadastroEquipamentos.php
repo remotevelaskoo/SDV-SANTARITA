@@ -30,7 +30,7 @@ class CadastroEquipamentos
 {
     private const CAMPOS_INVENTARIO = [
         'nome', 'numero_serie', 'endereco_rede', 'porta_rede', 'esquema', 'firmware_versao', 'direcao',
-        'modulo_seguro_rs485', 'timeout_segundos',
+        'modulo_seguro_rs485', 'porta_rele', 'timeout_segundos',
     ];
 
     /** Trocar o destino da conexão invalida o certificado confiado. */
@@ -177,6 +177,12 @@ class CadastroEquipamentos
         if (array_key_exists('modulo_seguro_rs485', $dados)) {
             $dados['modulo_seguro_rs485'] = (bool) $dados['modulo_seguro_rs485'];
         }
+        if (array_key_exists('porta_rele', $dados)) {
+            $dados['porta_rele'] = (int) $dados['porta_rele'];
+            if ($dados['porta_rele'] < 1 || $dados['porta_rele'] > 8) {
+                throw new RegraIntegracaoViolada('porta_rele_invalida', 'A porta do relé deve ficar entre 1 e 8.');
+            }
+        }
         if (array_key_exists('timeout_segundos', $dados)) {
             $this->validarTimeout((int) $dados['timeout_segundos']);
         }
@@ -213,6 +219,12 @@ class CadastroEquipamentos
             }
 
             $equipamento->forceFill(['versao' => $equipamento->versao + 1, 'updated_by' => $ator?->id])->save();
+
+            // Homologação do relé vale para uma porta e um firmware.
+            if ((isset($mudancas['firmware_versao']) || isset($mudancas['porta_rele'])) && $equipamento->rele_homologado_em !== null) {
+                $mudancas['rele_homologado_em'] = ['old' => $equipamento->rele_homologado_em, 'new' => null];
+                $equipamento->forceFill(['rele_homologado_em' => null, 'rele_homologado_por' => null])->save();
+            }
 
             if (isset($mudancas['firmware_versao'])) {
                 // Capacidades verificadas valem para um firmware; trocar o

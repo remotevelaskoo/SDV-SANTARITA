@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable([
     'implantacao_id', 'nome', 'tipo', 'fabricante', 'modelo', 'numero_serie',
     'endereco_rede', 'porta_rede', 'esquema', 'tls_pin_sha256', 'protocolo', 'firmware_versao', 'adaptador',
-    'direcao', 'modulo_seguro_rs485', 'status', 'estado_saude', 'ultima_comunicacao_at', 'ultimo_teste_at',
+    'direcao', 'modulo_seguro_rs485', 'porta_rele', 'rele_homologado_em', 'rele_homologado_por', 'status', 'estado_saude', 'ultima_comunicacao_at', 'ultimo_teste_at',
     'ultimo_erro_sanitizado', 'ultima_falha_at', 'timeout_segundos', 'versao',
     'created_by', 'updated_by', 'inactivated_at',
 ])]
@@ -48,8 +48,30 @@ class Equipamento extends Model
             'ultimo_teste_at' => 'datetime',
             'ultima_falha_at' => 'datetime',
             'modulo_seguro_rs485' => 'boolean',
+            'porta_rele' => 'integer',
+            'rele_homologado_em' => 'datetime',
             'inactivated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Endereço para exibição: só o primeiro e o último bloco ficam visíveis
+     * (ex.: 192.•••.•••.8). O valor completo fica no backend e no formulário
+     * de cadastro, nunca nas listas, no detalhe ou nas confirmações.
+     */
+    public function enderecoMascarado(): string
+    {
+        $endereco = (string) $this->endereco_rede;
+
+        if (filter_var($endereco, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $partes = explode('.', $endereco);
+
+            return $partes[0].'.•••.•••.'.$partes[3];
+        }
+
+        $partes = explode(':', $endereco);
+
+        return count($partes) > 2 ? reset($partes).':••••:'.end($partes) : '•••';
     }
 
     /** @return HasMany<EquipamentoPontoVinculo, $this> */

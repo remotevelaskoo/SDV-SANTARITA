@@ -34,6 +34,8 @@ final readonly class ContextoEquipamento
         public string $correlationId,
         public string $esquema = 'https',
         public ?string $tlsPinSha256 = null,
+        // Porta (relé) que ESTE terminal aciona; vem do cadastro do equipamento.
+        public int $portaRele = 1,
     ) {}
 
     public function segredo(): ?SegredoTecnico

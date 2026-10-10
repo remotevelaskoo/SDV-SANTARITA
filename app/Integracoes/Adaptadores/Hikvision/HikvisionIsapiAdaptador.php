@@ -185,7 +185,7 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
             .'<RemoteControlDoor version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema"><cmd>open</cmd></RemoteControlDoor>';
 
         try {
-            $resposta = $this->cliente->put($equipamento, sprintf(self::CAMINHO_PORTA, $this->porta()), $xml);
+            $resposta = $this->cliente->put($equipamento, sprintf(self::CAMINHO_PORTA, $equipamento->portaRele), $xml);
             $status = $this->cliente->xml($resposta);
         } catch (FalhaIsapi $e) {
             // Sem resposta legível não se sabe se o relé foi acionado, exceto
@@ -204,7 +204,7 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
                 ResultadoEquipamento::Aceito,
                 'comando_aceito',
                 'O terminal aceitou o comando de abertura. A abertura física não é comprovada por esta resposta.',
-                dados: ['status_terminal' => $sub ?? 'ok', 'porta' => $this->porta()],
+                dados: ['status_terminal' => $sub ?? 'ok', 'porta' => $equipamento->portaRele],
             ),
             '' => ResultadoOperacao::desconhecido('resposta_invalida', 'O terminal respondeu sem o status do comando; não é possível afirmar se o relé foi acionado.'),
             default => new ResultadoOperacao(
@@ -386,11 +386,6 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         }
 
         return $perfil;
-    }
-
-    private function porta(): int
-    {
-        return (int) config('integracoes.hikvision.porta_rele', 1);
     }
 
     private function texto(string $valor): ?string
