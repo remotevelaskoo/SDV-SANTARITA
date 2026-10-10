@@ -19,6 +19,7 @@
             ['label' => 'Configurações', 'icon' => 'settings', 'route' => 'settings'],
             ['label' => 'Motivos de negativa', 'icon' => 'file', 'route' => 'catalogs'],
             ['label' => 'Equipamentos', 'icon' => 'shield', 'route' => 'equipment'],
+            ['label' => 'Pontos de acesso', 'icon' => 'door', 'route' => 'access-points'],
             ['label' => 'Postos e operadores', 'icon' => 'users', 'route' => 'posts'],
             ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
             ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],

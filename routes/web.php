@@ -18,6 +18,7 @@ use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PerfilManagement;
 use App\Livewire\PersonRegistration;
+use App\Livewire\PontoAcessoManagement;
 use App\Livewire\Portaria;
 use App\Livewire\PostoManagement;
 use App\Livewire\PreRegistrationQueue;
@@ -74,6 +75,7 @@ Route::get('/perfis', PerfilManagement::class)->middleware(['auth', 'permissao:p
 Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth', 'permissao:configuracoes.gerenciar'])->name('settings');
 Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permissao:catalogos.gerenciar'])->name('catalogs');
 Route::get('/equipamentos', EquipamentoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('equipment');
+Route::get('/pontos-acesso', PontoAcessoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('access-points');
 Route::get('/postos', PostoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('posts');
 Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::class)
     ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])
