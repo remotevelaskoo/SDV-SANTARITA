@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.22
+**Versão:** 1.0.26
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -38,6 +38,10 @@
 | 1.0.20 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-014 |
 | 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
 | 1.0.22 | 11/08/2026 | Product Owner | Criação e aprovação retrospectiva do ADR-015 (integração externa de consulta de CEP) |
+| 1.0.23 | 27/09/2026 | Product Owner | Inclusão e aprovação do ADR-016 para integração direta dos terminais faciais (aprovado em 27/09/2026 como ADR-015 na branch `codex/fundacao-mvp` e renumerado por colisão com o ADR-015 da `main`) |
+| 1.0.24 | 27/09/2026 | Soluções do Vale | ADR-016 atualizado para 1.1.0 com a evidência técnica de bancada (DS-K1T673DX-BR, firmware V3.18.0, módulo seguro RS-485); ADR-016 segue como decisão vigente dos terminais; ADR-008 e ADR-013 continuam adiados; numeração inalterada |
+| 1.0.25 | 27/09/2026 | Product Owner | Consolidação da numeração (§18.4): ADR-015 permanece ViaCEP; ADR-016 é a decisão vigente dos terminais; o ADR-015 provisório de `codex/fundacao-mvp` fica substituído e não será integrado |
+| 1.0.26 | 10/10/2026 | Product Owner | Inclusão e aprovação do ADR-017: separação entre teste técnico do relé e liberação manual operacional, postos e designação de operadores; operação desligada por padrão |
 
 ---
 
@@ -263,6 +267,8 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
+| [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita (v1.1.1: bancada homologada, operação real desligada) |
+| [ADR-017](ADR-017_LIBERACAO_MANUAL_OPERACIONAL_E_TESTE_TECNICO_DO_RELE.md) | Liberação manual operacional e teste técnico do relé | P1 | Aprovado | ADR-016 | liberação manual no Modo Portaria (desligada até homologação) |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -307,7 +313,14 @@ ADR-002 Multi-implantação
 
 ADR-007 Portas e adaptadores
 ├── ADR-008 Contingência
-└── ADR-013 Biometria
+├── ADR-013 Biometria
+└── ADR-016 Integração direta do terminal facial
+
+ADR-008 + ADR-013
+└── ADR-016 produção e contingência
+
+ADR-016 Integração direta do terminal facial
+└── ADR-017 Liberação manual operacional e teste técnico do relé
 
 ADR-004 + ADR-005 + ADR-009
 └── ADR-012 Deploy e rollback
@@ -379,6 +392,7 @@ Antes da produção:
 | ADR-013 | `RN-045`, `RN-065`, `RN-066`, `RN-075` |
 | ADR-014 | `RN-041`, `RN-046` a `RN-049`, `RN-086` |
 | ADR-015 | `RN-002`, `RN-060` |
+| ADR-016 | `RN-038`, `RN-040`, `RN-045`, `RN-077` a `RN-080`, `RN-086` a `RN-093` |
 
 ---
 
@@ -399,6 +413,7 @@ Antes da produção:
 | ADR-013 | `PEN-RNG-005`, `PEN-BDD-007`, `PEN-ARQ-008` |
 | ADR-014 | `PEN-BDD-021`, `PEN-BDD-025`, `PEN-ARQ-017` |
 | ADR-015 | `PEN-RNG-006` |
+| ADR-016 | `PEN-001`, `PEN-002`, `PEN-005`, `PEN-017`, `PEN-ARQ-001`, `PEN-ARQ-002`, `PEN-ARQ-008` |
 
 ---
 
@@ -428,6 +443,15 @@ O documento 011 foi formalmente aprovado e não deverá ser renomeado ou renumer
 ## 18.3 Pendência
 
 **PEN-ADR-CAT-001:** decidir se a especificação de APIs será `docs/012_APIS.md` e atualizar a lista oficial de documentos, preservando o histórico da previsão original.
+
+## 18.4 Consolidação da numeração do ADR dos terminais faciais
+
+Decisão do Product Owner em 27/09/2026:
+
+- o **ADR-015** da `main` é a integração externa de consulta de CEP (ViaCEP) e permanece inalterado, sem renumeração;
+- o **ADR-016** é a decisão vigente da integração direta dos terminais faciais;
+- o arquivo `ADR-015_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md` da branch antiga `codex/fundacao-mvp` foi numeração provisória baseada em branch desatualizada; seu conteúdo está substituído pelo ADR-016 e ele **não deverá ser integrado à `main`**;
+- referências a "ADR-015" como decisão dos terminais, fora dessa branch antiga, devem ser lidas como ADR-016.
 
 ---
 
@@ -530,10 +554,12 @@ Os ADRs adiados somente voltarão a **Proposto** quando suas condições documen
 
 Fora do conjunto inicial, `ADR-015` (Integração externa: consulta de CEP — ViaCEP) foi criado e aprovado retrospectivamente em 11/08/2026, registrando uma decisão já implementada nas partes P08 e P11, conforme a seção 9 deste catálogo.
 
+`ADR-016` (Integração direta entre terminal facial e ponto de acesso) foi aprovado em 27/09/2026 para a topologia e a prova de integração; a produção permanece condicionada aos ADRs 008 e 013. Ele foi redigido como `ADR-015` na branch `codex/fundacao-mvp`, que se separou da `main` antes do ADR do ViaCEP; ao ser incorporado, recebeu o próximo número disponível, sem alterar o conteúdo aprovado.
+
 A próxima etapa documental é a especificação de APIs. Devido à divergência de numeração registrada em `PEN-ADR-CAT-001`, o arquivo deverá usar o próximo número principal disponível, sem renomear silenciosamente a arquitetura aprovada.
 
 ---
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP, e `ADR-016` registra a integração direta dos terminais faciais.

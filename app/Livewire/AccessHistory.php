@@ -137,6 +137,9 @@ class AccessHistory extends Component
             'reason' => $entry->motivo_negacao,
             'notes' => $entry->notes,
             'protocol' => $entry->protocol,
+            // Liberação manual excepcional ou fora do posto fica destacada para revisão (SDV-OPE-018 §4).
+            'excepcional' => (bool) $entry->excepcional,
+            'fora_do_posto' => (bool) $entry->fora_do_posto,
         ];
     }
 

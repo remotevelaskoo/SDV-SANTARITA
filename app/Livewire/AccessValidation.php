@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\CapturaDocumentoAssistida;
 use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Models\HistoricoAcesso;
@@ -22,6 +23,8 @@ use Livewire\Component;
 
 class AccessValidation extends Component
 {
+    use CapturaDocumentoAssistida;
+
     private const PONTO_ACESSO = 'Portaria Principal';
 
     public string $contribution = 'yes';
@@ -109,6 +112,15 @@ class AccessValidation extends Component
             return;
         }
 
+        // Dados sugeridos pelo OCR com baixa confiança exigem conferência humana.
+        if ($this->camposConferencia !== []) {
+            foreach ($this->camposConferencia as $campo) {
+                $this->addError($campo, 'Requer conferência: confirme ou corrija este campo.');
+            }
+
+            return;
+        }
+
         $this->validate([
             'quickName' => ['required', 'string', 'min:3', 'max:120'],
             'quickDocument' => ['required', 'string', 'min:11', 'max:20'],
@@ -117,6 +129,7 @@ class AccessValidation extends Component
             'quickResponsible' => ['required_if:quickAccessType,visitante,prestador', 'nullable', 'string', 'max:120'],
             'quickPropertyCode' => ['required', 'string', 'max:40'],
             'quickNotes' => ['nullable', 'string', 'max:200'],
+            'quickBirthDate' => ['nullable', 'date', 'before:today'],
         ], [
             'required' => 'Preencha este campo para continuar.',
             'required_if' => 'Preencha este campo para o tipo de acesso selecionado.',
@@ -133,6 +146,7 @@ class AccessValidation extends Component
 
         $pessoa = Pessoa::query()->create([
             'nome' => $this->quickName,
+            'data_nascimento' => $this->quickBirthDate !== '' ? $this->quickBirthDate : null,
             'status' => 'ativo',
             'versao' => 1,
         ]);
@@ -422,6 +436,8 @@ class AccessValidation extends Component
         $this->quickResponsible = '';
         $this->quickPropertyCode = '';
         $this->quickNotes = '';
+        $this->quickBirthDate = '';
+        $this->digitarManualmente();
     }
 
     private function normalizeDocument(string $document): string
