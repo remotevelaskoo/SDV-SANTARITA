@@ -1,11 +1,11 @@
 # SDV Access — Liberação manual operacional no Modo Portaria
 
 **Documento:** SDV-OPE-017
-**Versão:** 1.0.0
+**Versão:** 1.1.0
 **Status:** Implementado e desligado por padrão (`SDV_INTEGRACAO_LIBERACAO_OPERACIONAL=false`)
 **Data:** 10/10/2026
 **Decisão de origem:** [ADR-017](ADR/ADR-017_LIBERACAO_MANUAL_OPERACIONAL_E_TESTE_TECNICO_DO_RELE.md)
-**Relacionados:** [SDV-INT-016](016_HOMOLOGACAO_FACIAL_HIKVISION.md) (teste do relé), ADR-016
+**Relacionados:** [SDV-INT-016](016_HOMOLOGACAO_FACIAL_HIKVISION.md) (teste do relé), [SDV-OPE-018](018_POSTOS_OPERACIONAIS_E_CADASTRO_ASSISTIDO_POR_CAMERA.md), ADR-016
 
 ## 1. O que é
 
@@ -34,20 +34,31 @@ permissões**, depois da aprovação formal.
 
 Em **Gestão › Postos e operadores**:
 
-1. cadastre o posto (ex.: `GUARITA-01`, "Guarita Principal");
-2. vincule os pontos de acesso que o posto atende (o terminal de cada ponto passa a ser o
-   equipamento permitido);
-3. designe os operadores do posto. Para trocar de função, encerre a designação; o histórico
-   fica preservado.
+1. cadastre o posto (inicialmente Guarita Principal, Atendimento de Veículos e Atendimento de Pedestres);
+2. vincule os pontos e equipamentos preferenciais do posto;
+3. designe os operadores. Para trocar de função, encerre a designação; o histórico fica preservado.
+
+Ao iniciar o turno, o operador seleciona um posto autorizado. O posto prioriza seus relés e
+câmeras, mas não constitui bloqueio físico. A Guarita Principal pode operar todos os relés
+autorizados. Nos demais postos, o operador com permissão ampliada também pode escolher
+**Outros pontos de acesso**; nesse caso, a confirmação destaca que o equipamento não pertence
+ao posto ativo.
+
+Devem ser diferenciadas as permissões de liberação dos relés do posto e de liberação de outros
+relés da implantação. Toda troca de posto e todo acionamento externo ao posto são auditados.
 
 Tabelas: `postos`, `posto_pontos_acesso` e `operador_postos` (vínculos com início e fim).
+As câmeras USB são associadas localmente por navegador e posto, conforme SDV-OPE-018.
 
 ## 4. Requisitos para um equipamento aparecer
 
-Só aparecem no seletor terminais que cumprem tudo (ADR-017 §3.2): ponto do posto do operador,
-terminal e ponto ativos, online, certificado confiável, abertura remota homologada para o
-firmware atual, relé homologado (SDV-INT-016 §14) e direção compatível. Os demais não aparecem;
-se nenhum cumprir, a tela informa.
+A seleção principal mostra primeiro os terminais preferenciais do posto que cumpram tudo
+(ADR-017 §3.2): terminal e ponto ativos, online, certificado confiável, abertura remota
+homologada para o firmware atual, relé homologado (SDV-INT-016 §14) e direção compatível.
+
+Se o operador possuir a permissão ampliada, a seção **Outros pontos de acesso** apresenta os
+demais terminais elegíveis da implantação. Os indisponíveis não podem ser acionados e devem
+informar o motivo. A autorização é revalidada pelo backend no envio.
 
 Hoje a facial de homologação está na bancada (ponto do tipo `bancada`, nunca ativado), portanto
 não aparece. Para levá-la ao ponto real, use **Gestão › Pontos de acesso**:
@@ -70,11 +81,16 @@ Um terminal ativo não pode ser desvinculado: volte-o antes para homologação.
    foto e documento protegidos (abertos sob demanda e auditados), documento sem máscara para
    quem pode revelar, perfil, imóvel e vínculo, autorização (vínculo vigente) e validade e
    restrições. Com restrição, a liberação normal é bloqueada.
-3. **Liberação excepcional** (permissão própria): informe quem é ou a ocorrência e a
-   justificativa (mínimo 20 caracteres).
-4. Escolha a direção e o ponto/equipamento. Com um só compatível, ele vem selecionado e visível,
-   com o estado online/offline.
-5. Informe o motivo e clique em **Revisar liberação**.
+3. **Liberação excepcional** (permissão própria): marque o checkbox “Liberação excepcional —
+   prosseguir sem autorização regular confirmada”. Para agilizar o atendimento, não há texto
+   obrigatório no fluxo padrão. O sistema grava o motivo padronizado
+   `liberacao_excepcional_operador`, exige confirmação destacada e sinaliza o evento para
+   revisão. Uma observação complementar é opcional, salvo configuração administrativa.
+4. Escolha a direção e o ponto/equipamento. Os equipamentos preferenciais do posto aparecem
+   primeiro. Com permissão ampliada, é possível abrir **Outros pontos de acesso**; a escolha fora
+   do posto exige confirmação destacada. Com um só compatível, ele vem selecionado e visível.
+5. Na liberação normal, informe o motivo e clique em **Revisar liberação**. Na excepcional, o
+   motivo padronizado é aplicado automaticamente.
 6. Confirme: "Você está prestes a acionar Facial Entrada Principal, no ponto Entrada Principal.
    Confirma a liberação?".
 7. O resultado aparece com o **protocolo**: solicitada, enviada, aceita pelo terminal, recusada,
@@ -87,7 +103,8 @@ Um terminal ativo não pode ser desvinculado: volte-o antes para homologação.
 **Evento de acesso** (`historico_acessos`): `resultado = liberado` (decisão da portaria),
 `resultado_tecnico` (efeito no equipamento), `origem = liberacao_manual`, pessoa, imóvel,
 operador, posto, equipamento, ponto, direção, motivo, data e hora, protocolo, correlation ID,
-chave idempotente e, quando excepcional, identificação e justificativa.
+chave idempotente e, quando excepcional, a marcação, o motivo padronizado, a identificação
+disponível e a observação opcional.
 
 **Auditoria:** `liberacao_manual_solicitada` ou `liberacao_manual_excepcional_solicitada`
 (restrita), `integracao_abertura_remota` (resultado técnico, latência, chave e correlation ID),
