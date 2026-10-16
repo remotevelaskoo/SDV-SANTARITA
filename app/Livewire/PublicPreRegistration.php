@@ -9,6 +9,7 @@ use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -79,6 +80,10 @@ class PublicPreRegistration extends Component
     public string $ocrModelVersion = '';
 
     public string $extractedDocumentNumber = '';
+
+    public bool $portraitDetected = false;
+
+    public string $portraitSource = '';
 
     public bool $selfieReady = false;
 
@@ -260,10 +265,21 @@ class PublicPreRegistration extends Component
             return;
         }
 
+        $rateLimitKey = 'document-ocr:'.hash('sha256', (string) request()->ip());
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'Foram feitas muitas tentativas de leitura. Aguarde um minuto e continue manualmente ou tente novamente.';
+
+            return;
+        }
+        RateLimiter::hit($rateLimitKey, 60);
+
         $this->ocrStatus = 'processing';
         $this->ocrMessage = 'Lendo o documento em ambiente interno…';
         $this->ocrFields = [];
         $this->ocrConfidences = [];
+        $this->portraitDetected = false;
+        $this->portraitSource = '';
 
         try {
             $result = $ocr->extract($this->documentType, $this->documentFile, $this->documentBackFile);
@@ -285,6 +301,9 @@ class PublicPreRegistration extends Component
             $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
             $this->ocrEngine = (string) ($result['engine'] ?? '');
             $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
+            $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
+            $this->portraitDetected = ($portrait['detected'] ?? false) === true;
+            $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
 
             if ($this->ocrFields === []) {
                 $this->ocrStatus = 'failed';
@@ -325,6 +344,7 @@ class PublicPreRegistration extends Component
         $addressLine .= " · {$this->district} · {$this->city}/{$this->state}";
 
         $isTourist = $this->accessType === 'turista';
+        $portraitBytes = $this->preparePortraitCrop();
 
         try {
             $preRegistration = DB::transaction(function () use ($addressLine, $isTourist, $privateFiles): PreRegistration {
@@ -379,6 +399,7 @@ class PublicPreRegistration extends Component
                             'cpf' => $this->cpf,
                             'birth_date' => $this->birthDate,
                             'document_number' => $this->extractedDocumentNumber,
+                            'document_portrait_detected' => $this->portraitDetected,
                         ],
                         'processed_at' => now(),
                         'confirmed_at' => now(),
@@ -391,6 +412,15 @@ class PublicPreRegistration extends Component
             $this->addError('submission', 'Não foi possível proteger os arquivos agora. Seus dados continuam nesta tela para uma nova tentativa.');
 
             return;
+        }
+
+        if ($portraitBytes !== null) {
+            try {
+                $privateFiles->storeGeneratedPortrait($preRegistration, $portraitBytes);
+            } catch (\Throwable) {
+                // O recorte é um auxílio opcional. Documento e selfie originais
+                // permanecem disponíveis para conferência humana.
+            }
         }
 
         $this->protocol = $preRegistration->protocol;
@@ -412,6 +442,29 @@ class PublicPreRegistration extends Component
         $this->ocrEngine = '';
         $this->ocrModelVersion = '';
         $this->extractedDocumentNumber = '';
+        $this->portraitDetected = false;
+        $this->portraitSource = '';
+    }
+
+    private function preparePortraitCrop(): ?string
+    {
+        if (! $this->portraitDetected || $this->documentFile === null) {
+            return null;
+        }
+
+        try {
+            $ocr = app(DocumentOcrClient::class);
+            $result = $ocr->extract(
+                $this->documentType,
+                $this->documentFile,
+                $this->documentBackFile,
+                includePortrait: true,
+            );
+
+            return $ocr->portraitBytes($result);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function restart(): void

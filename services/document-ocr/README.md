@@ -32,8 +32,8 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 ## Limites
 
 - o resultado é sugestão, não validação do documento;
-- o serviço não reconhece nem compara rostos;
-- o recorte da fotografia do documento permanece na próxima entrega;
+- o serviço localiza a região de uma foto no documento, mas não reconhece nem compara rostos;
+- o recorte somente é devolvido quando `include_portrait=true` e deve ser armazenado em área privada;
 - o fluxo manual continua disponível quando o serviço estiver desligado ou falhar;
 - nenhuma imagem é enviada a fornecedor externo.
 

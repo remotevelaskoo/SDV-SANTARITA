@@ -1,6 +1,18 @@
 import unittest
+from threading import Lock
+from types import SimpleNamespace
 
-from app.extractor import OcrLine, parse_fields
+from app.extractor import DocumentExtractor, OcrLine, parse_fields
+
+
+class FakeOcrEngine:
+    def __call__(self, _content: bytes) -> SimpleNamespace:
+        return SimpleNamespace(txts=["NOME", "MARIA TESTE DA SILVA"], scores=[0.99, 0.98])
+
+
+class FailingPortraitExtractor:
+    def extract(self, *_args, **_kwargs) -> dict:
+        raise RuntimeError("detector failed")
 
 
 class ParserTest(unittest.TestCase):
@@ -26,6 +38,18 @@ class ParserTest(unittest.TestCase):
         fields = parse_fields("rg_cin", [OcrLine("CPF 111.111.111-11", 0.99, "front")])
 
         self.assertIsNone(fields["cpf"]["value"])
+
+    def test_portrait_failure_does_not_block_text_extraction(self) -> None:
+        extractor = DocumentExtractor.__new__(DocumentExtractor)
+        extractor._engine = FakeOcrEngine()
+        extractor._portrait_extractor = FailingPortraitExtractor()
+        extractor._lock = Lock()
+
+        result = extractor.extract("cnh", [("front", b"image")])
+
+        self.assertEqual("Maria Teste da Silva", result["fields"]["name"]["value"])
+        self.assertFalse(result["portrait"]["detected"])
+        self.assertEqual("unavailable", result["portrait"]["status"])
 
 
 if __name__ == "__main__":

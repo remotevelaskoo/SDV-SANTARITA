@@ -12,14 +12,19 @@ from app.main import app
 
 
 class FakeExtractor:
-    def extract(self, document_type: str, images: list[tuple[str, bytes]]) -> dict:
+    def extract(
+        self,
+        document_type: str,
+        images: list[tuple[str, bytes]],
+        include_portrait: bool = False,
+    ) -> dict:
         return {
             "status": "completed",
             "engine": "test-engine",
             "model_version": "test-model",
             "document_type": document_type,
             "fields": {},
-            "portrait": {"detected": False},
+            "portrait": {"detected": include_portrait, "image_base64": "portrait" if include_portrait else None},
             "line_count": 0,
             "received_sources": [source for source, _ in images],
         }
@@ -45,7 +50,7 @@ class ApiTest(unittest.TestCase):
             response = self.client.post(
                 "/v1/extract",
                 headers={"Authorization": "Bearer secret"},
-                data={"document_type": "cnh"},
+                data={"document_type": "cnh", "include_portrait": "true"},
                 files={
                     "front": ("front.jpg", image_bytes(), "image/jpeg"),
                     "back": ("back.jpg", image_bytes(), "image/jpeg"),
@@ -54,6 +59,7 @@ class ApiTest(unittest.TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertEqual(["front", "back"], response.json()["received_sources"])
+        self.assertTrue(response.json()["portrait"]["detected"])
 
     def test_rejects_a_request_without_the_internal_token(self) -> None:
         with patch.dict(os.environ, {"DOCUMENT_OCR_TOKEN": "secret"}):

@@ -136,6 +136,7 @@
                 <x-protected-file-review
                     :document-link="$attendance['protectedFiles']['document']"
                     :document-back-link="$attendance['protectedFiles']['document_back']"
+                    :document-portrait-link="$attendance['protectedFiles']['document_portrait']"
                     :selfie-link="$attendance['protectedFiles']['selfie']"
                     :id="'portaria-'.$attendance['protectedFiles']['pre_registration_id']"
                     :title="'Conferência visual protegida — '.$attendance['name']"

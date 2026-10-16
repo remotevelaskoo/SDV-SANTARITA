@@ -42,6 +42,7 @@ def health() -> dict:
 @app.post("/v1/extract", dependencies=[Depends(authorize)])
 async def extract_document(
     document_type: str = Form(...),
+    include_portrait: bool = Form(default=False),
     front: UploadFile = File(...),
     back: UploadFile | None = File(default=None),
 ) -> dict:
@@ -52,7 +53,7 @@ async def extract_document(
     if back is not None:
         images.append(("back", await _validated_image(back)))
 
-    return extractor().extract(document_type, images)
+    return extractor().extract(document_type, images, include_portrait=include_portrait)
 
 
 async def _validated_image(upload: UploadFile) -> bytes:

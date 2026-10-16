@@ -1,7 +1,7 @@
 # ADR-011 — PYTHON/FASTAPI PARA OCR OU IA
 
 **Identificador:** ADR-011
-**Versão:** 1.2.0
+**Versão:** 1.3.0
 **Status:** Proposto — retomada limitada ao OCR assistido do pré-cadastro
 **Prioridade:** P2 — Condicional
 **Produto:** SDV Access — Implantação Santa Rita
@@ -18,6 +18,7 @@
 | 1.0.1 | 12/08/2026 | Product Owner | Registro da importação assistida como caso futuro, sem ativar Python/FastAPI |
 | 1.1.0 | 15/10/2026 | Lucas Pastorelli + Codex | Retomada proposta para leitura assistida de RG/CIN e CNH no pré-cadastro, ainda sem escolher tecnologia ou autorizar fornecedor externo |
 | 1.2.0 | 15/10/2026 | Lucas Pastorelli + Codex | RapidOCR/ONNX em serviço FastAPI interno escolhido para prova técnica, sem ativação em produção |
+| 1.3.0 | 15/10/2026 | Lucas Pastorelli + Codex | OpenCV acrescentado para localização e recorte visual da foto impressa, sem reconhecimento facial |
 
 # 1. Contexto
 
@@ -53,6 +54,8 @@ Esta mudança de estado autoriza preparar captura, contrato, segurança, experi�
 - elimina o preenchimento manual.
 
 A prova técnica foi implementada com RapidOCR/ONNX em um serviço FastAPI interno. A ativação em produção ainda dependerá de homologação com amostras autorizadas, política de dados e aprovação operacional.
+
+Para localizar a fotografia impressa no documento, a prova utiliza um detector clássico do OpenCV. O resultado é somente um recorte visual privado: não há comparação entre rostos, geração de molde biométrico ou sincronização com equipamento.
 
 # 4. Condições de retomada
 

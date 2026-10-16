@@ -15,7 +15,12 @@ class DocumentOcrClient
     }
 
     /** @return array<string, mixed> */
-    public function extract(string $documentType, UploadedFile $front, ?UploadedFile $back = null): array
+    public function extract(
+        string $documentType,
+        UploadedFile $front,
+        ?UploadedFile $back = null,
+        bool $includePortrait = false,
+    ): array
     {
         if (! $this->enabled()) {
             throw new RuntimeException('O leitor automático não está habilitado.');
@@ -39,6 +44,7 @@ class DocumentOcrClient
 
         $response = $request->post($url.'/v1/extract', [
             'document_type' => $documentType,
+            'include_portrait' => $includePortrait ? 'true' : 'false',
         ]);
 
         if (! $response->successful()) {
@@ -51,6 +57,26 @@ class DocumentOcrClient
         }
 
         return $result;
+    }
+
+    public function portraitBytes(array $result): ?string
+    {
+        $portrait = $result['portrait'] ?? null;
+        if (! is_array($portrait) || ($portrait['detected'] ?? false) !== true) {
+            return null;
+        }
+
+        $encoded = $portrait['image_base64'] ?? null;
+        if (! is_string($encoded) || $encoded === '' || strlen($encoded) > 3_000_000) {
+            throw new RuntimeException('O recorte retornado pelo leitor é inválido.');
+        }
+
+        $contents = base64_decode($encoded, true);
+        if ($contents === false || $contents === '' || strlen($contents) > 2_000_000) {
+            throw new RuntimeException('O recorte retornado pelo leitor é inválido.');
+        }
+
+        return $contents;
     }
 
     private function request(): PendingRequest

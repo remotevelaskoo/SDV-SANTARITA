@@ -227,6 +227,11 @@
                                 @elseif ($ocrStatus === 'unavailable')
                                     <x-ui.alert variant="info" title="Preenchimento manual disponível">{{ $ocrMessage }}</x-ui.alert>
                                 @endif
+                                @if ($portraitDetected)
+                                    <x-ui.alert variant="info" title="Foto localizada no documento">
+                                        O sistema encontrou a região da foto e preparará um recorte privado para a conferência visual da portaria. Isso não compara rostos e não substitui a selfie.
+                                    </x-ui.alert>
+                                @endif
                             </div>
                         @elseif ($step === 4)
                             <div class="pre-registration-capture pre-registration-capture--selfie">
@@ -264,7 +269,7 @@
                             <div class="pre-registration-review">
                                 <article><span>Dados pessoais</span><strong>{{ $name ?: 'Não informado' }}</strong><small>{{ ucfirst($accessType) }} · {{ $cpf ?: 'CPF não informado' }}</small><button type="button" wire:click="editStep(1)">Editar</button></article>
                                 <article><span>Endereço informado</span><strong>{{ $address ?: 'Não informado' }}, {{ $addressNumber ?: 's/n' }}</strong><small>{{ $city ?: 'Cidade' }}/{{ strtoupper($state ?: 'UF') }}</small><button type="button" wire:click="editStep(2)">Editar</button></article>
-                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>{{ $documentType === 'cnh' ? 'CNH' : 'RG/CIN' }}{{ $documentBackReady ? ' · frente e verso' : ' · frente' }} · identidade exige conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
+                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>{{ $documentType === 'cnh' ? 'CNH' : 'RG/CIN' }}{{ $documentBackReady ? ' · frente e verso' : ' · frente' }}{{ $portraitDetected ? ' · foto do documento localizada' : '' }} · identidade exige conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
                                 <article><span>Veículo</span><strong>{{ $hasVehicle ? ($plate ?: 'Placa pendente') : 'Sem veículo' }}</strong><small>{{ $hasVehicle ? ($vehicleModel ?: 'Modelo pendente') : 'Etapa opcional' }}</small><button type="button" wire:click="editStep(5)">Editar</button></article>
                             </div>
 

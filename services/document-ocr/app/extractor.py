@@ -9,6 +9,8 @@ from typing import Iterable
 
 from rapidocr import RapidOCR
 
+from .portrait import PortraitExtractor
+
 
 ENGINE_NAME = "rapidocr"
 MODEL_VERSION = "PP-OCRv6-small"
@@ -28,14 +30,16 @@ class OcrLine:
 
 
 class DocumentExtractor:
-    def __init__(self, engine: RapidOCR | None = None) -> None:
+    def __init__(self, engine: RapidOCR | None = None, portrait_extractor: PortraitExtractor | None = None) -> None:
         self._engine = engine or RapidOCR()
+        self._portrait_extractor = portrait_extractor or PortraitExtractor()
         self._lock = Lock()
 
-    def extract(self, document_type: str, images: Iterable[tuple[str, bytes]]) -> dict:
+    def extract(self, document_type: str, images: Iterable[tuple[str, bytes]], include_portrait: bool = False) -> dict:
+        image_list = list(images)
         lines: list[OcrLine] = []
 
-        for source, content in images:
+        for source, content in image_list:
             with self._lock:
                 result = self._engine(content)
 
@@ -47,17 +51,24 @@ class DocumentExtractor:
                 for text, score in zip(result.txts, result.scores or (), strict=False)
             )
 
+        try:
+            portrait = self._portrait_extractor.extract(image_list, include_image=include_portrait)
+        except Exception:
+            portrait = {
+                "detected": False,
+                "confidence": None,
+                "source": None,
+                "image_base64": None,
+                "status": "unavailable",
+            }
+
         return {
             "status": "completed",
             "engine": ENGINE_NAME,
             "model_version": MODEL_VERSION,
             "document_type": document_type,
             "fields": parse_fields(document_type, lines),
-            "portrait": {
-                "detected": False,
-                "confidence": None,
-                "status": "planned_for_next_delivery",
-            },
+            "portrait": portrait,
             "line_count": len(lines),
         }
 

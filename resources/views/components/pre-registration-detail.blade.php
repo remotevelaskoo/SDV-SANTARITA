@@ -23,6 +23,7 @@
     @php
         $documentLink = $record->currentFileLink('documento');
         $documentBackLink = $record->currentFileLink('documento_verso');
+        $documentPortraitLink = $record->currentFileLink('documento_foto');
         $selfieLink = $record->currentFileLink('selfie');
         $documentExtraction = $record->documentExtractions()->first();
     @endphp
@@ -30,6 +31,7 @@
     <x-protected-file-review
         :document-link="$documentLink"
         :document-back-link="$documentBackLink"
+        :document-portrait-link="$documentPortraitLink"
         :selfie-link="$selfieLink"
         :id="'pre-registration-'.$record->id"
     />

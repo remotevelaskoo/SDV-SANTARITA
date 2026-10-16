@@ -1,7 +1,7 @@
 # OCR assistido no pré-cadastro
 
 **Documento:** SDV-UXP-015  
-**Situação:** Em desenvolvimento — entregas 1, 2 e 3 implementadas para revisão
+**Situação:** Em desenvolvimento — entregas 1 a 4 implementadas para revisão
 **Responsáveis:** Lucas Pastorelli + Codex  
 **Data:** 15 de outubro de 2026
 
@@ -50,7 +50,7 @@ O resultado será sempre uma sugestão. A pessoa deverá conferir e poderá corr
 | 1 — Captura estruturada | Tipo do documento, frente obrigatória, verso opcional e armazenamento privado separado | ✅ Implementada para revisão |
 | 2 — Leitura de texto | Serviço interno FastAPI/RapidOCR e extração de nome, CPF, número e nascimento | ✅ Implementada para revisão técnica |
 | 3 — Conferência | Sugestões, confiança, correção e confirmação explícita | ✅ Implementada para revisão funcional |
-| 4 — Foto do documento | Localização e recorte privado da fotografia para comparação visual | ⚪ Planejada |
+| 4 — Foto do documento | Localização e recorte privado da fotografia para comparação visual | ✅ Implementada para revisão funcional |
 | 5 — Homologação | Testes com amostras autorizadas de RG/CIN e CNH, erros, desempenho e acessibilidade | ⚪ Planejada |
 
 ## 5. Dados e segurança
@@ -113,9 +113,13 @@ O serviço:
 - não registra texto bruto, imagem ou documento em log;
 - pode ser desligado sem impedir o pré-cadastro.
 
+A entrega 4 acrescenta um detector facial clássico do OpenCV exclusivamente para localizar a região da fotografia impressa no documento. Quando encontrada, a região recebe margem de enquadramento, é reduzida para no máximo 640 × 640 pixels e armazenada como uma nova imagem privada e sensível. O recorte não é comparado matematicamente com a selfie, não gera molde facial e não cria credencial biométrica.
+
 Uma imagem fictícia controlada confirmou o funcionamento técnico dos quatro campos. Isso demonstra integração, não precisão em documentos brasileiros reais. A homologação continua dependendo de amostras autorizadas e das métricas descritas na seção 6.
 
 O Laravel preserva separadamente o valor sugerido e o valor confirmado pela pessoa, ambos protegidos por criptografia no banco. A tela da portaria informa que houve auxílio automático, mas continua exigindo conferência visual.
+
+O recorte somente é devolvido pelo serviço durante o envio final. Ele não permanece no estado público do navegador. A equipe autorizada poderá visualizá-lo ao lado da frente, verso e selfie usando o mesmo acesso protegido e auditado do AJ-001.
 
 ## 10. Relações
 
