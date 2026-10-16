@@ -121,7 +121,13 @@ O Laravel preserva separadamente o valor sugerido e o valor confirmado pela pess
 
 O recorte somente é devolvido pelo serviço durante o envio final. Ele não permanece no estado público do navegador. A equipe autorizada poderá visualizá-lo ao lado da frente, verso e selfie usando o mesmo acesso protegido e auditado do AJ-001.
 
-## 10. Relações
+## 10. Preparação da entrega 5
+
+O avaliador local em `services/document-ocr/evaluation` já está disponível. Ele mede acerto de nome, CPF, nascimento, número do documento, detecção da foto, falhas técnicas e latência sem colocar valores pessoais no relatório.
+
+Imagens, respostas esperadas privadas e relatórios foram bloqueados no Git para evitar publicação acidental. A execução real continua pendente porque exige um conjunto autorizado e representativo de CNH, RG e CIN, com variações de iluminação, inclinação, reflexo, desfoque e versão do documento.
+
+## 11. Relações
 
 - `docs/006_UX_UI_PRE_CADASTRO.md`;
 - `docs/ADR/ADR-006_ARMAZENAMENTO_S3_E_CICLO_DE_VIDA_DE_ARQUIVOS.md`;

@@ -38,3 +38,18 @@ PYTHONPATH=. python -m unittest discover -s tests -v
 - nenhuma imagem é enviada a fornecedor externo.
 
 RapidOCR é um projeto com licença Apache 2.0: <https://github.com/RapidAI/RapidOCR>.
+
+## Preparação da homologação
+
+As imagens reais autorizadas devem ser colocadas somente em `evaluation/samples/`. Essa pasta, o manifesto privado e os relatórios estão bloqueados pelo Git para impedir publicação acidental.
+
+1. copie `evaluation/manifest.example.jsonl` para `evaluation/manifest.private.jsonl`;
+2. substitua os dados fictícios pelas respostas esperadas das amostras autorizadas;
+3. coloque as imagens na pasta privada usando nomes sem dados pessoais;
+4. execute:
+
+```bash
+PYTHONPATH=. python -m evaluation.evaluate evaluation/manifest.private.jsonl
+```
+
+O relatório contém somente quantidades, acerto por campo, detecção da foto, falhas técnicas e tempo de resposta. Valores pessoais e texto extraído não são impressos nem gravados no relatório.
