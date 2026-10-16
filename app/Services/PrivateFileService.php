@@ -26,7 +26,7 @@ class PrivateFileService
     public function __construct(private AuditService $audit) {}
 
     /**
-     * @param  array<'documento'|'selfie', UploadedFile>  $uploads
+     * @param  array<'documento'|'documento_verso'|'selfie', UploadedFile>  $uploads
      * @return list<Arquivo>
      */
     public function storePreRegistrationFiles(PreRegistration $preRegistration, array $uploads): array
@@ -36,7 +36,7 @@ class PrivateFileService
 
         try {
             foreach ($uploads as $category => $upload) {
-                if (! in_array($category, ['documento', 'selfie'], true)) {
+                if (! in_array($category, ['documento', 'documento_verso', 'selfie'], true)) {
                     throw new RuntimeException('Categoria de arquivo não permitida.');
                 }
 
@@ -79,7 +79,11 @@ class PrivateFileService
                     'category' => $category,
                     'object_key' => $objectKey,
                     'original_name' => $upload->getClientOriginalName(),
-                    'display_name' => $category === 'documento' ? 'Documento enviado' : 'Selfie enviada',
+                    'display_name' => match ($category) {
+                        'documento' => 'Frente do documento',
+                        'documento_verso' => 'Verso do documento',
+                        default => 'Selfie enviada',
+                    },
                     'extension' => $extension,
                     'declared_mime' => $upload->getClientMimeType(),
                     'detected_mime' => $detectedMime,

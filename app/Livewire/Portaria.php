@@ -102,11 +102,11 @@ class Portaria extends Component
      * já cobertas pelo AJ-001 mergeado; aqui só reaproveitamos o mecanismo
      * para o Modo Portaria, sem tabela ou serviço novos).
      *
-     * @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}
+     * @return array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}
      */
     private function protectedFilesFor(?Pessoa $pessoa): array
     {
-        $vazio = ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+        $vazio = ['document' => null, 'document_back' => null, 'selfie' => null, 'pre_registration_id' => null];
 
         if (! $pessoa) {
             return $vazio;
@@ -135,6 +135,7 @@ class Portaria extends Component
 
         return [
             'document' => $preRegistration->currentFileLink('documento'),
+            'document_back' => $preRegistration->currentFileLink('documento_verso'),
             'selfie' => $preRegistration->currentFileLink('selfie'),
             'pre_registration_id' => $preRegistration->id,
         ];

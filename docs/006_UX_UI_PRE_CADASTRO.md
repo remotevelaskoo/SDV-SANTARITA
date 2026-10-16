@@ -2,7 +2,7 @@
 ## Fluxo público, análise pela portaria e acompanhamento
 
 **Documento:** SDV-UXP-006  
-**Versão:** 1.1.0
+**Versão:** 1.2.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -18,6 +18,7 @@
 | 1.0.0 | Julho/2026 | Soluções do Vale | Especificação inicial do Pré-Cadastro e da análise pela portaria |
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação UX/UI do Pré-Cadastro |
 | 1.1.0 | 12/08/2026 | Product Owner | Conferência visual de arquivos e revelação controlada de documento durante a análise pela portaria |
+| 1.2.0 | 15/10/2026 | Lucas Pastorelli + Codex | Início do AJ-005: captura estruturada de frente e verso de RG/CIN ou CNH para OCR assistido |
 
 ---
 
@@ -1836,7 +1837,7 @@ OCR, autorização, vínculo e decisão não residirão no navegador.
 | PEN-UXP-004 | Definir campos obrigatórios por tipo | Formulários e validação | Regras de negócio |
 | PEN-UXP-005 | Definir regras específicas de turista | Período, destino e documentação | `PEN-007` |
 | PEN-UXP-006 | Definir documentos exigidos para prestador | Etapa 3 e análise | Regras de negócio |
-| PEN-UXP-007 | Definir se OCR entra no MVP | Processamento e prazo | `PEN-019` |
+| PEN-UXP-007 | Resolvida em parte — OCR assistido entrou no planejamento pelo AJ-005; tecnologia, métricas e ativação em produção continuam condicionadas à ADR-011 | Processamento e prazo | `PEN-019`, `docs/015` |
 | PEN-UXP-008 | Definir tipos, formatos e limites de arquivo | Upload e segurança | Arquitetura |
 | PEN-UXP-009 | Definir quantidade de veículos | Etapa 5 | Produto |
 | PEN-UXP-010 | Definir prazo de rascunho e retomada | Retenção e experiência | Produto e LGPD |

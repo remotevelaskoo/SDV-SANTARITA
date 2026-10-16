@@ -135,6 +135,7 @@
             @foreach ($comArquivo as $attendance)
                 <x-protected-file-review
                     :document-link="$attendance['protectedFiles']['document']"
+                    :document-back-link="$attendance['protectedFiles']['document_back']"
                     :selfie-link="$attendance['protectedFiles']['selfie']"
                     :id="'portaria-'.$attendance['protectedFiles']['pre_registration_id']"
                     :title="'Conferência visual protegida — '.$attendance['name']"

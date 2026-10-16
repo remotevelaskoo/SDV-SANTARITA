@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // em runtime normal, BelongsToImplantacao::bootBelongsToImplantacao() sobrescreve o valor no `creating`.
 #[Fillable([
     'implantacao_id',
-    'protocol', 'name', 'document', 'birth_date', 'phone', 'email',
+    'protocol', 'name', 'document', 'document_type', 'birth_date', 'phone', 'email',
     'access_type', 'address_informed',
     'destination_property', 'destination_label', 'responsible_name',
     'period_start', 'period_end',
@@ -119,5 +119,14 @@ class PreRegistration extends Model
         return mb_strlen($this->document) > 4
             ? str_repeat('*', max(4, mb_strlen($this->document) - 4)).mb_substr($this->document, -4)
             : 'Documento protegido';
+    }
+
+    public function documentTypeLabel(): string
+    {
+        return match ($this->document_type) {
+            'cnh' => 'CNH',
+            'rg_cin' => 'RG/CIN',
+            default => 'Não informado',
+        };
     }
 }

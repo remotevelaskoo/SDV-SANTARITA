@@ -705,6 +705,7 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('pre_registrations', [
             'name' => 'Camila Andrade',
             'document' => '987.654.321-00',
+            'document_type' => 'cnh',
             'access_type' => 'turista',
             'destination_label' => 'Praia do Santa Rita',
             'destination_property' => null,

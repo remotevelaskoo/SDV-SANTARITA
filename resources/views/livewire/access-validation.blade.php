@@ -143,6 +143,7 @@
         @if ($protectedFiles['pre_registration_id'])
             <x-protected-file-review
                 :document-link="$protectedFiles['document']"
+                :document-back-link="$protectedFiles['document_back']"
                 :selfie-link="$protectedFiles['selfie']"
                 :id="'validation-'.$protectedFiles['pre_registration_id']"
             />

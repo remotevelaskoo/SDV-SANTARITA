@@ -53,9 +53,15 @@ class PublicPreRegistration extends Component
 
     public string $destinationProperty = 'Bloco B — Apto 304';
 
+    public string $documentType = 'cnh';
+
     public bool $documentReady = false;
 
     public mixed $documentFile = null;
+
+    public bool $documentBackReady = false;
+
+    public mixed $documentBackFile = null;
 
     public bool $selfieReady = false;
 
@@ -167,6 +173,22 @@ class PublicPreRegistration extends Component
         $this->resetErrorBag('documentReady');
     }
 
+    public function updatedDocumentBackFile(): void
+    {
+        if ($this->documentBackFile === null) {
+            $this->documentBackReady = false;
+
+            return;
+        }
+
+        $this->validateOnly('documentBackFile', [
+            'documentBackFile' => $this->optionalProtectedImageRules(),
+        ], $this->fileValidationMessages());
+
+        $this->documentBackReady = true;
+        $this->resetErrorBag('documentBackFile');
+    }
+
     public function updatedSelfieFile(): void
     {
         $this->validateOnly('selfieFile', [
@@ -182,6 +204,13 @@ class PublicPreRegistration extends Component
         $this->documentFile = null;
         $this->documentReady = false;
         $this->resetErrorBag(['documentFile', 'documentReady']);
+    }
+
+    public function removeDocumentBackFile(): void
+    {
+        $this->documentBackFile = null;
+        $this->documentBackReady = false;
+        $this->resetErrorBag('documentBackFile');
     }
 
     public function removeSelfieFile(): void
@@ -215,6 +244,7 @@ class PublicPreRegistration extends Component
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
                     'document' => $this->cpf,
+                    'document_type' => $this->documentType,
                     'birth_date' => $this->birthDate,
                     'phone' => $this->phone,
                     'email' => $this->email,
@@ -237,10 +267,16 @@ class PublicPreRegistration extends Component
                     'submitted_at' => now(),
                 ]);
 
-                $privateFiles->storePreRegistrationFiles($preRegistration, [
+                $uploads = [
                     'documento' => $this->documentFile,
                     'selfie' => $this->selfieFile,
-                ]);
+                ];
+
+                if ($this->documentBackFile !== null) {
+                    $uploads['documento_verso'] = $this->documentBackFile;
+                }
+
+                $privateFiles->storePreRegistrationFiles($preRegistration, $uploads);
 
                 return $preRegistration;
             });
@@ -287,7 +323,11 @@ class PublicPreRegistration extends Component
                     ? []
                     : ['required', Rule::in($this->destinationOptions())],
             ],
-            3 => ['documentFile' => $this->protectedImageRules()],
+            3 => [
+                'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
+                'documentFile' => $this->protectedImageRules(),
+                'documentBackFile' => $this->optionalProtectedImageRules(),
+            ],
             4 => ['selfieFile' => $this->protectedImageRules()],
             5 => $this->hasVehicle ? [
                 'plate' => ['required', 'string', 'min:7', 'max:8'],
@@ -322,7 +362,9 @@ class PublicPreRegistration extends Component
             'city' => ['required', 'string', 'max:80'],
             'state' => ['required', 'string', 'size:2'],
             'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
+            'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
             'documentFile' => $this->protectedImageRules(),
+            'documentBackFile' => $this->optionalProtectedImageRules(),
             'selfieFile' => $this->protectedImageRules(),
             'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
             'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],
@@ -335,6 +377,12 @@ class PublicPreRegistration extends Component
     private function protectedImageRules(): array
     {
         return ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
+    }
+
+    /** @return array<int, string> */
+    private function optionalProtectedImageRules(): array
+    {
+        return ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
     }
 
     /** @return array<string, string> */
@@ -354,6 +402,8 @@ class PublicPreRegistration extends Component
     {
         return [
             'documentFile.required' => 'Envie uma foto do documento para continuar.',
+            'documentType.required' => 'Escolha o tipo de documento.',
+            'documentType.in' => 'Escolha RG/CIN ou CNH.',
             'selfieFile.required' => 'Envie uma selfie para continuar.',
             'image' => 'O arquivo precisa ser uma imagem válida.',
             'mimes' => 'Use uma imagem JPG, PNG ou WebP.',

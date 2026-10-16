@@ -22,11 +22,13 @@
 
     @php
         $documentLink = $record->currentFileLink('documento');
+        $documentBackLink = $record->currentFileLink('documento_verso');
         $selfieLink = $record->currentFileLink('selfie');
     @endphp
 
     <x-protected-file-review
         :document-link="$documentLink"
+        :document-back-link="$documentBackLink"
         :selfie-link="$selfieLink"
         :id="'pre-registration-'.$record->id"
     />
@@ -46,6 +48,7 @@
                     @endif
                 </dd>
             </div>
+            <div><dt>Tipo de documento</dt><dd>{{ $record->documentTypeLabel() }}</dd></div>
             <div><dt>Data de nascimento</dt><dd>{{ $record->birth_date->format('d/m/Y') }}</dd></div>
             <div><dt>Telefone</dt><dd>{{ $record->phone }}</dd></div>
             <div><dt>E-mail</dt><dd>{{ $record->email }}</dd></div>

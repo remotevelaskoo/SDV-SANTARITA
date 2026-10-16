@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 14 de agosto de 2026
+**Última atualização:** 15 de outubro de 2026
 
 ## 1. Objetivo deste documento
 
@@ -41,7 +41,7 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 | 🔴 Bloqueadas | 4 | P23 a P25 e P27 |
 | ⚪ Planejada | 0 | — |
 
-O avanço por quantidade de partes é de **21 concluídas em 27 (aproximadamente 78%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes. O AJ-001 foi concluído como reforço de segurança de partes existentes e, por isso, não altera a contagem das 27 partes principais.
+O avanço por quantidade de partes é de **21 concluídas em 27 (aproximadamente 78%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes. Ajustes como AJ-001 a AJ-005 ampliam ou reforçam partes existentes e, por isso, não alteram a contagem das 27 partes principais.
 
 ## 3. Termos usados pela equipe
 
@@ -266,8 +266,9 @@ Uma parte somente estará pronta quando:
 | AJ-002 — Revelação controlada de CPF/documento | Listas permanecem mascaradas; detalhe permite revelação explícita, temporária, autorizada e auditada para conferir identidade | Antes da homologação interna dos fluxos de pré-cadastro e validação | Extensão do catálogo P20 e auditoria P22 | ✅ Concluída — permissão `dados-sensiveis.revelar`, revelação temporária nas fichas de pré-cadastro e validação, remascaramento e evento restrito de auditoria |
 | AJ-003 — Integração facial BRAVAS | Sincronização separada da aprovação do pré-cadastro, por adaptador, fila, confirmação e revogação | P25 | Inventário do equipamento, política jurídica, homologação e retomada da ADR-013 | 🔴 Bloqueada |
 | AJ-004 — Importação assistida por IA | Importar fontes legadas por área de preparação, extração com confiança, deduplicação e revisão humana obrigatória | Após estabilização do modelo e da auditoria | P17, P22 e retomada da ADR-011 | 🟡 Planejada |
+| AJ-005 — OCR assistido no pré-cadastro | Fotografar RG/CIN ou CNH, extrair dados como sugestão, localizar a foto do documento e exigir confirmação humana, mantendo a selfie separada | Antes da homologação definitiva do pré-cadastro | P08, AJ-001, P22 e retomada da ADR-011 | 🟡 Em andamento — entrega 1 de captura estruturada na branch `codex/aj005-ocr-documento` |
 
-As quatro decisões acima não reabrem P08, P20 ou P21 como um todo. AJ-001 e AJ-002 são endurecimentos necessários para homologação; AJ-003 permanece no escopo futuro de P25; AJ-004 deverá ser detalhada em entrega própria quando suas dependências forem resolvidas.
+Os ajustes acima não reabrem P08, P20 ou P21 como um todo. AJ-001 e AJ-002 são endurecimentos necessários para homologação; AJ-003 permanece no escopo futuro de P25; AJ-004 trata importação de fontes legadas; AJ-005 trata exclusivamente a leitura assistida do documento durante o pré-cadastro e está detalhado em `docs/015_OCR_ASSISTIDO_PRE_CADASTRO.md`.
 
 #### Resultado detalhado do AJ-001
 
@@ -313,3 +314,4 @@ Registro leve de correções em partes já marcadas como concluídas — não cr
 - [Regras de negócio](009_REGRAS_DE_NEGOCIO.md)
 - [Banco de dados](010_BANCO_DE_DADOS.md)
 - [Arquitetura do sistema](011_ARQUITETURA_DO_SISTEMA.md)
+- [OCR assistido no pré-cadastro](015_OCR_ASSISTIDO_PRE_CADASTRO.md)

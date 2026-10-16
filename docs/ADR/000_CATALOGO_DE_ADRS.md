@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.22
+**Versão:** 1.0.23
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -38,6 +38,7 @@
 | 1.0.20 | 30/07/2026 | Product Owner | Criação e aprovação do adiamento do ADR-014 |
 | 1.0.21 | 30/07/2026 | Soluções do Vale | Encerramento do conjunto inicial de ADRs e atualização da próxima etapa |
 | 1.0.22 | 11/08/2026 | Product Owner | Criação e aprovação retrospectiva do ADR-015 (integração externa de consulta de CEP) |
+| 1.0.23 | 15/10/2026 | Lucas Pastorelli + Codex | ADR-011 volta a Proposto para o caso limitado de OCR assistido no pré-cadastro |
 
 ---
 
@@ -258,7 +259,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-008](ADR-008_CONTINGENCIA_E_CACHE_OPERACIONAL.md) | Contingência e cache operacional | P1 | Adiado | 011 | homologação e go-live |
 | [ADR-009](ADR-009_GESTAO_E_ROTACAO_DE_SEGREDOS.md) | Gestão e rotação de segredos | P0 | Aprovado | 010, 011 | integrações e produção |
 | [ADR-010](ADR-010_OBSERVABILIDADE.md) | Observabilidade | P1 | Aprovado | 011 | homologação integrada |
-| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Adiado | 010, 011 | somente capacidade de OCR/IA |
+| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Proposto | 006, 010, 011, 015 | OCR assistido no pré-cadastro; tecnologia ainda não escolhida |
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
@@ -522,11 +523,11 @@ O conjunto inicial (`ADR-001` a `ADR-014`) está completo:
 - `ADR-001` a `ADR-007`: aprovados;
 - `ADR-008`: adiado com aprovação formal;
 - `ADR-009` e `ADR-010`: aprovados;
-- `ADR-011`: adiado com aprovação formal;
+- `ADR-011`: proposto para retomada limitada ao OCR assistido no pré-cadastro;
 - `ADR-012`: aprovado;
 - `ADR-013` e `ADR-014`: adiados com aprovação formal.
 
-Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas.
+Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas. O ADR-011 voltou a Proposto em 15/10/2026 após a definição do caso AJ-005; tecnologia, política e prova técnica ainda precisam ser aprovadas.
 
 Fora do conjunto inicial, `ADR-015` (Integração externa: consulta de CEP — ViaCEP) foi criado e aprovado retrospectivamente em 11/08/2026, registrando uma decisão já implementada nas partes P08 e P11, conforme a seção 9 deste catálogo.
 
@@ -536,4 +537,4 @@ A próxima etapa documental é a especificação de APIs. Devido à divergência
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados, três permanecem adiados e o ADR-011 está Proposto para retomada limitada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP.
