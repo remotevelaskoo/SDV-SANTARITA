@@ -1,0 +1,5 @@
+manifest.private.jsonl
+samples/*
+!samples/.gitkeep
+reports/*
+!reports/.gitkeep

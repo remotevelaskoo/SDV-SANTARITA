@@ -72,7 +72,7 @@ class Portaria extends Component
         ];
     }
 
-    /** @return list<array{time: string, name: string, relation: string, subject: string, result: string, protectedFiles: array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}}> */
+    /** @return list<array{time: string, name: string, relation: string, subject: string, result: string, protectedFiles: array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, document_portrait: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}}> */
     public function recentAttendances(): array
     {
         return HistoricoAcesso::query()
@@ -102,11 +102,11 @@ class Portaria extends Component
      * já cobertas pelo AJ-001 mergeado; aqui só reaproveitamos o mecanismo
      * para o Modo Portaria, sem tabela ou serviço novos).
      *
-     * @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}
+     * @return array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, document_portrait: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}
      */
     private function protectedFilesFor(?Pessoa $pessoa): array
     {
-        $vazio = ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+        $vazio = ['document' => null, 'document_back' => null, 'document_portrait' => null, 'selfie' => null, 'pre_registration_id' => null];
 
         if (! $pessoa) {
             return $vazio;
@@ -135,6 +135,8 @@ class Portaria extends Component
 
         return [
             'document' => $preRegistration->currentFileLink('documento'),
+            'document_back' => $preRegistration->currentFileLink('documento_verso'),
+            'document_portrait' => $preRegistration->currentFileLink('documento_foto'),
             'selfie' => $preRegistration->currentFileLink('selfie'),
             'pre_registration_id' => $preRegistration->id,
         ];

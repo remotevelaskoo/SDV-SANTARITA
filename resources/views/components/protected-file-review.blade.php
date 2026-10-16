@@ -1,4 +1,4 @@
-@props(['documentLink' => null, 'selfieLink' => null, 'id', 'title' => 'Conferência visual protegida'])
+@props(['documentLink' => null, 'documentBackLink' => null, 'documentPortraitLink' => null, 'selfieLink' => null, 'id', 'title' => 'Conferência visual protegida'])
 
 <section
     class="protected-file-review"
@@ -14,9 +14,9 @@
     </header>
 
     <div class="protected-file-review__grid">
-        @foreach ([['label' => 'Documento', 'link' => $documentLink], ['label' => 'Selfie', 'link' => $selfieLink]] as $item)
+        @foreach ([['label' => 'Documento (frente)', 'link' => $documentLink], ['label' => 'Documento (verso)', 'link' => $documentBackLink], ['label' => 'Foto localizada no documento', 'link' => $documentPortraitLink], ['label' => 'Selfie', 'link' => $selfieLink]] as $item)
             <article>
-                <span class="protected-file-review__icon"><x-icon :name="$item['label'] === 'Documento' ? 'file' : 'users'" /></span>
+                <span class="protected-file-review__icon"><x-icon :name="$item['label'] === 'Selfie' || str_contains($item['label'], 'Foto') ? 'users' : 'file'" /></span>
                 <div>
                     <strong>{{ $item['label'] }}</strong>
                     @if ($item['link']?->file?->isAvailable())
