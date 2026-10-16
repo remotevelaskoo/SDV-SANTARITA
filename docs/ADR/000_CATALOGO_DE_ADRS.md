@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.24
+**Versão:** 1.0.25
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -40,6 +40,7 @@
 | 1.0.22 | 11/08/2026 | Product Owner | Criação e aprovação retrospectiva do ADR-015 (integração externa de consulta de CEP) |
 | 1.0.23 | 15/10/2026 | Lucas Pastorelli + Codex | ADR-011 volta a Proposto para o caso limitado de OCR assistido no pré-cadastro |
 | 1.0.24 | 15/10/2026 | Lucas Pastorelli + Codex | Registro do recorte visual privado da foto impressa no documento, sem reconhecimento facial |
+| 1.0.25 | 16/10/2026 | Lucas Pastorelli + Codex | Criação e aprovação do ADR-016 para operação híbrida local e nuvem |
 
 ---
 
@@ -265,6 +266,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
+| [ADR-016](ADR-016_OPERACAO_HIBRIDA_LOCAL_E_NUVEM.md) | Operação híbrida local e nuvem | P0 | Aprovado | 010, 011, 013 | P28 e publicação |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -313,6 +315,9 @@ ADR-007 Portas e adaptadores
 
 ADR-004 + ADR-005 + ADR-009
 └── ADR-012 Deploy e rollback
+
+ADR-002 + ADR-004 + ADR-005 + ADR-012
+└── ADR-016 Operação híbrida local e nuvem
 
 ADR-011 OCR/IA e ADR-014 Particionamento
 └── condicionais
@@ -381,6 +386,7 @@ Antes da produção:
 | ADR-013 | `RN-045`, `RN-065`, `RN-066`, `RN-075` |
 | ADR-014 | `RN-041`, `RN-046` a `RN-049`, `RN-086` |
 | ADR-015 | `RN-002`, `RN-060` |
+| ADR-016 | continuidade operacional, sincronização, backup e recuperação da P28 |
 
 ---
 
@@ -401,6 +407,7 @@ Antes da produção:
 | ADR-013 | `PEN-RNG-005`, `PEN-BDD-007`, `PEN-ARQ-008` |
 | ADR-014 | `PEN-BDD-021`, `PEN-BDD-025`, `PEN-ARQ-017` |
 | ADR-015 | `PEN-RNG-006` |
+| ADR-016 | `PEN-ARQ-002` e pendências `PEN-ADR-016-001` a `006` |
 
 ---
 
@@ -532,10 +539,12 @@ Os ADRs adiados somente voltarão a **Proposto** quando suas condições documen
 
 Fora do conjunto inicial, `ADR-015` (Integração externa: consulta de CEP — ViaCEP) foi criado e aprovado retrospectivamente em 11/08/2026, registrando uma decisão já implementada nas partes P08 e P11, conforme a seção 9 deste catálogo.
 
+O `ADR-016` (Operação híbrida local e nuvem) foi criado e aprovado em 16/10/2026. Ele estabelece que a internet não será ponto único de falha da portaria e cria a P28 para implementar nó local, sincronização controlada e backup externo. A autorização offline de equipamentos continua separada e condicionada à ADR-008.
+
 A próxima etapa documental é a especificação de APIs. Devido à divergência de numeração registrada em `PEN-ADR-CAT-001`, o arquivo deverá usar o próximo número principal disponível, sem renomear silenciosamente a arquitetura aprovada.
 
 ---
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados, três permanecem adiados e o ADR-011 está Proposto para retomada limitada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs do conjunto inicial estão aprovados, três permanecem adiados e o ADR-011 está Proposto para retomada limitada. `ADR-015` e `ADR-016` foram incorporados posteriormente e estão aprovados.

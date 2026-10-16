@@ -4,7 +4,7 @@
 
 **Equipe:** Lucas Pastorelli e Vinicius Velasco
 
-**Última atualização:** 15 de outubro de 2026
+**Última atualização:** 16 de outubro de 2026
 
 ## 1. Objetivo deste documento
 
@@ -37,11 +37,11 @@ Este é um documento vivo. Sempre que alguém iniciar, concluir ou bloquear uma 
 |---|---:|---|
 | ✅ Concluídas | 21 | P01 a P16 e P18 a P22 |
 | 🟡 Em andamento | 2 | P17 e P26 |
-| 🟢 Disponíveis | 0 | — |
+| 🟢 Disponíveis | 1 | P28 |
 | 🔴 Bloqueadas | 4 | P23 a P25 e P27 |
 | ⚪ Planejada | 0 | — |
 
-O avanço por quantidade de partes é de **21 concluídas em 27 (aproximadamente 78%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, integrações, segurança e publicação possuem complexidades diferentes. Ajustes como AJ-001 a AJ-005 ampliam ou reforçam partes existentes e, por isso, não alteram a contagem das 27 partes principais.
+O avanço por quantidade de partes é de **21 concluídas em 28 (75%)**. Esse percentual representa o número de partes concluídas, não o esforço total, pois banco de dados, operação híbrida, integrações, segurança e publicação possuem complexidades diferentes. Ajustes como AJ-001 a AJ-005 ampliam ou reforçam partes existentes e, por isso, não alteram a contagem das 28 partes principais.
 
 ## 3. Termos usados pela equipe
 
@@ -52,6 +52,9 @@ O avanço por quantidade de partes é de **21 concluídas em 27 (aproximadamente
 - **Pull Request:** pedido feito no GitHub para revisar e juntar uma branch ao projeto principal.
 - **Responsivo:** funcionamento e aparência adequados no computador, tablet e celular.
 - **Integração:** comunicação do sistema com equipamentos ou serviços externos.
+- **Nó local:** servidor dedicado dentro do condomínio que mantém os fluxos essenciais disponíveis pela rede interna.
+- **Sincronização:** envio e recebimento controlado das alterações entre o nó local e a nuvem.
+- **Backup:** cópia histórica e recuperável dos dados; é independente da sincronização.
 
 ## 4. Quadro principal das partes
 
@@ -194,11 +197,12 @@ O catálogo local dos componentes pode ser acessado em `/componentes` durante o 
 | P24 | Portões e controladoras | Enviar comandos, confirmar resultado e tratar falhas | P06, P21 e equipamentos | 🔴 Bloqueada | A definir | A definir |
 | P25 | Leitura de placas e reconhecimento | Integrar placa, face e outras credenciais | P21 e equipamentos | 🔴 Bloqueada | A definir | A definir |
 | P26 | Testes e segurança finais | Validar regras, permissões, privacidade, falhas e uso nos equipamentos reais | Partes funcionais concluídas | 🟡 Em andamento — a parte "uso nos equipamentos reais" segue bloqueada pelo hardware, mas "validar regras, permissões, privacidade, falhas" não depende disso. **Fatia 1 concluída**: auditoria de cobertura de permissões em todas as rotas/telas e de correção do isolamento entre implantações em todos os 29 models com `BelongsToImplantacao`. **Vulnerabilidade real encontrada e corrigida**: `UserManagement::openUser()`/`findSelected()` (`app/Livewire/UserManagement.php`) consultavam `User::find($id)` sem filtrar pela implantação atual — como `selectedUserId` é uma propriedade pública do Livewire, um administrador da implantação A podia visualizar, bloquear, desbloquear ou inativar um usuário que só existe na implantação B (escalação entre tenants). Corrigido com o mesmo filtro `whereHas('implantacoes', ...)` já usado em `filteredUsers()`/`userCounts()` desde o P19. **Defesa em profundidade adicionada**: `PerfilManagement`, `ConfiguracaoManagement` e `CatalogoManagement` passaram a reverificar a própria permissão em `render()` (`abort_unless($this->canManage(), 403)`, mesmo padrão já usado em `Reports.php`/`AuditLog.php`), não confiando só no middleware da rota. `UserManagement` não recebeu essa mesma checagem de propósito — exigir `usuarios.administrar` para renderizar tornaria a proteção de "último administrador" (`wouldRemoveLastAdministrator()`) estruturalmente inalcançável, já que quem chegasse ao componente já seria administrador. **Investigado e confirmado como falso positivo (não corrigido)**: `/sessoes` sem `permissao:` middleware é intencional (autoatendimento, cada operador só vê/revoga as próprias sessões); `dashboard.visualizar` nunca é checado porque o dashboard é universal por design; `saveUser()` verificar duplicidade de username/e-mail globalmente é intencional (`User` é identidade global entre implantações, ADR-002 §10). **Pendência registrada, não construída** (funcionalidade ainda não existe, não falha de proteção): as permissões `integracoes.gerenciar`, `autorizacoes.gerenciar`, `contribuicao.registrar`, `integracao.encaminhar`, `ocorrencias.registrar`, `manutencao.gerenciar`, `caixa.consolidado.consultar` estão no catálogo mas não são checadas em nenhuma rota nem componente. **Fatia 2 concluída**: proteção contra força bruta no login (`docs/008` §34 lista "rate limit" como controle básico obrigatório — era o único item da lista sem nenhuma implementação; `grep` por `RateLimiter`/`throttle` não encontrava nada no projeto). `app/Livewire/Login.php` passou a usar `Illuminate\Support\Facades\RateLimiter` diretamente no componente (não via middleware `throttle:` de rota, já que a ação `login()` do Livewire passa pelo endpoint compartilhado de todos os componentes da página, não por uma rota HTTP própria) — chave combina `identification` normalizado e IP, limite de 5 tentativas por 60 segundos (mesmo padrão default do `Illuminate\Foundation\Auth\ThrottlesLogins` da própria framework), bloqueando antes mesmo de consultar `Auth::attempt()` ao exceder. Login bem-sucedido limpa o contador; excesso de tentativas gera evento de auditoria próprio (`reason_code: limite_tentativas_excedido`), distinto de `credenciais_invalidas` | Vinicius | `vinicius/p26-seguranca-fatia1`, `vinicius/p26-rate-limit-login-fatia2` |
-| P27 | Publicação | Colocar o sistema em hospedagem, configurar domínio, cópias de segurança e acompanhamento | P26 | 🔴 Bloqueada | A definir | A definir |
+| P27 | Publicação | Colocar o sistema em produção, configurar domínio, monitoramento, cópias de segurança e recuperação | P26 e P28 | 🔴 Bloqueada | A definir | A definir |
+| P28 | Operação híbrida local e nuvem | Nó local dedicado, funcionamento sem internet nos fluxos essenciais, fila persistente, sincronização posterior, tratamento de conflitos e backup externo restaurável | P18, P22, ADR-004, ADR-005 e ADR-016 | 🟢 Disponível — decisão de produto e arquitetura aprovadas; implementação ainda não iniciada. A parte sem hardware pode começar agora; decisões offline de equipamentos continuam condicionadas à ADR-008 e a P23–P25 | A definir | A definir |
 
 ## 5. Partes que podem começar em paralelo agora
 
-P09, P14, P15, **P16 — Relatórios**, o **P18 — Banco de dados inicial**, o **P19 — Login real**, o **P20 — Perfis e permissões**, o **P21 — Conexão das telas**, a **P22 — Auditoria** e os ajustes **AJ-001 — Conferência visual protegida** e **AJ-002 — Revelação controlada de CPF/documento** já foram concluídos. **P17 — Administração** e **P26 — Testes e segurança finais** (a parte que não depende de equipamento) seguem em andamento com Vinicius. P23 a P25 continuam bloqueadas até a equipe definir e disponibilizar os equipamentos físicos; P27 depende da P26.
+P09, P14, P15, **P16 — Relatórios**, o **P18 — Banco de dados inicial**, o **P19 — Login real**, o **P20 — Perfis e permissões**, o **P21 — Conexão das telas**, a **P22 — Auditoria** e os ajustes **AJ-001 — Conferência visual protegida** e **AJ-002 — Revelação controlada de CPF/documento** já foram concluídos. **P17 — Administração** e **P26 — Testes e segurança finais** (a parte que não depende de equipamento) seguem em andamento com Vinicius. **P28 — Operação híbrida local e nuvem** está disponível para iniciar pela fundação que não depende de hardware. P23 a P25 continuam bloqueadas até a equipe definir e disponibilizar os equipamentos físicos; P27 depende da conclusão de P26 e P28.
 
 Antes de começar qualquer uma dessas partes, deverá ser registrado neste documento o responsável e a branch utilizada. “A definir” não significa que a parte está bloqueada; significa apenas que a equipe ainda não atribuiu a parte a Lucas ou Vinicius.
 
@@ -256,6 +260,9 @@ Uma parte somente estará pronta quando:
 | Escolher o responsável por P21 | Lucas e Vinicius | Resolvida — Vinicius, dividida em 7 fatias planejadas previamente |
 | Escolher o responsável por P22 | Lucas e Vinicius | Resolvida — Lucas + Codex, branch `codex/p22-auditoria` |
 | Confirmar quais equipamentos existem na portaria | Lucas e Vinicius | Pendente |
+| Confirmar que o sistema não dependerá totalmente da internet | Lucas e Vinicius | Resolvida — topologia híbrida aprovada na ADR-016 e registrada como P28 |
+| Escolher o equipamento dedicado do nó local e o provedor de nuvem | Lucas e Vinicius | Pendente — necessária para P28 e P27 |
+| Definir RPO, RTO, retenção e frequência dos backups | Lucas e Vinicius | Pendente — necessária antes da publicação |
 | Definir quem revisará cada primeira entrega | Lucas e Vinicius | Pendente |
 
 ## 8.1 Ajustes funcionais aprovados para as próximas entregas
@@ -315,3 +322,4 @@ Registro leve de correções em partes já marcadas como concluídas — não cr
 - [Banco de dados](010_BANCO_DE_DADOS.md)
 - [Arquitetura do sistema](011_ARQUITETURA_DO_SISTEMA.md)
 - [OCR assistido no pré-cadastro](015_OCR_ASSISTIDO_PRE_CADASTRO.md)
+- [ADR-016 — Operação híbrida local e nuvem](ADR/ADR-016_OPERACAO_HIBRIDA_LOCAL_E_NUVEM.md)

@@ -31,7 +31,7 @@ O modelo de negócio do SDV Access é centrado no **imóvel**, ao qual são vinc
 
 ## Status
 
-21 de 27 partes do plano concluídas (~78%). As restantes dependem da definição e homologação de equipamentos físicos (câmeras, portões, leitura de placas) pela equipe — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md) para a situação detalhada de cada parte.
+21 de 28 partes do plano concluídas (75%). A P28 formaliza a operação híbrida local e nuvem, necessária para que a portaria continue funcionando durante uma queda da internet. As integrações físicas ainda dependem da definição e homologação de câmeras, portões e leitores — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md) para a situação detalhada de cada parte.
 
 O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH e uma prova interna de OCR assistido no pré-cadastro. Nome, CPF, nascimento e número do documento são apresentados como sugestões com confiança e confirmação humana. A foto impressa pode ser localizada e recortada apenas para conferência visual; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
 
