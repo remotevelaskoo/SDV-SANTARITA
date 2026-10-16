@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\PreRegistration;
+use App\Services\DocumentOcrClient;
 use App\Services\PrivateFileService;
 use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
@@ -62,6 +63,22 @@ class PublicPreRegistration extends Component
     public bool $documentBackReady = false;
 
     public mixed $documentBackFile = null;
+
+    public string $ocrStatus = 'idle';
+
+    public string $ocrMessage = '';
+
+    /** @var array<string, string> */
+    public array $ocrFields = [];
+
+    /** @var array<string, float> */
+    public array $ocrConfidences = [];
+
+    public string $ocrEngine = '';
+
+    public string $ocrModelVersion = '';
+
+    public string $extractedDocumentNumber = '';
 
     public bool $selfieReady = false;
 
@@ -171,6 +188,7 @@ class PublicPreRegistration extends Component
 
         $this->documentReady = true;
         $this->resetErrorBag('documentReady');
+        $this->analyzeDocument();
     }
 
     public function updatedDocumentBackFile(): void
@@ -187,6 +205,14 @@ class PublicPreRegistration extends Component
 
         $this->documentBackReady = true;
         $this->resetErrorBag('documentBackFile');
+        $this->analyzeDocument();
+    }
+
+    public function updatedDocumentType(): void
+    {
+        if ($this->documentFile !== null) {
+            $this->analyzeDocument();
+        }
     }
 
     public function updatedSelfieFile(): void
@@ -203,6 +229,7 @@ class PublicPreRegistration extends Component
     {
         $this->documentFile = null;
         $this->documentReady = false;
+        $this->resetOcrState();
         $this->resetErrorBag(['documentFile', 'documentReady']);
     }
 
@@ -211,6 +238,67 @@ class PublicPreRegistration extends Component
         $this->documentBackFile = null;
         $this->documentBackReady = false;
         $this->resetErrorBag('documentBackFile');
+
+        if ($this->documentFile !== null) {
+            $this->analyzeDocument();
+        }
+    }
+
+    public function analyzeDocument(): void
+    {
+        if ($this->documentFile === null) {
+            $this->resetOcrState();
+
+            return;
+        }
+
+        $ocr = app(DocumentOcrClient::class);
+        if (! $ocr->enabled()) {
+            $this->ocrStatus = 'unavailable';
+            $this->ocrMessage = 'A leitura automática não está ativa neste ambiente. Você pode continuar preenchendo os dados manualmente.';
+
+            return;
+        }
+
+        $this->ocrStatus = 'processing';
+        $this->ocrMessage = 'Lendo o documento em ambiente interno…';
+        $this->ocrFields = [];
+        $this->ocrConfidences = [];
+
+        try {
+            $result = $ocr->extract($this->documentType, $this->documentFile, $this->documentBackFile);
+
+            foreach ($result['fields'] as $field => $suggestion) {
+                if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
+                    continue;
+                }
+
+                $this->ocrFields[$field] = $suggestion['value'];
+                if (is_numeric($suggestion['confidence'] ?? null)) {
+                    $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
+                }
+            }
+
+            $this->name = $this->ocrFields['name'] ?? $this->name;
+            $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
+            $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
+            $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
+            $this->ocrEngine = (string) ($result['engine'] ?? '');
+            $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
+
+            if ($this->ocrFields === []) {
+                $this->ocrStatus = 'failed';
+                $this->ocrMessage = 'Não conseguimos identificar dados com segurança. Confira a imagem e continue manualmente.';
+
+                return;
+            }
+
+            $this->ocrStatus = 'completed';
+            $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+        } catch (\Throwable) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'A leitura automática não ficou disponível agora. Seus dados e sua imagem foram mantidos; continue manualmente ou tente novamente.';
+        }
     }
 
     public function removeSelfieFile(): void
@@ -278,6 +366,25 @@ class PublicPreRegistration extends Component
 
                 $privateFiles->storePreRegistrationFiles($preRegistration, $uploads);
 
+                if ($this->ocrStatus === 'completed') {
+                    $preRegistration->documentExtractions()->create([
+                        'document_type' => $this->documentType,
+                        'engine' => $this->ocrEngine,
+                        'model_version' => $this->ocrModelVersion,
+                        'status' => 'confirmed',
+                        'extracted_fields' => $this->ocrFields,
+                        'field_confidences' => $this->ocrConfidences,
+                        'confirmed_fields' => [
+                            'name' => $this->name,
+                            'cpf' => $this->cpf,
+                            'birth_date' => $this->birthDate,
+                            'document_number' => $this->extractedDocumentNumber,
+                        ],
+                        'processed_at' => now(),
+                        'confirmed_at' => now(),
+                    ]);
+                }
+
                 return $preRegistration;
             });
         } catch (\Throwable) {
@@ -294,6 +401,17 @@ class PublicPreRegistration extends Component
     private function generateProtocol(): string
     {
         return 'PRE-SRA-'.strtoupper(Str::random(6));
+    }
+
+    private function resetOcrState(): void
+    {
+        $this->ocrStatus = 'idle';
+        $this->ocrMessage = '';
+        $this->ocrFields = [];
+        $this->ocrConfidences = [];
+        $this->ocrEngine = '';
+        $this->ocrModelVersion = '';
+        $this->extractedDocumentNumber = '';
     }
 
     public function restart(): void

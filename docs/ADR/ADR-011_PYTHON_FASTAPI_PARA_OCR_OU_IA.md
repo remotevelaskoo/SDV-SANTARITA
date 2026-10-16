@@ -1,7 +1,7 @@
 # ADR-011 — PYTHON/FASTAPI PARA OCR OU IA
 
 **Identificador:** ADR-011
-**Versão:** 1.1.0
+**Versão:** 1.2.0
 **Status:** Proposto — retomada limitada ao OCR assistido do pré-cadastro
 **Prioridade:** P2 — Condicional
 **Produto:** SDV Access — Implantação Santa Rita
@@ -17,6 +17,7 @@
 | 1.0.0 | 30/07/2026 | Product Owner | Registro e aprovação do adiamento de Python/FastAPI |
 | 1.0.1 | 12/08/2026 | Product Owner | Registro da importação assistida como caso futuro, sem ativar Python/FastAPI |
 | 1.1.0 | 15/10/2026 | Lucas Pastorelli + Codex | Retomada proposta para leitura assistida de RG/CIN e CNH no pré-cadastro, ainda sem escolher tecnologia ou autorizar fornecedor externo |
+| 1.2.0 | 15/10/2026 | Lucas Pastorelli + Codex | RapidOCR/ONNX em serviço FastAPI interno escolhido para prova técnica, sem ativação em produção |
 
 # 1. Contexto
 
@@ -51,7 +52,7 @@ Esta mudança de estado autoriza preparar captura, contrato, segurança, experi�
 - permite que OCR valide documento ou libere entrada;
 - elimina o preenchimento manual.
 
-A implementação do processador dependerá de prova técnica, política de dados e aprovação da alternativa escolhida.
+A prova técnica foi implementada com RapidOCR/ONNX em um serviço FastAPI interno. A ativação em produção ainda dependerá de homologação com amostras autorizadas, política de dados e aprovação operacional.
 
 # 4. Condições de retomada
 
@@ -74,7 +75,7 @@ A implementação do processador dependerá de prova técnica, política de dado
 |---|---|
 | biblioteca no Laravel | capacidade e manutenção |
 | API externa | privacidade, custo e lock-in |
-| serviço Python interno | operação e modelos |
+| serviço Python interno | escolhido para a prova com RapidOCR/ONNX; homologação ainda necessária |
 | processamento no equipamento | contrato e evidência |
 
 # 6. Contrato futuro
@@ -187,7 +188,7 @@ Negativas:
 | PEN-ADR-011-001 | Caso de uso e escopo |
 | PEN-ADR-011-002 | Política de dados |
 | PEN-ADR-011-003 | Metas de precisão |
-| PEN-ADR-011-004 | Tecnologia/modelo |
+| PEN-ADR-011-004 | Resolvida para prova técnica: RapidOCR/ONNX interno; decisão de produção depende da homologação |
 | PEN-ADR-011-005 | Infraestrutura e custo |
 | PEN-ADR-011-006 | Fontes, volume e campos da importação assistida |
 
@@ -212,4 +213,4 @@ OCR assistido passa a integrar o planejamento do pré-cadastro. Python/FastAPI c
 
 ## Situação do ADR
 
-**Proposto para retomada limitada. A escolha tecnológica e a ativação em produção ainda exigem aprovação.**
+**Proposto para retomada limitada. A tecnologia da prova foi escolhida; a ativação em produção ainda exige homologação e aprovação.**

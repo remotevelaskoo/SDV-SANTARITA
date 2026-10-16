@@ -1,7 +1,7 @@
 # OCR assistido no pré-cadastro
 
 **Documento:** SDV-UXP-015  
-**Situação:** Em desenvolvimento — entrega 1  
+**Situação:** Em desenvolvimento — entregas 1, 2 e 3 implementadas para revisão
 **Responsáveis:** Lucas Pastorelli + Codex  
 **Data:** 15 de outubro de 2026
 
@@ -47,9 +47,9 @@ O resultado será sempre uma sugestão. A pessoa deverá conferir e poderá corr
 
 | Entrega | Conteúdo | Situação |
 |---|---|---|
-| 1 — Captura estruturada | Tipo do documento, frente obrigatória, verso opcional e armazenamento privado separado | 🟡 Em desenvolvimento |
-| 2 — Leitura de texto | Integração com processador autorizado e extração de nome, CPF, número e nascimento | ⚪ Planejada |
-| 3 — Conferência | Sugestões, confiança, correção e confirmação explícita | ⚪ Planejada |
+| 1 — Captura estruturada | Tipo do documento, frente obrigatória, verso opcional e armazenamento privado separado | ✅ Implementada para revisão |
+| 2 — Leitura de texto | Serviço interno FastAPI/RapidOCR e extração de nome, CPF, número e nascimento | ✅ Implementada para revisão técnica |
+| 3 — Conferência | Sugestões, confiança, correção e confirmação explícita | ✅ Implementada para revisão funcional |
 | 4 — Foto do documento | Localização e recorte privado da fotografia para comparação visual | ⚪ Planejada |
 | 5 — Homologação | Testes com amostras autorizadas de RG/CIN e CNH, erros, desempenho e acessibilidade | ⚪ Planejada |
 
@@ -82,7 +82,7 @@ Não será divulgada uma porcentagem de precisão antes dessa prova.
 
 | Decisão | Situação |
 |---|---|
-| Tecnologia de OCR: biblioteca interna ou fornecedor contratado | Pendente de prova técnica |
+| Tecnologia de OCR: biblioteca interna ou fornecedor contratado | RapidOCR/ONNX interno escolhido para a prova; produção depende de homologação |
 | Metas mínimas de acerto por campo | Pendente da amostra de homologação |
 | Prazo de retenção das imagens e resultados | Pendente de política de privacidade |
 | Uso da fotografia apenas para conferência visual | Adotado nesta entrega |
@@ -100,7 +100,24 @@ Não será divulgada uma porcentagem de precisão antes dessa prova.
 - nenhuma integração externa ou reconhecimento facial é acionado;
 - os testes existentes continuam válidos e há teste específico para frente e verso.
 
-## 9. Relações
+## 9. Resultado da prova técnica interna
+
+Foi criado um serviço separado em `services/document-ocr`, executado na infraestrutura do próprio sistema. A prova utiliza RapidOCR com ONNX Runtime e não envia a imagem a fornecedor externo.
+
+O serviço:
+
+- aceita somente CNH ou RG/CIN em JPG, PNG ou WebP de até 8 MB;
+- exige autenticação quando o segredo interno está configurado;
+- valida conteúdo e limita as dimensões da imagem;
+- devolve apenas campos estruturados, confiança, origem e versão do mecanismo;
+- não registra texto bruto, imagem ou documento em log;
+- pode ser desligado sem impedir o pré-cadastro.
+
+Uma imagem fictícia controlada confirmou o funcionamento técnico dos quatro campos. Isso demonstra integração, não precisão em documentos brasileiros reais. A homologação continua dependendo de amostras autorizadas e das métricas descritas na seção 6.
+
+O Laravel preserva separadamente o valor sugerido e o valor confirmado pela pessoa, ambos protegidos por criptografia no banco. A tela da portaria informa que houve auxílio automático, mas continua exigindo conferência visual.
+
+## 10. Relações
 
 - `docs/006_UX_UI_PRE_CADASTRO.md`;
 - `docs/ADR/ADR-006_ARMAZENAMENTO_S3_E_CICLO_DE_VIDA_DE_ARQUIVOS.md`;

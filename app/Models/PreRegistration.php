@@ -55,6 +55,12 @@ class PreRegistration extends Model
         return $this->hasMany(PreRegistrationArquivo::class)->orderByDesc('linked_at');
     }
 
+    /** @return HasMany<PreRegistrationDocumentExtraction, $this> */
+    public function documentExtractions(): HasMany
+    {
+        return $this->hasMany(PreRegistrationDocumentExtraction::class)->orderByDesc('processed_at');
+    }
+
     public function currentFileLink(string $category): ?PreRegistrationArquivo
     {
         $links = $this->relationLoaded('fileLinks')

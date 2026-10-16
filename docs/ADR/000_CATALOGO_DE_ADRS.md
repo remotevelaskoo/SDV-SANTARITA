@@ -259,7 +259,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-008](ADR-008_CONTINGENCIA_E_CACHE_OPERACIONAL.md) | Contingência e cache operacional | P1 | Adiado | 011 | homologação e go-live |
 | [ADR-009](ADR-009_GESTAO_E_ROTACAO_DE_SEGREDOS.md) | Gestão e rotação de segredos | P0 | Aprovado | 010, 011 | integrações e produção |
 | [ADR-010](ADR-010_OBSERVABILIDADE.md) | Observabilidade | P1 | Aprovado | 011 | homologação integrada |
-| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Proposto | 006, 010, 011, 015 | OCR assistido no pré-cadastro; tecnologia ainda não escolhida |
+| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Proposto | 006, 010, 011, 015 | RapidOCR/ONNX interno escolhido para prova; produção ainda não aprovada |
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |

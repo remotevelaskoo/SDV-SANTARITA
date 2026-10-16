@@ -33,7 +33,7 @@ O modelo de negócio do SDV Access é centrado no **imóvel**, ao qual são vinc
 
 21 de 27 partes do plano concluídas (~78%). As restantes dependem da definição e homologação de equipamentos físicos (câmeras, portões, leitura de placas) pela equipe — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md) para a situação detalhada de cada parte.
 
-O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH como base para OCR assistido no pré-cadastro. A leitura será uma sugestão com confirmação humana; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
+O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH e uma prova interna de OCR assistido no pré-cadastro. Nome, CPF, nascimento e número do documento são apresentados como sugestões com confiança e confirmação humana; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
 
 ## Coordenação da equipe
 

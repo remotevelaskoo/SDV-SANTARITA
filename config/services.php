@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'document_ocr' => [
+        'enabled' => env('DOCUMENT_OCR_ENABLED', false),
+        'url' => env('DOCUMENT_OCR_URL', 'http://127.0.0.1:8001'),
+        'token' => env('DOCUMENT_OCR_TOKEN'),
+        'timeout' => (int) env('DOCUMENT_OCR_TIMEOUT', 15),
+    ],
+
 ];

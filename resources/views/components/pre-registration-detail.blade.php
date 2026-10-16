@@ -24,6 +24,7 @@
         $documentLink = $record->currentFileLink('documento');
         $documentBackLink = $record->currentFileLink('documento_verso');
         $selfieLink = $record->currentFileLink('selfie');
+        $documentExtraction = $record->documentExtractions()->first();
     @endphp
 
     <x-protected-file-review
@@ -32,6 +33,18 @@
         :selfie-link="$selfieLink"
         :id="'pre-registration-'.$record->id"
     />
+
+    @if ($documentExtraction)
+        <x-ui.alert variant="info" title="Dados auxiliados por leitura automática">
+            O solicitante conferiu as sugestões antes do envio. A leitura automática não valida a autenticidade do documento.
+            @if ($documentExtraction->field_confidences)
+                <small>
+                    Campos sugeridos:
+                    {{ collect($documentExtraction->field_confidences)->map(fn ($confidence, $field) => match ($field) { 'name' => 'nome', 'cpf' => 'CPF', 'birth_date' => 'nascimento', 'document_number' => 'número do documento', default => $field }. ' '.number_format(((float) $confidence) * 100, 0).'%')->implode(' · ') }}
+                </small>
+            @endif
+        </x-ui.alert>
+    @endif
 
     <section aria-labelledby="detail-data-{{ $record->id }}">
         <h4 id="detail-data-{{ $record->id }}">Dados preenchidos</h4>
