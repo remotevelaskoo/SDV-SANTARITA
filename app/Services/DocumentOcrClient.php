@@ -20,8 +20,7 @@ class DocumentOcrClient
         UploadedFile $front,
         ?UploadedFile $back = null,
         bool $includePortrait = false,
-    ): array
-    {
+    ): array {
         if (! $this->enabled()) {
             throw new RuntimeException('O leitor automático não está habilitado.');
         }

@@ -42,6 +42,7 @@ class DocumentOcrTest extends TestCase
         ]);
 
         Livewire::test(PublicPreRegistration::class)
+            ->set('started', true)
             ->set('step', 3)
             ->set('documentType', 'cnh')
             ->set('documentFile', UploadedFile::fake()->image('cnh.jpg', 900, 600))
@@ -113,6 +114,8 @@ class DocumentOcrTest extends TestCase
         Http::fake();
 
         Livewire::test(PublicPreRegistration::class)
+            ->set('started', true)
+            ->set('step', 3)
             ->set('documentFile', UploadedFile::fake()->image('cnh.jpg', 900, 600))
             ->assertSet('ocrStatus', 'failed')
             ->assertSee('muitas tentativas')
