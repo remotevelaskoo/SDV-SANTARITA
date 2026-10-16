@@ -51,6 +51,25 @@ class ParserTest(unittest.TestCase):
         self.assertFalse(result["portrait"]["detected"])
         self.assertEqual("unavailable", result["portrait"]["status"])
 
+    def test_uses_cnh_layout_to_link_name_and_birth_date_to_their_labels(self) -> None:
+        lines = [
+            OcrLine("1 NOME E SOBRENOME", 0.99, "front", (300, 300, 570, 330)),
+            OcrLine("4a VALIDADE", 0.98, "front", (1300, 300, 1470, 330)),
+            OcrLine("PESSOA FICTICIA DE TESTE", 0.97, "front", (300, 345, 830, 380)),
+            OcrLine("20/08/2030", 0.99, "front", (1310, 345, 1470, 380)),
+            OcrLine("3 DATA, LOCAL E UF DE NASCIMENTO", 0.98, "front", (750, 405, 1100, 435)),
+            OcrLine("15/05/1992 SAO PAULO SP", 0.97, "front", (750, 445, 1100, 480)),
+            OcrLine("4a DATA DE EMISSAO", 0.99, "front", (750, 500, 930, 530)),
+            OcrLine("4b DATA DE VALIDADE", 0.99, "front", (1040, 500, 1180, 530)),
+            OcrLine("10/10/2020", 0.99, "front", (750, 535, 920, 570)),
+            OcrLine("10/10/2030", 0.99, "front", (1040, 535, 1210, 570)),
+        ]
+
+        fields = parse_fields("cnh", lines)
+
+        self.assertEqual("Pessoa Ficticia de Teste", fields["name"]["value"])
+        self.assertEqual("1992-05-15", fields["birth_date"]["value"])
+
 
 if __name__ == "__main__":
     unittest.main()

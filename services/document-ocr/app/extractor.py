@@ -21,6 +21,7 @@ class OcrLine:
     text: str
     confidence: float
     source: str
+    box: tuple[float, float, float, float] | None = None
 
     @property
     def normalized(self) -> str:
@@ -46,10 +47,11 @@ class DocumentExtractor:
             if not result or not result.txts:
                 continue
 
-            lines.extend(
-                OcrLine(text=text, confidence=float(score), source=source)
-                for text, score in zip(result.txts, result.scores or (), strict=False)
-            )
+            boxes = result.boxes if getattr(result, "boxes", None) is not None else ()
+            scores = result.scores if getattr(result, "scores", None) is not None else ()
+            for index, (text, score) in enumerate(zip(result.txts, scores, strict=False)):
+                box = _bounding_box(boxes[index]) if index < len(boxes) else None
+                lines.append(OcrLine(text=text, confidence=float(score), source=source, box=box))
 
         try:
             portrait = self._portrait_extractor.extract(image_list, include_image=include_portrait)
@@ -91,15 +93,20 @@ def _field(value: str | None, line: OcrLine | None) -> dict:
 
 
 def _name_field(lines: list[OcrLine]) -> dict:
-    labels = ("NOME", "NOME COMPLETO", "NAME")
+    labels = ("NOME COMPLETO", "NOME E SOBRENOME", "NOME", "NAME")
 
     for index, line in enumerate(lines):
         normalized = line.normalized
 
         for label in labels:
+            if label in normalized and line.box:
+                for candidate in _nearby_lines_below(line, lines):
+                    if _looks_like_name(candidate.normalized) and not _is_document_label(candidate.normalized):
+                        return _field(_title_name(candidate.text), candidate)
+
             if normalized == label and index + 1 < len(lines):
                 candidate = lines[index + 1]
-                if _looks_like_name(candidate.normalized):
+                if _looks_like_name(candidate.normalized) and not _is_document_label(candidate.normalized):
                     return _field(_title_name(candidate.text), candidate)
 
             if normalized.startswith(label + " "):
@@ -127,7 +134,23 @@ def _cpf_field(lines: list[OcrLine]) -> dict:
 
 def _birth_date_field(lines: list[OcrLine]) -> dict:
     pattern = re.compile(r"\b(\d{2})[/.\-](\d{2})[/.\-](\d{4})\b")
-    labels = ("NASCIMENTO", "DATA NASCIMENTO", "DATA DE NASCIMENTO", "NASC")
+    labels = ("DATA DE NASCIMENTO", "DATA NASCIMENTO", "NASCIMENTO", "NASC", "DATE OF BIRTH")
+
+    # Na CNH atual, o rótulo e o valor normalmente são blocos separados.
+    # A posição visual evita confundir nascimento com validade, emissão ou
+    # primeira habilitação, que também aparecem como datas no documento.
+    for line in lines:
+        if not line.box or not any(label in line.normalized for label in labels):
+            continue
+
+        match = pattern.search(line.normalized)
+        if match and (value := _valid_birth_date(match)):
+            return _field(value, line)
+
+        for candidate in _nearby_lines_below(line, lines):
+            match = pattern.search(candidate.normalized)
+            if match and (value := _valid_birth_date(match)):
+                return _field(value, candidate)
 
     prioritized = sorted(
         lines,
@@ -139,14 +162,8 @@ def _birth_date_field(lines: list[OcrLine]) -> dict:
         if not match:
             continue
 
-        value = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
-        try:
-            parsed = datetime.strptime(value, "%d/%m/%Y")
-        except ValueError:
-            continue
-
-        if 1900 <= parsed.year < datetime.now().year:
-            return _field(parsed.strftime("%Y-%m-%d"), line)
+        if value := _valid_birth_date(match):
+            return _field(value, line)
 
     return _field(None, None)
 
@@ -180,6 +197,67 @@ def _document_number_field(document_type: str, lines: list[OcrLine]) -> dict:
 def _looks_like_name(value: str) -> bool:
     words = re.findall(r"[A-ZÀ-Ü]{2,}", value.upper())
     return 2 <= len(words) <= 8 and not any(char.isdigit() for char in value)
+
+
+def _is_document_label(value: str) -> bool:
+    labels = (
+        "VALIDADE", "VALIDITY", "EMISSAO", "ISSUE", "HABILITACAO", "NASCIMENTO",
+        "FILIAÇÃO", "FILIACAO", "NACIONALIDADE", "NATURALIDADE", "ASSINATURA",
+        "CATEGORIA", "REGISTRO", "DOCUMENTO", "IDENTIDADE", "CPF",
+    )
+    return any(label in value for label in labels)
+
+
+def _bounding_box(points) -> tuple[float, float, float, float] | None:
+    try:
+        xs = [float(point[0]) for point in points]
+        ys = [float(point[1]) for point in points]
+    except (TypeError, ValueError, IndexError):
+        return None
+
+    return (min(xs), min(ys), max(xs), max(ys)) if xs and ys else None
+
+
+def _nearby_lines_below(label: OcrLine, lines: list[OcrLine]) -> list[OcrLine]:
+    if not label.box:
+        return []
+
+    left, top, right, bottom = label.box
+    label_height = max(1.0, bottom - top)
+    label_width = max(1.0, right - left)
+
+    candidates: list[tuple[float, OcrLine]] = []
+    for candidate in lines:
+        if candidate is label or candidate.source != label.source or not candidate.box:
+            continue
+
+        candidate_left, candidate_top, candidate_right, _ = candidate.box
+        vertical_gap = candidate_top - bottom
+        if vertical_gap < -label_height * 0.25 or vertical_gap > label_height * 4:
+            continue
+
+        horizontal_overlap = max(0.0, min(right, candidate_right) - max(left, candidate_left))
+        horizontally_aligned = horizontal_overlap > 0 or abs(candidate_left - left) <= label_width * 0.35
+        if not horizontally_aligned:
+            continue
+
+        horizontal_gap = abs(candidate_left - left) / label_width
+        candidates.append((vertical_gap + horizontal_gap, candidate))
+
+    return [candidate for _, candidate in sorted(candidates, key=lambda item: item[0])]
+
+
+def _valid_birth_date(match: re.Match[str]) -> str | None:
+    value = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+    try:
+        parsed = datetime.strptime(value, "%d/%m/%Y")
+    except ValueError:
+        return None
+
+    if 1900 <= parsed.year < datetime.now().year:
+        return parsed.strftime("%Y-%m-%d")
+
+    return None
 
 
 def _title_name(value: str) -> str:
