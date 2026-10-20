@@ -74,6 +74,30 @@ class ImplantacaoContext
         return $implantacao;
     }
 
+    /**
+     * Executa um trecho no contexto explícito de uma implantação e restaura
+     * o contexto anterior ao final. Usado por jobs e comandos, que não têm
+     * sessão (ADR-005 §16: worker reutilizado não mantém contexto do job
+     * anterior).
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function executarNo(Implantacao $implantacao, callable $callback): mixed
+    {
+        $anterior = [self::$overridden, self::$override];
+        self::$overridden = true;
+        self::$override = $implantacao;
+
+        try {
+            return $callback();
+        } finally {
+            [self::$overridden, self::$override] = $anterior;
+        }
+    }
+
     public static function setCurrentForTesting(?Implantacao $implantacao): void
     {
         self::$overridden = true;

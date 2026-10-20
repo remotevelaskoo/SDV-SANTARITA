@@ -667,6 +667,48 @@ class ExampleTest extends TestCase
             ->assertSee('O envio não garante entrada');
     }
 
+    public function test_the_public_pre_registration_skips_the_document_step_while_it_is_disabled(): void
+    {
+        Storage::fake('private-files');
+        config(['documentos.pre_cadastro.etapa_documento' => false]);
+
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->assertSee('Etapa 1 de 5')
+            ->assertDontSee('Captura e conferência')
+            ->set('name', 'Camila Andrade')
+            ->set('cpf', '987.654.321-00')
+            ->set('birthDate', '1992-05-15')
+            ->set('phone', '(12) 99999-9999')
+            ->set('email', 'camila@example.com')
+            ->call('nextStep')
+            ->set('zipCode', '12000-000')
+            ->set('address', 'Rua das Flores')
+            ->set('addressNumber', '120')
+            ->set('district', 'Centro')
+            ->set('city', 'Taubaté')
+            ->set('state', 'SP')
+            ->call('nextStep')
+            ->assertSet('step', 4)
+            ->assertSee('Etapa 3 de 5')
+            ->call('previousStep')
+            ->assertSet('step', 2)
+            ->call('nextStep')
+            ->set('selfieFile', UploadedFile::fake()->image('selfie.jpg', 480, 640))
+            ->call('nextStep')
+            ->call('nextStep')
+            ->assertSet('step', 6)
+            ->assertSee('O documento será conferido na portaria')
+            ->call('editStep', 3)
+            ->assertSet('step', 6)
+            ->set('privacyAccepted', true)
+            ->call('submit')
+            ->assertSet('submitted', true);
+
+        $this->assertDatabaseHas('pre_registrations', ['name' => 'Camila Andrade', 'document_type' => null]);
+        $this->assertDatabaseCount('pre_registration_arquivos', 1);
+    }
+
     public function test_the_public_pre_registration_preserves_the_six_step_journey(): void
     {
         Storage::fake('private-files');
@@ -692,6 +734,9 @@ class ExampleTest extends TestCase
             ->set('documentFile', UploadedFile::fake()->image('documento.jpg', 640, 480))
             ->call('nextStep')
             ->assertSet('step', 4)
+            ->assertSee('Tirar selfie com a câmera')
+            ->assertSeeHtml('capture="user"')
+            ->assertSee('Ou envie uma selfie do dispositivo')
             ->set('selfieFile', UploadedFile::fake()->image('selfie.jpg', 480, 640))
             ->call('nextStep')
             ->assertSet('step', 5)

@@ -916,7 +916,7 @@ O desenho físico deverá definir:
 - contingência para integrações;
 - monitoramento de crescimento, locks, conexões e replicação.
 
-Para a topologia híbrida aprovada na ADR-016, também deverá definir:
+Para a topologia híbrida aprovada na ADR-018, também deverá definir:
 
 - banco operacional do nó local e sua recuperação em equipamento substituto;
 - outbox persistente para fatos criados sem internet;

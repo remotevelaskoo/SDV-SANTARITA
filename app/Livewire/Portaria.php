@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Integracoes\Aplicacao\ComandosAbertura;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\CaixaTurno;
 use App\Models\HistoricoAcesso;
 use App\Models\Pessoa;
@@ -28,6 +30,22 @@ class Portaria extends Component
         ['label' => 'Cadastro rápido', 'description' => 'Criar cadastro mínimo durante o atendimento', 'icon' => 'users', 'route' => null],
         ['label' => 'Consultar caixa', 'description' => 'Ver movimentações e conferir o turno atual', 'icon' => 'wallet', 'route' => 'cash-register'],
     ];
+
+    /**
+     * Ao iniciar a operação, quem libera relés escolhe o posto do turno
+     * (SDV-OPE-018 §2) antes de usar o Modo Portaria.
+     */
+    public function mount(TurnosOperacionais $turnos): mixed
+    {
+        $usuario = auth()->user();
+        if ($usuario?->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL)
+            && $turnos->turnoAtivo($usuario) === null
+            && $turnos->postosAutorizados($usuario)->isNotEmpty()) {
+            return $this->redirect(route('posto.selecionar', ['voltar' => '/portaria']));
+        }
+
+        return null;
+    }
 
     /** @return list<array{severity: string, title: string, description: string}> */
     public function alerts(): array

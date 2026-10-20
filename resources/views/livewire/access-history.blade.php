@@ -59,7 +59,7 @@
                                 <td>{{ $entry['property'] }}</td>
                                 <td>{{ $entry['point'] }}@if ($entry['plate'])<small>🚙 {{ $entry['plate'] }}</small>@endif</td>
                                 <td><span class="access-history-type access-history-type--{{ $entry['type'] }}"><x-icon :name="$entry['type'] === 'entrada' ? 'arrow-down-left' : 'arrow-up-right'" />{{ $entry['type'] === 'entrada' ? 'Entrada' : 'Saída' }}</span></td>
-                                <td><x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge></td>
+                                <td><x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge> @if ($entry['excepcional'] ?? false)<x-ui.badge variant="danger">Excepcional</x-ui.badge>@endif @if ($entry['fora_do_posto'] ?? false)<x-ui.badge variant="warning">Fora do posto</x-ui.badge>@endif</td>
                                 <td><x-ui.button variant="secondary" size="sm" wire:click="openEntry('{{ $entry['id'] }}')">Detalhes</x-ui.button></td>
                             </tr>
                         @endforeach
@@ -75,7 +75,7 @@
                                     <small>{{ $entry['relation'] }} · {{ $entry['property'] }} · {{ $entry['point'] }}</small>
                                 </div>
                                 <time>{{ $entry['datetime'] }}</time>
-                                <x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge>
+                                <x-ui.badge :variant="$resultVariant($entry['result'])">{{ $resultLabel($entry['result']) }}</x-ui.badge> @if ($entry['excepcional'] ?? false)<x-ui.badge variant="danger">Excepcional</x-ui.badge>@endif @if ($entry['fora_do_posto'] ?? false)<x-ui.badge variant="warning">Fora do posto</x-ui.badge>@endif
                                 <x-ui.button variant="ghost" size="sm" wire:click="openEntry('{{ $entry['id'] }}')">Detalhes</x-ui.button>
                             </li>
                         @endforeach

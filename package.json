@@ -5,7 +5,8 @@
     "packageManager": "pnpm@11.9.0",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:js": "node --test \"tests/js/**/*.test.mjs\""
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

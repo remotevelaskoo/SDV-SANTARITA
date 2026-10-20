@@ -31,7 +31,9 @@ O modelo de negócio do SDV Access é centrado no **imóvel**, ao qual são vinc
 
 ## Status
 
-21 de 28 partes do plano concluídas (75%). A P28 formaliza a operação híbrida local e nuvem, necessária para que a portaria continue funcionando durante uma queda da internet. As integrações físicas ainda dependem da definição e homologação de câmeras, portões e leitores — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md) para a situação detalhada de cada parte.
+21 de 28 partes do plano concluídas (75%); P17, P24 e P26 em andamento. A integração com o terminal facial Hikvision DS-K1T673DX-BR foi homologada em bancada (conexão, inventário, capacidades, imagem estática e comando do relé), com a operação real ainda desligada. Câmeras da portaria, cancela/catraca e leitura de placas ainda dependem de equipamento — ver o [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md).
+
+A P28 formaliza a operação híbrida local e nuvem ([ADR-018](docs/ADR/ADR-018_OPERACAO_HIBRIDA_LOCAL_E_NUVEM.md)), necessária para que a portaria continue funcionando durante uma queda da internet.
 
 O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH e uma prova interna de OCR assistido no pré-cadastro. Nome, CPF, nascimento e número do documento são apresentados como sugestões com confiança e confirmação humana. A foto impressa pode ser localizada e recortada apenas para conferência visual; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
 
@@ -91,3 +93,20 @@ pnpm run build
 ```
 
 Os indicadores do dashboard consultam dados reais do banco (pessoas, acessos, vínculos, veículos, caixa). Módulos que dependem de equipamento físico ainda não homologado (câmeras, portões, leitura de placas) informam claramente que não estão integrados, em vez de simular uma conexão.
+
+## Integração com terminais faciais
+
+Decisão: [ADR-016](docs/ADR/ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md). Detalhes em [SDV-INT-015](docs/015_FUNDACAO_INTEGRACAO_TERMINAIS_FACIAIS.md) (fundação) e [SDV-INT-016](docs/016_HOMOLOGACAO_FACIAL_HIKVISION.md) (homologação em bancada e passo a passo pela tela **Gestão › Equipamentos**).
+
+Variáveis do `.env` (nunca coloque a senha do terminal no `.env` nem no Git):
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `SDV_INTEGRACAO_SIMULADOR_PERMITIDO` | `true` fora de produção | permite o adaptador `simulador` |
+| `SDV_INTEGRACAO_SEGREDO_CIFRADO` | `true` fora de produção | aceita a senha técnica digitada na tela, cifrada com `APP_KEY`; produção exige cofre (ADR-009) |
+| `SDV_HOMOLOGACAO_FACIAL_HOST` | vazio | IP sugerido no formulário; cada equipamento guarda o seu |
+| `SDV_INTEGRACAO_TESTE_RELE` | `false` | libera "Liberar acesso" somente na bancada, durante o teste do relé |
+| `SDV_INTEGRACAO_ABERTURA_REMOTA` | `false` | abertura automática decidida pelo SDV; permanece desligada até validar o contato seco |
+| `SDV_INTEGRACAO_LIBERACAO_OPERACIONAL` | `false` | liberação manual no Modo Portaria ([SDV-OPE-017](docs/017_LIBERACAO_MANUAL_OPERACIONAL.md), ADR-017); desligada até homologação e aprovação formal |
+
+Depois de alterar o `.env`, rode `php artisan config:clear`. Firmwares e capacidades homologados ficam em `config/integracoes.php` (`hikvision.perfis_homologados`).

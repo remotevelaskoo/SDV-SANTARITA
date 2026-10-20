@@ -57,10 +57,15 @@
                     Depois de salvar, o porteiro retorna a este atendimento. A autorização continua pendente e deve ser conferida separadamente.
                 </x-ui.alert>
 
+                @if ($this->podeCapturarDocumento())
+                    @include('livewire.partials.captura-documento')
+                @endif
+
                 <form wire:submit="saveQuickRegistration">
                     <div class="quick-registration__fields">
-                        <x-ui.field id="quick-name" label="Nome completo" wire:model="quickName" :error="$errors->first('quickName')" required />
-                        <x-ui.field id="quick-document" label="CPF ou documento" wire:model="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />
+                        <div><x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />@if (in_array('quickName', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickName')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
+                        <div><x-ui.field id="quick-document" label="CPF ou documento" wire:model.blur="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />@if (in_array('quickDocument', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocument')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
+                        <div><x-ui.field id="quick-birth" label="Data de nascimento" type="date" wire:model.blur="quickBirthDate" :error="$errors->first('quickBirthDate')" />@if (in_array('quickBirthDate', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickBirthDate')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
                         <x-ui.field id="quick-phone" label="Telefone" wire:model="quickPhone" :error="$errors->first('quickPhone')" required />
                         <x-ui.select id="quick-access-type" label="Tipo de acesso" wire:model.live="quickAccessType" :error="$errors->first('quickAccessType')" required>
                             <option value="visitante">Visitante</option>

@@ -32,7 +32,7 @@
                 </dl>
 
                 <x-ui.alert variant="info" title="Antes de começar">
-                    Solicitaremos identificação, documento e selfie para análise. O envio não garante entrada e não abre nenhum acesso físico.
+                    Solicitaremos identificação, {{ $this->documentStepEnabled() ? 'documento e selfie' : 'selfie' }} para análise. O envio não garante entrada e não abre nenhum acesso físico.
                 </x-ui.alert>
 
                 <x-ui.button variant="primary" wire:click="start">Iniciar pré-cadastro</x-ui.button>
@@ -63,20 +63,24 @@
                 <header class="pre-registration-flow__header">
                     <div>
                         <a class="pre-registration-mobile-brand" href="{{ route('login') }}"><span aria-hidden="true">SDV</span> SDV Access</a>
-                        <small>Etapa {{ $step }} de 6</small>
+                        @php
+                            $visibleSteps = $this->visibleSteps();
+                            $visibleIndex = collect($visibleSteps)->search(fn ($s) => $s['step'] === $step) + 1;
+                        @endphp
+                        <small>Etapa {{ $visibleIndex }} de {{ count($visibleSteps) }}</small>
                         <h2 id="pre-registration-step-title">{{ $steps[$step - 1]['label'] }}</h2>
                         <p>{{ $steps[$step - 1]['description'] }}</p>
                     </div>
                     <x-ui.badge variant="success">Convite válido</x-ui.badge>
                 </header>
 
-                <div class="pre-registration-progress" role="progressbar" aria-label="Progresso do pré-cadastro" aria-valuemin="1" aria-valuemax="6" aria-valuenow="{{ $step }}">
-                    <span style="width: {{ ($step / 6) * 100 }}%"></span>
+                <div class="pre-registration-progress" role="progressbar" aria-label="Progresso do pré-cadastro" aria-valuemin="1" aria-valuemax="{{ count($visibleSteps) }}" aria-valuenow="{{ $visibleIndex }}">
+                    <span style="width: {{ ($visibleIndex / count($visibleSteps)) * 100 }}%"></span>
                 </div>
 
                 <div class="pre-registration-flow__content">
                     <aside class="pre-registration-steps-desktop">
-                        <x-ui.stepper :steps="$steps" :current="$step" />
+                        <x-ui.stepper :steps="$visibleSteps" :current="$visibleIndex" />
                     </aside>
 
                     <div class="pre-registration-step-content">
@@ -244,7 +248,35 @@
                                     </x-ui.alert>
                                     <x-ui.button variant="secondary" wire:click="removeSelfieFile">Repetir selfie</x-ui.button>
                                 @else
-                                    <x-ui.upload id="pre-selfie-file" label="Enviar selfie recente" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="selfieFile" source="Câmera ou arquivo do dispositivo" />
+                                    <div class="selfie-camera" x-data="selfieCamera()" wire:ignore.self>
+                                        <div class="selfie-camera__visor" x-show="ativa" x-cloak>
+                                            <video x-ref="video" autoplay playsinline muted></video>
+                                            <span class="selfie-camera__moldura" aria-hidden="true"></span>
+                                        </div>
+                                        <figure class="selfie-camera__previa" x-show="foto" x-cloak>
+                                            <img :src="foto" alt="Selfie tirada agora">
+                                        </figure>
+
+                                        <div class="selfie-camera__acoes">
+                                            <button type="button" class="ui-button ui-button--primary" x-show="!ativa && !foto" x-on:click="abrir()" :disabled="abrindo">
+                                                <span class="ui-button__content"><x-icon name="camera" /> Tirar selfie com a câmera</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--primary" x-show="ativa" x-cloak x-on:click="tirarFoto()">
+                                                <span class="ui-button__content">Tirar foto</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--ghost" x-show="ativa" x-cloak x-on:click="fechar()">
+                                                <span class="ui-button__content">Cancelar</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--secondary" x-show="foto" x-cloak x-on:click="tirarOutra()">
+                                                <span class="ui-button__content">Tirar outra</span>
+                                            </button>
+                                        </div>
+                                        <p class="selfie-camera__aviso" role="alert" x-show="aviso" x-cloak x-text="aviso"></p>
+                                        <input type="file" accept="image/*" capture="user" class="selfie-camera__nativa" x-ref="nativa" x-on:change="recebidaDaCameraNativa($event)" tabindex="-1" aria-hidden="true">
+                                        <p class="selfie-camera__enviando" x-show="enviando" x-cloak role="status">Enviando selfie…</p>
+                                        <small>Funciona com a câmera do celular ou do computador. Só a foto tirada é enviada, nunca vídeo.</small>
+                                    </div>
+                                    <x-ui.upload id="pre-selfie-file" label="Ou envie uma selfie do dispositivo" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="selfieFile" source="Câmera ou arquivo do dispositivo" />
                                     <span wire:loading wire:target="selfieFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo selfie…</span>
                                     @error('selfieFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif
@@ -269,7 +301,11 @@
                             <div class="pre-registration-review">
                                 <article><span>Dados pessoais</span><strong>{{ $name ?: 'Não informado' }}</strong><small>{{ ucfirst($accessType) }} · {{ $cpf ?: 'CPF não informado' }}</small><button type="button" wire:click="editStep(1)">Editar</button></article>
                                 <article><span>Endereço informado</span><strong>{{ $address ?: 'Não informado' }}, {{ $addressNumber ?: 's/n' }}</strong><small>{{ $city ?: 'Cidade' }}/{{ strtoupper($state ?: 'UF') }}</small><button type="button" wire:click="editStep(2)">Editar</button></article>
+                                @if (! $this->documentStepEnabled())
+                                <article><span>Selfie</span><strong>{{ $selfieReady ? 'Pronta para análise' : 'Pendente' }}</strong><small>O documento será conferido na portaria · identidade exige conferência humana</small><button type="button" wire:click="editStep(4)">Editar</button></article>
+                                @else
                                 <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>{{ $documentType === 'cnh' ? 'CNH' : 'RG/CIN' }}{{ $documentBackReady ? ' · frente e verso' : ' · frente' }}{{ $portraitDetected ? ' · foto do documento localizada' : '' }} · identidade exige conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
+                                @endif
                                 <article><span>Veículo</span><strong>{{ $hasVehicle ? ($plate ?: 'Placa pendente') : 'Sem veículo' }}</strong><small>{{ $hasVehicle ? ($vehicleModel ?: 'Modelo pendente') : 'Etapa opcional' }}</small><button type="button" wire:click="editStep(5)">Editar</button></article>
                             </div>
 
@@ -298,7 +334,7 @@
                         <x-ui.button variant="ghost" wire:click="saveDraft">Salvar rascunho</x-ui.button>
                     </div>
                     @if ($step < 6)
-                        <x-ui.button variant="primary" wire:click="nextStep">Continuar</x-ui.button>
+                        <x-ui.button variant="primary" wire:click="nextStep" wire:loading.attr="disabled" wire:target="selfieFile,documentFile,documentBackFile,nextStep">Continuar</x-ui.button>
                     @else
                         <x-ui.button variant="success" wire:click="submit">Enviar pré-cadastro</x-ui.button>
                     @endif

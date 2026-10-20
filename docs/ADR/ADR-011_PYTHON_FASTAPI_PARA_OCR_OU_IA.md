@@ -43,7 +43,7 @@ Enquanto adiado:
 
 ## 3.1 Retomada proposta em outubro de 2026
 
-O caso de uso de OCR assistido no pré-cadastro foi solicitado para RG/CIN e CNH. A retomada fica limitada ao fluxo especificado em `docs/015_OCR_ASSISTIDO_PRE_CADASTRO.md`.
+O caso de uso de OCR assistido no pré-cadastro foi solicitado para RG/CIN e CNH. A retomada fica limitada ao fluxo especificado em `docs/019_OCR_ASSISTIDO_PRE_CADASTRO.md`.
 
 Esta mudança de estado autoriza preparar captura, contrato, segurança, experiência de conferência e prova técnica. Ela ainda não:
 
