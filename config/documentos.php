@@ -31,6 +31,12 @@ return [
         'tamanho_maximo_kb' => 6144,
     ],
 
+    // Pré-cadastro público: a etapa 3 (foto do documento + OCR) fica
+    // desligada por enquanto; ligar com SDV_PRE_CADASTRO_ETAPA_DOCUMENTO=true.
+    'pre_cadastro' => [
+        'etapa_documento' => (bool) env('SDV_PRE_CADASTRO_ETAPA_DOCUMENTO', false),
+    ],
+
     'qualidade' => [
         'resolucao_minima' => 480,
         'brilho_minimo' => 50,

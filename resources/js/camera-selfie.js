@@ -1,9 +1,9 @@
 /**
  * Selfie pela câmera do celular ou do computador no pré-cadastro (etapa 4).
  *
- * Abre a câmera frontal (somente vídeo, nunca microfone), mostra a prévia e
- * envia ao Livewire apenas a foto que a pessoa confirmou, como se fosse um
- * arquivo escolhido. Sem câmera disponível pelo navegador (por exemplo, fora
+ * Abre a câmera frontal (somente vídeo, nunca microfone) e, ao tirar a foto,
+ * envia na hora ao Livewire só essa imagem, como se fosse um arquivo
+ * escolhido; "Repetir selfie" permite tirar outra. Sem câmera disponível pelo navegador (por exemplo, fora
  * de conexão segura), recorre à câmera nativa do celular pelo campo de
  * arquivo com `capture="user"`. O envio de arquivo continua disponível.
  */
@@ -14,6 +14,7 @@ export function selfieCamera({ propriedade = 'selfieFile' } = {}) {
         foto: null,
         blob: null,
         aviso: '',
+        enviando: false,
         stream: null,
 
         destroy() {
@@ -68,6 +69,7 @@ export function selfieCamera({ propriedade = 'selfieFile' } = {}) {
                 this.blob = blob;
                 this.foto = URL.createObjectURL(blob);
                 this.fechar();
+                this.usarFoto();
             }, 'image/jpeg', 0.92);
         },
 
@@ -93,7 +95,12 @@ export function selfieCamera({ propriedade = 'selfieFile' } = {}) {
 
         enviar(arquivo) {
             this.aviso = '';
-            this.$wire.upload(propriedade, arquivo, () => this.descartarFoto(), () => {
+            this.enviando = true;
+            this.$wire.upload(propriedade, arquivo, () => {
+                this.enviando = false;
+                this.descartarFoto();
+            }, () => {
+                this.enviando = false;
                 this.aviso = 'Não foi possível enviar a selfie. Tente novamente.';
             });
         },
