@@ -244,7 +244,37 @@
                                     </x-ui.alert>
                                     <x-ui.button variant="secondary" wire:click="removeSelfieFile">Repetir selfie</x-ui.button>
                                 @else
-                                    <x-ui.upload id="pre-selfie-file" label="Enviar selfie recente" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="selfieFile" source="Câmera ou arquivo do dispositivo" />
+                                    <div class="selfie-camera" x-data="selfieCamera()" wire:ignore.self>
+                                        <div class="selfie-camera__visor" x-show="ativa" x-cloak>
+                                            <video x-ref="video" autoplay playsinline muted></video>
+                                            <span class="selfie-camera__moldura" aria-hidden="true"></span>
+                                        </div>
+                                        <figure class="selfie-camera__previa" x-show="foto" x-cloak>
+                                            <img :src="foto" alt="Selfie tirada agora">
+                                        </figure>
+
+                                        <div class="selfie-camera__acoes">
+                                            <button type="button" class="ui-button ui-button--primary" x-show="!ativa && !foto" x-on:click="abrir()" :disabled="abrindo">
+                                                <span class="ui-button__content"><x-icon name="camera" /> Tirar selfie com a câmera</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--primary" x-show="ativa" x-cloak x-on:click="tirarFoto()">
+                                                <span class="ui-button__content">Tirar foto</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--ghost" x-show="ativa" x-cloak x-on:click="fechar()">
+                                                <span class="ui-button__content">Cancelar</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--primary" x-show="foto" x-cloak x-on:click="usarFoto()">
+                                                <span class="ui-button__content">Usar esta foto</span>
+                                            </button>
+                                            <button type="button" class="ui-button ui-button--secondary" x-show="foto" x-cloak x-on:click="tirarOutra()">
+                                                <span class="ui-button__content">Tirar outra</span>
+                                            </button>
+                                        </div>
+                                        <p class="selfie-camera__aviso" role="alert" x-show="aviso" x-cloak x-text="aviso"></p>
+                                        <input type="file" accept="image/*" capture="user" class="selfie-camera__nativa" x-ref="nativa" x-on:change="recebidaDaCameraNativa($event)" tabindex="-1" aria-hidden="true">
+                                        <small>Funciona com a câmera do celular ou do computador. Só a foto que você confirmar é enviada.</small>
+                                    </div>
+                                    <x-ui.upload id="pre-selfie-file" label="Ou envie uma selfie do dispositivo" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="selfieFile" source="Câmera ou arquivo do dispositivo" />
                                     <span wire:loading wire:target="selfieFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo selfie…</span>
                                     @error('selfieFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif

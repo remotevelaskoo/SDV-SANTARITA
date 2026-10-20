@@ -1220,6 +1220,15 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .pre-registration-capture h3 { margin: 0; font-size: 0.9rem; }
 .pre-registration-capture > p { max-width: 28rem; margin: 0; color: var(--neutral-600); font-size: 0.7rem; line-height: 1.55; }
 .pre-registration-capture > small { color: var(--neutral-600); font-size: 0.6rem; }
+.selfie-camera { display: grid; justify-items: center; gap: 0.6rem; width: 100%; }
+.selfie-camera__visor, .selfie-camera__previa { position: relative; width: min(100%, 22rem); margin: 0; }
+.selfie-camera__visor video, .selfie-camera__previa img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--radius-lg); background: #000; transform: scaleX(-1); }
+.selfie-camera__previa img { transform: none; }
+.selfie-camera__moldura { position: absolute; inset: 12% 18% 18%; border: 3px solid rgb(255 255 255 / 0.85); border-radius: 50%; pointer-events: none; }
+.selfie-camera__acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.selfie-camera__aviso { margin: 0; color: var(--red-700, #b42318); font-size: 0.65rem; }
+.selfie-camera small { color: var(--neutral-600); font-size: 0.6rem; }
+.selfie-camera__nativa { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .pre-registration-error { color: var(--danger); font-size: 0.62rem; font-weight: 750; }
 .pre-registration-vehicle-fields { margin-top: 0.2rem; }
 .pre-registration-review { display: grid; gap: 0.7rem; }
