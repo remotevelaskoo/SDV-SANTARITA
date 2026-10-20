@@ -87,6 +87,33 @@
                         @endif
 
                         @if ($step === 1)
+                            <section class="pre-registration-capture" aria-labelledby="pre-ocr-start-title">
+                                <span class="pre-registration-capture__icon"><x-icon name="file" /></span>
+                                <h3 id="pre-ocr-start-title">Comece pelo documento, se preferir</h3>
+                                <p>Envie a frente da CNH ou do RG/CIN para tentarmos preencher nome, CPF e nascimento. Você também pode ignorar esta ajuda e digitar tudo abaixo.</p>
+
+                                <x-ui.select id="pre-document-type-start" label="Tipo de documento" wire:model.live="documentType" required>
+                                    <option value="cnh">CNH</option>
+                                    <option value="rg_cin">RG ou Carteira de Identidade Nacional (CIN)</option>
+                                </x-ui.select>
+
+                                @if ($documentReady)
+                                    <x-ui.alert :variant="$ocrStatus === 'completed' ? 'success' : 'info'" :title="$ocrStatus === 'completed' ? 'Dados sugeridos' : 'Documento recebido'">
+                                        {{ $ocrMessage ?: 'A imagem foi recebida. Confira os dados pessoais abaixo.' }}
+                                    </x-ui.alert>
+                                    <div>
+                                        <x-ui.button variant="secondary" wire:click="analyzeDocument" wire:loading.attr="disabled" wire:target="analyzeDocument">Ler novamente</x-ui.button>
+                                        <x-ui.button variant="ghost" wire:click="removeDocumentFile">Substituir documento</x-ui.button>
+                                    </div>
+                                @else
+                                    <x-ui.upload id="pre-document-file-start" label="Enviar frente do documento" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="documentFile" source="Câmera ou arquivo do dispositivo" />
+                                    @error('documentFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
+                                @endif
+
+                                <span wire:loading wire:target="documentFile,analyzeDocument" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Lendo o documento…</span>
+                                <small>A leitura é apenas uma sugestão. Confira e corrija todos os campos antes de continuar.</small>
+                            </section>
+
                             <div class="pre-registration-fields">
                                 <x-ui.field id="pre-name" label="Nome completo" wire:model="name" :error="$errors->first('name')" required />
                                 <x-ui.field id="pre-cpf" label="CPF" wire:model="cpf" placeholder="000.000.000-00" :error="$errors->first('cpf')" required />
@@ -136,18 +163,75 @@
                             <div class="pre-registration-capture">
                                 <span class="pre-registration-capture__icon"><x-icon name="file" /></span>
                                 <h3>Fotografe ou envie seu documento</h3>
-                                <p>Mantenha o documento inteiro visível, sem reflexos e com o texto legível.</p>
+                                <p>Mantenha o documento inteiro visível, sem reflexos e com o texto legível. A frente é obrigatória e o verso pode ser enviado quando possuir informações.</p>
+
+                                <x-ui.select id="pre-document-type" label="Tipo de documento" wire:model="documentType" :error="$errors->first('documentType')" required>
+                                    <option value="cnh">CNH</option>
+                                    <option value="rg_cin">RG ou Carteira de Identidade Nacional (CIN)</option>
+                                </x-ui.select>
+
+                                <x-ui.alert variant="info" title="Leitura assistida, não aprovação automática">
+                                    O sistema tenta localizar nome, CPF, nascimento e número do documento para reduzir a digitação. Você continua responsável por conferir os dados. A selfie permanece uma etapa separada.
+                                </x-ui.alert>
+
+                                <h4>Frente do documento</h4>
                                 @if ($documentReady)
-                                    <x-ui.alert variant="success" title="Documento pronto para análise">
-                                        Imagem recebida e pronta para ser protegida quando você concluir o envio. A portaria fará a conferência visual.
+                                    <x-ui.alert variant="success" title="Frente pronta para análise">
+                                        Imagem recebida e pronta para ser protegida quando você concluir o envio.
                                     </x-ui.alert>
-                                    <x-ui.button variant="secondary" wire:click="removeDocumentFile">Substituir documento</x-ui.button>
+                                    <x-ui.button variant="secondary" wire:click="analyzeDocument" wire:loading.attr="disabled" wire:target="analyzeDocument">
+                                        Ler documento novamente
+                                    </x-ui.button>
+                                    <x-ui.button variant="secondary" wire:click="removeDocumentFile">Substituir frente</x-ui.button>
                                 @else
-                                    <x-ui.upload id="pre-document-file" label="Enviar foto do documento" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="documentFile" />
+                                    <x-ui.upload id="pre-document-file" label="Enviar frente do documento" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="documentFile" source="Câmera ou arquivo do dispositivo" />
                                     <span wire:loading wire:target="documentFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo imagem…</span>
                                     @error('documentFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif
+
+                                <h4>Verso do documento <small>(quando houver)</small></h4>
+                                @if ($documentBackReady)
+                                    <x-ui.alert variant="success" title="Verso pronto para análise">
+                                        A segunda imagem também será armazenada de forma privada.
+                                    </x-ui.alert>
+                                    <x-ui.button variant="secondary" wire:click="removeDocumentBackFile">Remover verso</x-ui.button>
+                                @else
+                                    <x-ui.upload id="pre-document-back-file" label="Enviar verso do documento" accept="image/jpeg,image/png,image/webp" limit="Até 8 MB" wire:model="documentBackFile" source="Câmera ou arquivo do dispositivo" />
+                                    <span wire:loading wire:target="documentBackFile" class="ui-loading"><span class="ui-spinner" aria-hidden="true"></span> Protegendo imagem…</span>
+                                    @error('documentBackFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
+                                @endif
                                 <small>Formatos aceitos: JPG, PNG ou WebP. O arquivo não recebe endereço público.</small>
+
+                                <div wire:loading wire:target="documentFile,documentBackFile,analyzeDocument" class="ui-loading">
+                                    <span class="ui-spinner" aria-hidden="true"></span> Lendo os dados do documento…
+                                </div>
+
+                                @if ($ocrStatus === 'completed')
+                                    <x-ui.alert variant="success" title="Sugestões encontradas">
+                                        {{ $ocrMessage }}
+                                        <ul>
+                                            @foreach ($ocrFields as $field => $value)
+                                                <li>
+                                                    <strong>{{ match ($field) { 'name' => 'Nome', 'cpf' => 'CPF', 'birth_date' => 'Nascimento', 'document_number' => 'Número do documento', default => ucfirst($field) } }}:</strong>
+                                                    {{ $value }}
+                                                    @if (isset($ocrConfidences[$field]))
+                                                        <small>({{ number_format($ocrConfidences[$field] * 100, 0) }}% de confiança da leitura)</small>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </x-ui.alert>
+                                    <x-ui.button variant="primary" wire:click="editStep(1)">Conferir dados pessoais</x-ui.button>
+                                @elseif ($ocrStatus === 'failed')
+                                    <x-ui.alert variant="warning" title="Leitura automática não concluída">{{ $ocrMessage }}</x-ui.alert>
+                                @elseif ($ocrStatus === 'unavailable')
+                                    <x-ui.alert variant="info" title="Preenchimento manual disponível">{{ $ocrMessage }}</x-ui.alert>
+                                @endif
+                                @if ($portraitDetected)
+                                    <x-ui.alert variant="info" title="Foto localizada no documento">
+                                        O sistema encontrou a região da foto e preparará um recorte privado para a conferência visual da portaria. Isso não compara rostos e não substitui a selfie.
+                                    </x-ui.alert>
+                                @endif
                             </div>
                         @elseif ($step === 4)
                             <div class="pre-registration-capture pre-registration-capture--selfie">
@@ -185,7 +269,7 @@
                             <div class="pre-registration-review">
                                 <article><span>Dados pessoais</span><strong>{{ $name ?: 'Não informado' }}</strong><small>{{ ucfirst($accessType) }} · {{ $cpf ?: 'CPF não informado' }}</small><button type="button" wire:click="editStep(1)">Editar</button></article>
                                 <article><span>Endereço informado</span><strong>{{ $address ?: 'Não informado' }}, {{ $addressNumber ?: 's/n' }}</strong><small>{{ $city ?: 'Cidade' }}/{{ strtoupper($state ?: 'UF') }}</small><button type="button" wire:click="editStep(2)">Editar</button></article>
-                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>Legibilidade e identidade exigem conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
+                                <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>{{ $documentType === 'cnh' ? 'CNH' : 'RG/CIN' }}{{ $documentBackReady ? ' · frente e verso' : ' · frente' }}{{ $portraitDetected ? ' · foto do documento localizada' : '' }} · identidade exige conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
                                 <article><span>Veículo</span><strong>{{ $hasVehicle ? ($plate ?: 'Placa pendente') : 'Sem veículo' }}</strong><small>{{ $hasVehicle ? ($vehicleModel ?: 'Modelo pendente') : 'Etapa opcional' }}</small><button type="button" wire:click="editStep(5)">Editar</button></article>
                             </div>
 

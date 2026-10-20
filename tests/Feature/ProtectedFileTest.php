@@ -86,6 +86,37 @@ class ProtectedFileTest extends TestCase
             ->assertHasErrors(['documentFile' => 'max']);
     }
 
+    public function test_public_upload_accepts_document_front_and_back_as_separate_private_images(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->set('step', 3)
+            ->set('documentType', 'rg_cin')
+            ->set('documentFile', UploadedFile::fake()->image('frente.jpg', 1280, 720))
+            ->set('documentBackFile', UploadedFile::fake()->image('verso.jpg', 1280, 720))
+            ->assertSet('documentReady', true)
+            ->assertSet('documentBackReady', true)
+            ->call('nextStep')
+            ->assertHasNoErrors()
+            ->assertSet('step', 4);
+
+        $preRegistration = PreRegistration::factory()->create();
+        app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
+            'documento' => UploadedFile::fake()->image('frente.jpg', 1280, 720),
+            'documento_verso' => UploadedFile::fake()->image('verso.jpg', 1280, 720),
+        ]);
+
+        $this->assertDatabaseHas('pre_registration_arquivos', [
+            'pre_registration_id' => $preRegistration->id,
+            'category' => 'documento',
+            'is_current' => true,
+        ]);
+        $this->assertDatabaseHas('pre_registration_arquivos', [
+            'pre_registration_id' => $preRegistration->id,
+            'category' => 'documento_verso',
+            'is_current' => true,
+        ]);
+    }
+
     public function test_replacing_a_file_preserves_the_previous_version_and_object(): void
     {
         $preRegistration = PreRegistration::factory()->create();

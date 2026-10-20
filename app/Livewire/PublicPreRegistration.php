@@ -3,11 +3,13 @@
 namespace App\Livewire;
 
 use App\Models\PreRegistration;
+use App\Services\DocumentOcrClient;
 use App\Services\PrivateFileService;
 use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -53,9 +55,35 @@ class PublicPreRegistration extends Component
 
     public string $destinationProperty = 'Bloco B — Apto 304';
 
+    public string $documentType = 'cnh';
+
     public bool $documentReady = false;
 
     public mixed $documentFile = null;
+
+    public bool $documentBackReady = false;
+
+    public mixed $documentBackFile = null;
+
+    public string $ocrStatus = 'idle';
+
+    public string $ocrMessage = '';
+
+    /** @var array<string, string> */
+    public array $ocrFields = [];
+
+    /** @var array<string, float> */
+    public array $ocrConfidences = [];
+
+    public string $ocrEngine = '';
+
+    public string $ocrModelVersion = '';
+
+    public string $extractedDocumentNumber = '';
+
+    public bool $portraitDetected = false;
+
+    public string $portraitSource = '';
 
     public bool $selfieReady = false;
 
@@ -165,6 +193,31 @@ class PublicPreRegistration extends Component
 
         $this->documentReady = true;
         $this->resetErrorBag('documentReady');
+        $this->analyzeDocument();
+    }
+
+    public function updatedDocumentBackFile(): void
+    {
+        if ($this->documentBackFile === null) {
+            $this->documentBackReady = false;
+
+            return;
+        }
+
+        $this->validateOnly('documentBackFile', [
+            'documentBackFile' => $this->optionalProtectedImageRules(),
+        ], $this->fileValidationMessages());
+
+        $this->documentBackReady = true;
+        $this->resetErrorBag('documentBackFile');
+        $this->analyzeDocument();
+    }
+
+    public function updatedDocumentType(): void
+    {
+        if ($this->documentFile !== null) {
+            $this->analyzeDocument();
+        }
     }
 
     public function updatedSelfieFile(): void
@@ -181,7 +234,90 @@ class PublicPreRegistration extends Component
     {
         $this->documentFile = null;
         $this->documentReady = false;
+        $this->resetOcrState();
         $this->resetErrorBag(['documentFile', 'documentReady']);
+    }
+
+    public function removeDocumentBackFile(): void
+    {
+        $this->documentBackFile = null;
+        $this->documentBackReady = false;
+        $this->resetErrorBag('documentBackFile');
+
+        if ($this->documentFile !== null) {
+            $this->analyzeDocument();
+        }
+    }
+
+    public function analyzeDocument(): void
+    {
+        if ($this->documentFile === null) {
+            $this->resetOcrState();
+
+            return;
+        }
+
+        $ocr = app(DocumentOcrClient::class);
+        if (! $ocr->enabled()) {
+            $this->ocrStatus = 'unavailable';
+            $this->ocrMessage = 'A leitura automática não está ativa neste ambiente. Você pode continuar preenchendo os dados manualmente.';
+
+            return;
+        }
+
+        $rateLimitKey = 'document-ocr:'.hash('sha256', (string) request()->ip());
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'Foram feitas muitas tentativas de leitura. Aguarde um minuto e continue manualmente ou tente novamente.';
+
+            return;
+        }
+        RateLimiter::hit($rateLimitKey, 60);
+
+        $this->ocrStatus = 'processing';
+        $this->ocrMessage = 'Lendo o documento em ambiente interno…';
+        $this->ocrFields = [];
+        $this->ocrConfidences = [];
+        $this->portraitDetected = false;
+        $this->portraitSource = '';
+
+        try {
+            $result = $ocr->extract($this->documentType, $this->documentFile, $this->documentBackFile);
+
+            foreach ($result['fields'] as $field => $suggestion) {
+                if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
+                    continue;
+                }
+
+                $this->ocrFields[$field] = $suggestion['value'];
+                if (is_numeric($suggestion['confidence'] ?? null)) {
+                    $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
+                }
+            }
+
+            $this->name = $this->ocrFields['name'] ?? $this->name;
+            $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
+            $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
+            $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
+            $this->ocrEngine = (string) ($result['engine'] ?? '');
+            $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
+            $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
+            $this->portraitDetected = ($portrait['detected'] ?? false) === true;
+            $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
+
+            if ($this->ocrFields === []) {
+                $this->ocrStatus = 'failed';
+                $this->ocrMessage = 'Não conseguimos identificar dados com segurança. Confira a imagem e continue manualmente.';
+
+                return;
+            }
+
+            $this->ocrStatus = 'completed';
+            $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+        } catch (\Throwable) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'A leitura automática não ficou disponível agora. Seus dados e sua imagem foram mantidos; continue manualmente ou tente novamente.';
+        }
     }
 
     public function removeSelfieFile(): void
@@ -208,6 +344,7 @@ class PublicPreRegistration extends Component
         $addressLine .= " · {$this->district} · {$this->city}/{$this->state}";
 
         $isTourist = $this->accessType === 'turista';
+        $portraitBytes = $this->preparePortraitCrop();
 
         try {
             $preRegistration = DB::transaction(function () use ($addressLine, $isTourist, $privateFiles): PreRegistration {
@@ -215,6 +352,7 @@ class PublicPreRegistration extends Component
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
                     'document' => $this->cpf,
+                    'document_type' => $this->documentType,
                     'birth_date' => $this->birthDate,
                     'phone' => $this->phone,
                     'email' => $this->email,
@@ -237,10 +375,36 @@ class PublicPreRegistration extends Component
                     'submitted_at' => now(),
                 ]);
 
-                $privateFiles->storePreRegistrationFiles($preRegistration, [
+                $uploads = [
                     'documento' => $this->documentFile,
                     'selfie' => $this->selfieFile,
-                ]);
+                ];
+
+                if ($this->documentBackFile !== null) {
+                    $uploads['documento_verso'] = $this->documentBackFile;
+                }
+
+                $privateFiles->storePreRegistrationFiles($preRegistration, $uploads);
+
+                if ($this->ocrStatus === 'completed') {
+                    $preRegistration->documentExtractions()->create([
+                        'document_type' => $this->documentType,
+                        'engine' => $this->ocrEngine,
+                        'model_version' => $this->ocrModelVersion,
+                        'status' => 'confirmed',
+                        'extracted_fields' => $this->ocrFields,
+                        'field_confidences' => $this->ocrConfidences,
+                        'confirmed_fields' => [
+                            'name' => $this->name,
+                            'cpf' => $this->cpf,
+                            'birth_date' => $this->birthDate,
+                            'document_number' => $this->extractedDocumentNumber,
+                            'document_portrait_detected' => $this->portraitDetected,
+                        ],
+                        'processed_at' => now(),
+                        'confirmed_at' => now(),
+                    ]);
+                }
 
                 return $preRegistration;
             });
@@ -248,6 +412,15 @@ class PublicPreRegistration extends Component
             $this->addError('submission', 'Não foi possível proteger os arquivos agora. Seus dados continuam nesta tela para uma nova tentativa.');
 
             return;
+        }
+
+        if ($portraitBytes !== null) {
+            try {
+                $privateFiles->storeGeneratedPortrait($preRegistration, $portraitBytes);
+            } catch (\Throwable) {
+                // O recorte é um auxílio opcional. Documento e selfie originais
+                // permanecem disponíveis para conferência humana.
+            }
         }
 
         $this->protocol = $preRegistration->protocol;
@@ -258,6 +431,40 @@ class PublicPreRegistration extends Component
     private function generateProtocol(): string
     {
         return 'PRE-SRA-'.strtoupper(Str::random(6));
+    }
+
+    private function resetOcrState(): void
+    {
+        $this->ocrStatus = 'idle';
+        $this->ocrMessage = '';
+        $this->ocrFields = [];
+        $this->ocrConfidences = [];
+        $this->ocrEngine = '';
+        $this->ocrModelVersion = '';
+        $this->extractedDocumentNumber = '';
+        $this->portraitDetected = false;
+        $this->portraitSource = '';
+    }
+
+    private function preparePortraitCrop(): ?string
+    {
+        if (! $this->portraitDetected || $this->documentFile === null) {
+            return null;
+        }
+
+        try {
+            $ocr = app(DocumentOcrClient::class);
+            $result = $ocr->extract(
+                $this->documentType,
+                $this->documentFile,
+                $this->documentBackFile,
+                includePortrait: true,
+            );
+
+            return $ocr->portraitBytes($result);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function restart(): void
@@ -287,7 +494,11 @@ class PublicPreRegistration extends Component
                     ? []
                     : ['required', Rule::in($this->destinationOptions())],
             ],
-            3 => ['documentFile' => $this->protectedImageRules()],
+            3 => [
+                'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
+                'documentFile' => $this->protectedImageRules(),
+                'documentBackFile' => $this->optionalProtectedImageRules(),
+            ],
             4 => ['selfieFile' => $this->protectedImageRules()],
             5 => $this->hasVehicle ? [
                 'plate' => ['required', 'string', 'min:7', 'max:8'],
@@ -322,7 +533,9 @@ class PublicPreRegistration extends Component
             'city' => ['required', 'string', 'max:80'],
             'state' => ['required', 'string', 'size:2'],
             'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
+            'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
             'documentFile' => $this->protectedImageRules(),
+            'documentBackFile' => $this->optionalProtectedImageRules(),
             'selfieFile' => $this->protectedImageRules(),
             'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
             'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],
@@ -335,6 +548,12 @@ class PublicPreRegistration extends Component
     private function protectedImageRules(): array
     {
         return ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
+    }
+
+    /** @return array<int, string> */
+    private function optionalProtectedImageRules(): array
+    {
+        return ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
     }
 
     /** @return array<string, string> */
@@ -354,6 +573,8 @@ class PublicPreRegistration extends Component
     {
         return [
             'documentFile.required' => 'Envie uma foto do documento para continuar.',
+            'documentType.required' => 'Escolha o tipo de documento.',
+            'documentType.in' => 'Escolha RG/CIN ou CNH.',
             'selfieFile.required' => 'Envie uma selfie para continuar.',
             'image' => 'O arquivo precisa ser uma imagem válida.',
             'mimes' => 'Use uma imagem JPG, PNG ou WebP.',

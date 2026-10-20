@@ -916,6 +916,19 @@ O desenho físico deverá definir:
 - contingência para integrações;
 - monitoramento de crescimento, locks, conexões e replicação.
 
+Para a topologia híbrida aprovada na ADR-018, também deverá definir:
+
+- banco operacional do nó local e sua recuperação em equipamento substituto;
+- outbox persistente para fatos criados sem internet;
+- identificador idempotente, origem e instante original de cada operação sincronizável;
+- política explícita de autoridade e conflito por agregado;
+- bloqueio de escrita remota conflitante durante a desconexão;
+- confirmação de sincronização sem apagar prematuramente a cópia local;
+- backup externo independente da réplica e da sincronização;
+- restauração conjunta de banco, objetos privados e posições de sincronização.
+
+O GitHub não será considerado backup de dados operacionais.
+
 Metas numéricas permanecem pendentes e não serão presumidas neste documento.
 
 ---

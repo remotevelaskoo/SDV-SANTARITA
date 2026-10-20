@@ -648,7 +648,7 @@ A arquitetura deverá suportar:
 - cache operacional apenas quando aprovado;
 - funcionamento degradado claramente sinalizado.
 
-Não será presumida operação offline completa. Política de cache, tempo de tolerância, autoridade local e reconciliação dependem do inventário de equipamentos e de ADR.
+A topologia híbrida local e nuvem foi aprovada na ADR-018. Os fluxos essenciais deverão continuar pela rede interna, com fila persistente e reconciliação posterior. Isso não autoriza automaticamente decisões offline de câmeras, leitores, controladoras ou credenciais: cache, tempo de tolerância, revogação e autoridade de cada equipamento continuam condicionados ao inventário e à ADR-008.
 
 ---
 
@@ -869,6 +869,21 @@ python-ocr-ai (opcional)
 - banco e S3 com políticas de backup independentes.
 
 Docker Compose poderá atender desenvolvimento e ambientes simples. A orquestração de produção será definida conforme infraestrutura e metas operacionais.
+
+## 29.3 Topologia híbrida da implantação
+
+Conforme a ADR-018, cada implantação deverá possuir um nó operacional local acessível pela rede interna e serviços de nuvem para acesso remoto autorizado, consolidação, sincronização e recuperação.
+
+- queda da internet não poderá interromper os fluxos essenciais já homologados;
+- operações locais usarão identificadores únicos, outbox persistente e processamento idempotente;
+- a interface informará modo local, última sincronização e quantidade de pendências;
+- conflitos não serão resolvidos por sobrescrita silenciosa;
+- alterações remotas conflitantes ficarão bloqueadas ou em modo somente leitura durante a desconexão;
+- equipamentos permanecerão na rede local e serão acessados por adaptadores homologados;
+- sincronização e backup serão mecanismos independentes;
+- o nó local será equipamento dedicado, protegido por energia e com procedimento de substituição.
+
+Os detalhes de hardware, provedor, RPO, RTO, retenção e validade local de permissões deverão ser fechados antes da publicação.
 
 ---
 

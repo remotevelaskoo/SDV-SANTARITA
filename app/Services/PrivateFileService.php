@@ -26,7 +26,7 @@ class PrivateFileService
     public function __construct(private AuditService $audit) {}
 
     /**
-     * @param  array<'documento'|'selfie', UploadedFile>  $uploads
+     * @param  array<'documento'|'documento_verso'|'documento_foto'|'selfie', UploadedFile>  $uploads
      * @return list<Arquivo>
      */
     public function storePreRegistrationFiles(PreRegistration $preRegistration, array $uploads): array
@@ -36,7 +36,7 @@ class PrivateFileService
 
         try {
             foreach ($uploads as $category => $upload) {
-                if (! in_array($category, ['documento', 'selfie'], true)) {
+                if (! in_array($category, ['documento', 'documento_verso', 'documento_foto', 'selfie'], true)) {
                     throw new RuntimeException('Categoria de arquivo não permitida.');
                 }
 
@@ -79,7 +79,12 @@ class PrivateFileService
                     'category' => $category,
                     'object_key' => $objectKey,
                     'original_name' => $upload->getClientOriginalName(),
-                    'display_name' => $category === 'documento' ? 'Documento enviado' : 'Selfie enviada',
+                    'display_name' => match ($category) {
+                        'documento' => 'Frente do documento',
+                        'documento_verso' => 'Verso do documento',
+                        'documento_foto' => 'Foto localizada no documento',
+                        default => 'Selfie enviada',
+                    },
                     'extension' => $extension,
                     'declared_mime' => $upload->getClientMimeType(),
                     'detected_mime' => $detectedMime,
@@ -108,7 +113,7 @@ class PrivateFileService
                         'detected_mime' => $metadata['detected_mime'],
                         'size_bytes' => $metadata['size_bytes'],
                         'checksum_sha256' => $metadata['checksum_sha256'],
-                        'classification' => $metadata['category'] === 'selfie' ? 'sensivel' : 'pessoal',
+                        'classification' => in_array($metadata['category'], ['selfie', 'documento_foto'], true) ? 'sensivel' : 'pessoal',
                         'purpose' => 'conferencia_pre_cadastro',
                         'status' => 'disponivel',
                         'origin' => 'pre_cadastro_publico',
@@ -146,6 +151,41 @@ class PrivateFileService
             }
 
             throw $exception;
+        }
+    }
+
+    public function storeGeneratedPortrait(PreRegistration $preRegistration, string $contents): Arquivo
+    {
+        if ($contents === '' || strlen($contents) > 2_000_000) {
+            throw new RuntimeException('O recorte da foto possui tamanho inválido.');
+        }
+
+        $image = @getimagesizefromstring($contents);
+        if (! is_array($image) || ($image['mime'] ?? null) !== 'image/jpeg') {
+            throw new RuntimeException('O recorte da foto não é uma imagem JPEG válida.');
+        }
+
+        $temporaryPath = tempnam(storage_path('framework/cache'), 'sdv-portrait-');
+        if ($temporaryPath === false || file_put_contents($temporaryPath, $contents) === false) {
+            throw new RuntimeException('Não foi possível preparar o recorte para armazenamento privado.');
+        }
+
+        try {
+            $upload = new UploadedFile(
+                $temporaryPath,
+                'foto-documento.jpg',
+                'image/jpeg',
+                null,
+                true,
+            );
+
+            [$file] = $this->storePreRegistrationFiles($preRegistration, [
+                'documento_foto' => $upload,
+            ]);
+
+            return $file;
+        } finally {
+            @unlink($temporaryPath);
         }
     }
 

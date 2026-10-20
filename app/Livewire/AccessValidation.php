@@ -329,12 +329,12 @@ class AccessValidation extends Component
             : ($document ? 'Documento protegido' : 'Não informado');
     }
 
-    /** @return array{document: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string} */
+    /** @return array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, document_portrait: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string} */
     #[Computed]
     public function currentProtectedFiles(): array
     {
         if ($this->quickPersonRegistered || ! $this->currentPessoaId) {
-            return ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+            return ['document' => null, 'document_back' => null, 'document_portrait' => null, 'selfie' => null, 'pre_registration_id' => null];
         }
 
         $presentedDocument = PessoaDocumento::query()
@@ -344,7 +344,7 @@ class AccessValidation extends Component
             ->value('valor_apresentacao');
 
         if (! $presentedDocument) {
-            return ['document' => null, 'selfie' => null, 'pre_registration_id' => null];
+            return ['document' => null, 'document_back' => null, 'document_portrait' => null, 'selfie' => null, 'pre_registration_id' => null];
         }
 
         $preRegistration = PreRegistration::query()
@@ -356,6 +356,8 @@ class AccessValidation extends Component
 
         return [
             'document' => $preRegistration?->currentFileLink('documento'),
+            'document_back' => $preRegistration?->currentFileLink('documento_verso'),
+            'document_portrait' => $preRegistration?->currentFileLink('documento_foto'),
             'selfie' => $preRegistration?->currentFileLink('selfie'),
             'pre_registration_id' => $preRegistration?->id,
         ];

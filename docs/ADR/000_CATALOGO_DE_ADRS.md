@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.26
+**Versão:** 1.0.30
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -42,6 +42,10 @@
 | 1.0.24 | 27/09/2026 | Soluções do Vale | ADR-016 atualizado para 1.1.0 com a evidência técnica de bancada (DS-K1T673DX-BR, firmware V3.18.0, módulo seguro RS-485); ADR-016 segue como decisão vigente dos terminais; ADR-008 e ADR-013 continuam adiados; numeração inalterada |
 | 1.0.25 | 27/09/2026 | Product Owner | Consolidação da numeração (§18.4): ADR-015 permanece ViaCEP; ADR-016 é a decisão vigente dos terminais; o ADR-015 provisório de `codex/fundacao-mvp` fica substituído e não será integrado |
 | 1.0.26 | 10/10/2026 | Product Owner | Inclusão e aprovação do ADR-017: separação entre teste técnico do relé e liberação manual operacional, postos e designação de operadores; operação desligada por padrão |
+| 1.0.27 | 15/10/2026 | Lucas Pastorelli + Codex | ADR-011 volta a Proposto para o caso limitado de OCR assistido no pré-cadastro |
+| 1.0.28 | 15/10/2026 | Lucas Pastorelli + Codex | Registro do recorte visual privado da foto impressa no documento, sem reconhecimento facial |
+| 1.0.29 | 16/10/2026 | Lucas Pastorelli + Codex | Criação e aprovação do ADR para operação híbrida (publicado na `main` como ADR-016; renumerado para ADR-018 na 1.0.30) |
+| 1.0.30 | 20/10/2026 | Product Owner | Integração da `main` ao PR dos terminais: colisão de número resolvida mantendo ADR-016 (terminais faciais) e ADR-017 (liberação manual) e renumerando a operação híbrida para ADR-018, sem alterar seu conteúdo aprovado |
 
 ---
 
@@ -262,13 +266,14 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-008](ADR-008_CONTINGENCIA_E_CACHE_OPERACIONAL.md) | Contingência e cache operacional | P1 | Adiado | 011 | homologação e go-live |
 | [ADR-009](ADR-009_GESTAO_E_ROTACAO_DE_SEGREDOS.md) | Gestão e rotação de segredos | P0 | Aprovado | 010, 011 | integrações e produção |
 | [ADR-010](ADR-010_OBSERVABILIDADE.md) | Observabilidade | P1 | Aprovado | 011 | homologação integrada |
-| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Adiado | 010, 011 | somente capacidade de OCR/IA |
+| [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Proposto | 006, 010, 011, 015 | RapidOCR/ONNX e recorte OpenCV internos escolhidos para prova; produção ainda não aprovada |
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
 | [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
 | [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita (v1.1.1: bancada homologada, operação real desligada) |
 | [ADR-017](ADR-017_LIBERACAO_MANUAL_OPERACIONAL_E_TESTE_TECNICO_DO_RELE.md) | Liberação manual operacional e teste técnico do relé | P1 | Aprovado | ADR-016 | liberação manual no Modo Portaria (desligada até homologação) |
+| [ADR-018](ADR-018_OPERACAO_HIBRIDA_LOCAL_E_NUVEM.md) | Operação híbrida local e nuvem | P0 | Aprovado | 010, 011, 013 | P28 e publicação |
 
 O estado `Adiado` indica dependência de informação, demanda ou volume ainda não confirmados; não representa aprovação da solução.
 
@@ -324,6 +329,9 @@ ADR-016 Integração direta do terminal facial
 
 ADR-004 + ADR-005 + ADR-009
 └── ADR-012 Deploy e rollback
+
+ADR-002 + ADR-004 + ADR-005 + ADR-012
+└── ADR-018 Operação híbrida local e nuvem
 
 ADR-011 OCR/IA e ADR-014 Particionamento
 └── condicionais
@@ -393,6 +401,7 @@ Antes da produção:
 | ADR-014 | `RN-041`, `RN-046` a `RN-049`, `RN-086` |
 | ADR-015 | `RN-002`, `RN-060` |
 | ADR-016 | `RN-038`, `RN-040`, `RN-045`, `RN-077` a `RN-080`, `RN-086` a `RN-093` |
+| ADR-018 | continuidade operacional, sincronização, backup e recuperação da P28 |
 
 ---
 
@@ -414,6 +423,7 @@ Antes da produção:
 | ADR-014 | `PEN-BDD-021`, `PEN-BDD-025`, `PEN-ARQ-017` |
 | ADR-015 | `PEN-RNG-006` |
 | ADR-016 | `PEN-001`, `PEN-002`, `PEN-005`, `PEN-017`, `PEN-ARQ-001`, `PEN-ARQ-002`, `PEN-ARQ-008` |
+| ADR-018 | `PEN-ARQ-002` e pendências `PEN-ADR-018-001` a `006` |
 
 ---
 
@@ -546,15 +556,17 @@ O conjunto inicial (`ADR-001` a `ADR-014`) está completo:
 - `ADR-001` a `ADR-007`: aprovados;
 - `ADR-008`: adiado com aprovação formal;
 - `ADR-009` e `ADR-010`: aprovados;
-- `ADR-011`: adiado com aprovação formal;
+- `ADR-011`: proposto para retomada limitada ao OCR assistido no pré-cadastro;
 - `ADR-012`: aprovado;
 - `ADR-013` e `ADR-014`: adiados com aprovação formal.
 
-Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas.
+Os ADRs adiados somente voltarão a **Proposto** quando suas condições documentadas forem atendidas. O ADR-011 voltou a Proposto em 15/10/2026 após a definição do caso AJ-005; tecnologia, política e prova técnica ainda precisam ser aprovadas.
 
 Fora do conjunto inicial, `ADR-015` (Integração externa: consulta de CEP — ViaCEP) foi criado e aprovado retrospectivamente em 11/08/2026, registrando uma decisão já implementada nas partes P08 e P11, conforme a seção 9 deste catálogo.
 
 `ADR-016` (Integração direta entre terminal facial e ponto de acesso) foi aprovado em 27/09/2026 para a topologia e a prova de integração; a produção permanece condicionada aos ADRs 008 e 013. Ele foi redigido como `ADR-015` na branch `codex/fundacao-mvp`, que se separou da `main` antes do ADR do ViaCEP; ao ser incorporado, recebeu o próximo número disponível, sem alterar o conteúdo aprovado.
+
+O `ADR-018` (Operação híbrida local e nuvem) foi criado e aprovado em 16/10/2026. Ele estabelece que a internet não será ponto único de falha da portaria e cria a P28 para implementar nó local, sincronização controlada e backup externo. A autorização offline de equipamentos continua separada e condicionada à ADR-008. Foi publicado na `main` como `ADR-016` e renumerado para `ADR-018` ao ser integrado ao PR dos terminais faciais, que já usava os números 016 e 017; o conteúdo aprovado não foi alterado.
 
 A próxima etapa documental é a especificação de APIs. Devido à divergência de numeração registrada em `PEN-ADR-CAT-001`, o arquivo deverá usar o próximo número principal disponível, sem renomear silenciosamente a arquitetura aprovada.
 
@@ -562,4 +574,4 @@ A próxima etapa documental é a especificação de APIs. Devido à divergência
 
 ## Situação do documento
 
-Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs estão aprovados e quatro estão adiados com aprovação formal e condições explícitas de retomada. `ADR-015` foi incorporado posteriormente, registrando retrospectivamente a integração com o ViaCEP, e `ADR-016` registra a integração direta dos terminais faciais.
+Este catálogo encontra-se **aprovado e atualizado**. O conjunto inicial `ADR-001` a `ADR-014` está integralmente documentado; dez ADRs do conjunto inicial estão aprovados, três permanecem adiados e o ADR-011 está Proposto para retomada limitada. `ADR-015` (ViaCEP), `ADR-016` (integração direta dos terminais faciais), `ADR-017` (liberação manual e teste técnico do relé) e `ADR-018` (operação híbrida local e nuvem) foram incorporados posteriormente e estão aprovados.
