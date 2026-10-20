@@ -157,6 +157,14 @@ câmeras. A permissão `documentos.capturar` controla a captura.
 impedem salvar até o operador confirmar ou corrigir. Nada é aprovado, autorizado ou liberado pela
 leitura.
 
+**Leitor interno do AJ-005 (20/10/2026).** Com a integração da `main`, o cadastro rápido usa o
+mesmo leitor do pré-cadastro ([SDV-UXP-019](019_OCR_ASSISTIDO_PRE_CADASTRO.md), serviço Python
+`services/document-ocr`, ADR-011) por meio do adaptador `OcrServicoDocumento`, escolhido quando
+`DOCUMENT_OCR_ENABLED=true`; desligado, vale o simulador. O operador escolhe CNH ou RG/CIN antes
+da captura. A checagem de qualidade continua antes do leitor (imagem ruim não é enviada), o
+recorte da foto não é solicitado e a captura continua sem persistência. Leitor fora do ar vira
+"não reconhecido" e o operador digita os dados. Nenhum OCR de terceiros é usado.
+
 **Retenção.** `SDV_CAPTURA_DOCUMENTO_RETENCAO=nao_persistir`: o upload temporário é apagado logo
 após a análise e nenhuma imagem é guardada. A auditoria (`documento_capturado_analisado`) registra
 origem, resultado, códigos de qualidade e nomes de campos, nunca imagem, CPF ou outro valor.

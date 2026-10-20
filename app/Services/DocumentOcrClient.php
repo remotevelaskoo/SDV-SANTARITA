@@ -21,6 +21,17 @@ class DocumentOcrClient
         ?UploadedFile $back = null,
         bool $includePortrait = false,
     ): array {
+        return $this->extractContents($documentType, $this->contents($front), $back ? $this->contents($back) : null, $includePortrait);
+    }
+
+    /**
+     * Mesma leitura a partir do conteúdo binário das imagens (cadastro rápido
+     * por câmera, que não guarda arquivo).
+     *
+     * @return array<string, mixed>
+     */
+    public function extractContents(string $documentType, string $front, ?string $back = null, bool $includePortrait = false): array
+    {
         if (! $this->enabled()) {
             throw new RuntimeException('O leitor automático não está habilitado.');
         }
@@ -31,14 +42,10 @@ class DocumentOcrClient
         }
 
         $request = $this->request()
-            ->attach('front', $this->contents($front), $front->getClientOriginalName(), [
-                'Content-Type' => $front->getMimeType(),
-            ]);
+            ->attach('front', $front, 'front.'.$this->extension($front), ['Content-Type' => $this->mimeType($front)]);
 
         if ($back !== null) {
-            $request = $request->attach('back', $this->contents($back), $back->getClientOriginalName(), [
-                'Content-Type' => $back->getMimeType(),
-            ]);
+            $request = $request->attach('back', $back, 'back.'.$this->extension($back), ['Content-Type' => $this->mimeType($back)]);
         }
 
         $response = $request->post($url.'/v1/extract', [
@@ -87,6 +94,20 @@ class DocumentOcrClient
         $token = (string) config('services.document_ocr.token');
 
         return $token !== '' ? $request->withToken($token) : $request;
+    }
+
+    private function mimeType(string $contents): string
+    {
+        return (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: 'application/octet-stream';
+    }
+
+    private function extension(string $contents): string
+    {
+        return match ($this->mimeType($contents)) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
     }
 
     private function contents(UploadedFile $file): string

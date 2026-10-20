@@ -30,6 +30,9 @@ trait CapturaDocumentoAssistida
     /** 'camera' ou 'arquivo' (contingência). */
     public string $capturaOrigem = 'camera';
 
+    /** 'cnh' ou 'rg_cin': orienta o leitor sobre o número do documento. */
+    public string $capturaTipoDocumento = 'cnh';
+
     /** @var array<string, mixed>|null resultado da última análise, sem imagem */
     public ?array $analiseDocumento = null;
 
@@ -62,7 +65,7 @@ trait CapturaDocumentoAssistida
         $this->descartarArquivosTemporarios();
 
         try {
-            $analise = $assistente->analisar($this->usuarioCaptura(), $frente, $verso, $this->capturaOrigem);
+            $analise = $assistente->analisar($this->usuarioCaptura(), $frente, $verso, $this->capturaOrigem, $this->capturaTipoDocumento);
         } catch (RegraIntegracaoViolada $e) {
             $this->addError('capturaFrente', $e->getMessage());
 

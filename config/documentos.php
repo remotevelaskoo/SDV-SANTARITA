@@ -1,5 +1,6 @@
 <?php
 
+use App\Documentos\Infra\OcrServicoDocumento;
 use App\Documentos\Infra\OcrSimulador;
 
 /*
@@ -7,7 +8,9 @@ use App\Documentos\Infra\OcrSimulador;
 | Cadastro rápido assistido por câmera (SDV-OPE-018)
 |--------------------------------------------------------------------------
 |
-| Sem OCR externo nesta entrega: só o simulador. Limiares provisórios até
+| Com DOCUMENT_OCR_ENABLED ligado, usa o leitor interno do AJ-005 (serviço
+| Python na rede interna, SDV-UXP-019); desligado, usa o simulador. Nenhum
+| OCR de terceiros. Limiares provisórios até
 | a homologação das câmeras e das estações (SDV-OPE-018 §11).
 |
 */
@@ -16,7 +19,7 @@ return [
 
     // Classe que implementa App\Documentos\Dominio\PortaOcrDocumento.
     'ocr' => [
-        'adaptador' => OcrSimulador::class,
+        'adaptador' => env('DOCUMENT_OCR_ENABLED', false) ? OcrServicoDocumento::class : OcrSimulador::class,
         // Abaixo desta confiança o campo fica como "Requer conferência".
         'confianca_minima' => (float) env('SDV_OCR_CONFIANCA_MINIMA', 0.85),
     ],

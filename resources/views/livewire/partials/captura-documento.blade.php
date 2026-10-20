@@ -10,6 +10,15 @@
 
     <div class="captura-documento__camera">
         <label class="ui-field">
+            <span class="ui-field__label">Tipo do documento</span>
+            <span class="ui-select-control">
+                <select class="ui-field__control ui-field__select" wire:model="capturaTipoDocumento">
+                    <option value="cnh">CNH</option>
+                    <option value="rg_cin">RG ou CIN</option>
+                </select>
+            </span>
+        </label>
+        <label class="ui-field">
             <span class="ui-field__label">Câmera de documentos</span>
             <span class="ui-select-control">
                 <select class="ui-field__control ui-field__select" x-model="escolhas.documentos" x-on:change="escolher('documentos', $event.target.value)">

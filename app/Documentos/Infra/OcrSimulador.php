@@ -20,7 +20,7 @@ class OcrSimulador implements PortaOcrDocumento
         $this->proxima = $resultado;
     }
 
-    public function extrair(string $frente, ?string $verso = null): ResultadoOcr
+    public function extrair(string $frente, ?string $verso = null, string $tipoDocumento = 'cnh'): ResultadoOcr
     {
         return $this->proxima ?? ResultadoOcr::naoReconhecido();
     }

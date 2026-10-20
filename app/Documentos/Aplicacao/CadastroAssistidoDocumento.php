@@ -34,10 +34,13 @@ class CadastroAssistidoDocumento
      *     campos: array<string, array{valor: ?string, confianca: float, conferir: bool}>, conferir: list<string>,
      *     duplicidade: bool, mensagem: ?string}
      */
-    public function analisar(User $operador, string $frente, ?string $verso = null, string $origem = 'camera'): array
+    public function analisar(User $operador, string $frente, ?string $verso = null, string $origem = 'camera', string $tipoDocumento = 'cnh'): array
     {
         if (! $operador->hasPermission(self::PERMISSAO)) {
             throw new RegraIntegracaoViolada('sem_permissao', 'Você não tem permissão para capturar documentos.');
+        }
+        if (! in_array($tipoDocumento, PortaOcrDocumento::TIPOS_DOCUMENTO, true)) {
+            throw new RegraIntegracaoViolada('tipo_documento_invalido', 'Escolha CNH ou RG/CIN.');
         }
 
         $problemas = [];
@@ -58,7 +61,7 @@ class CadastroAssistidoDocumento
             return ['status' => 'repetir', 'problemas' => $problemas, 'campos' => [], 'conferir' => [], 'duplicidade' => false, 'mensagem' => 'Capture novamente: a qualidade da imagem não permite a leitura.'];
         }
 
-        $resultado = $this->ocr->extrair($frente, $verso);
+        $resultado = $this->ocr->extrair($frente, $verso, $tipoDocumento);
         if (! $resultado->reconhecido) {
             $this->auditar('nao_reconhecido', $origem, $verso !== null, [], $resultado, []);
 
