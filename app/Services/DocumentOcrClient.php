@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Documentos\Dominio\FalhaLeituraDocumento;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -28,17 +30,20 @@ class DocumentOcrClient
      * Mesma leitura a partir do conteúdo binário das imagens (cadastro rápido
      * por câmera, que não guarda arquivo).
      *
+     * Falhas saem classificadas em FalhaLeituraDocumento (AJ-006): sem
+     * resposta, serviço indisponível ou arquivo recusado pelo leitor.
+     *
      * @return array<string, mixed>
      */
     public function extractContents(string $documentType, string $front, ?string $back = null, bool $includePortrait = false): array
     {
         if (! $this->enabled()) {
-            throw new RuntimeException('O leitor automático não está habilitado.');
+            throw new FalhaLeituraDocumento('servico', 'desligado', 'O leitor automático não está habilitado.');
         }
 
         $url = rtrim((string) config('services.document_ocr.url'), '/');
         if ($url === '') {
-            throw new RuntimeException('O endereço interno do leitor automático não foi configurado.');
+            throw new FalhaLeituraDocumento('servico', 'nao_configurado', 'O endereço interno do leitor automático não foi configurado.');
         }
 
         $request = $this->request()
@@ -48,18 +53,32 @@ class DocumentOcrClient
             $request = $request->attach('back', $back, 'back.'.$this->extension($back), ['Content-Type' => $this->mimeType($back)]);
         }
 
-        $response = $request->post($url.'/v1/extract', [
-            'document_type' => $documentType,
-            'include_portrait' => $includePortrait ? 'true' : 'false',
-        ]);
+        try {
+            $response = $request->post($url.'/v1/extract', [
+                'document_type' => $documentType,
+                'include_portrait' => $includePortrait ? 'true' : 'false',
+            ]);
+        } catch (ConnectionException) {
+            throw new FalhaLeituraDocumento('comunicacao', 'sem_resposta', 'O leitor automático não respondeu.');
+        }
 
         if (! $response->successful()) {
-            throw new RuntimeException('O leitor automático não conseguiu processar o documento.');
+            $detalhe = $response->json('detail');
+
+            throw match (true) {
+                $response->status() === 422 => new FalhaLeituraDocumento('captura', match ($detalhe) {
+                    'invalid_image_size', 'image_dimensions_too_large' => 'arquivo_grande',
+                    default => 'imagem_invalida',
+                }, 'O leitor recusou a imagem.'),
+                in_array($response->status(), [401, 403], true) => new FalhaLeituraDocumento('servico', 'nao_autorizado', 'O leitor recusou a autenticação.'),
+                in_array($response->status(), [408, 502, 503, 504], true) => new FalhaLeituraDocumento('comunicacao', 'sem_resposta', 'O leitor automático não respondeu.'),
+                default => new FalhaLeituraDocumento('servico', 'erro_interno', 'O leitor automático não conseguiu processar o documento.'),
+            };
         }
 
         $result = $response->json();
         if (! is_array($result) || ($result['status'] ?? null) !== 'completed' || ! is_array($result['fields'] ?? null)) {
-            throw new RuntimeException('O leitor automático retornou um resultado inválido.');
+            throw new FalhaLeituraDocumento('servico', 'resposta_invalida', 'O leitor automático retornou um resultado inválido.');
         }
 
         return $result;

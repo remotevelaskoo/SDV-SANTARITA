@@ -105,6 +105,7 @@
                                     <x-ui.alert :variant="$ocrStatus === 'completed' ? 'success' : 'info'" :title="$ocrStatus === 'completed' ? 'Dados sugeridos' : 'Documento recebido'">
                                         {{ $ocrMessage ?: 'A imagem foi recebida. Confira os dados pessoais abaixo.' }}
                                     </x-ui.alert>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" :variant="$ocrStatus === 'completed' ? 'info' : 'warning'" />
                                     <div>
                                         <x-ui.button variant="secondary" wire:click="analyzeDocument" wire:loading.attr="disabled" wire:target="analyzeDocument">Ler novamente</x-ui.button>
                                         <x-ui.button variant="ghost" wire:click="removeDocumentFile">Substituir documento</x-ui.button>
@@ -226,8 +227,10 @@
                                         </ul>
                                     </x-ui.alert>
                                     <x-ui.button variant="primary" wire:click="editStep(1)">Conferir dados pessoais</x-ui.button>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" variant="info" />
                                 @elseif ($ocrStatus === 'failed')
                                     <x-ui.alert variant="warning" title="Leitura automática não concluída">{{ $ocrMessage }}</x-ui.alert>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" />
                                 @elseif ($ocrStatus === 'unavailable')
                                     <x-ui.alert variant="info" title="Preenchimento manual disponível">{{ $ocrMessage }}</x-ui.alert>
                                 @endif

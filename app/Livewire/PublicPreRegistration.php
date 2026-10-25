@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Documentos\Dominio\DiagnosticoLeitura;
+use App\Documentos\Dominio\FalhaLeituraDocumento;
 use App\Models\PreRegistration;
 use App\Services\DocumentOcrClient;
 use App\Services\PrivateFileService;
@@ -9,6 +11,7 @@ use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -68,6 +71,13 @@ class PublicPreRegistration extends Component
     public string $ocrStatus = 'idle';
 
     public string $ocrMessage = '';
+
+    /**
+     * Motivo objetivo da falha ou da leitura parcial (AJ-006), sem dado lido.
+     *
+     * @var array{categoria: string, titulo: string, motivos: list<string>, recapturar: bool}|null
+     */
+    public ?array $ocrDiagnostico = null;
 
     /** @var array<string, string> */
     public array $ocrFields = [];
@@ -299,6 +309,7 @@ class PublicPreRegistration extends Component
         if (! $ocr->enabled()) {
             $this->ocrStatus = 'unavailable';
             $this->ocrMessage = 'A leitura automática não está ativa neste ambiente. Você pode continuar preenchendo os dados manualmente.';
+            $this->ocrDiagnostico = DiagnosticoLeitura::servico('desligado')->paraTela();
 
             return;
         }
@@ -307,6 +318,7 @@ class PublicPreRegistration extends Component
         if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
             $this->ocrStatus = 'failed';
             $this->ocrMessage = 'Foram feitas muitas tentativas de leitura. Aguarde um minuto e continue manualmente ou tente novamente.';
+            $this->ocrDiagnostico = DiagnosticoLeitura::servico('tentativas_excedidas')->paraTela();
 
             return;
         }
@@ -316,46 +328,67 @@ class PublicPreRegistration extends Component
         $this->ocrMessage = 'Lendo o documento em ambiente interno…';
         $this->ocrFields = [];
         $this->ocrConfidences = [];
+        $this->ocrDiagnostico = null;
         $this->portraitDetected = false;
         $this->portraitSource = '';
 
         try {
             $result = $ocr->extract($this->documentType, $this->documentFile, $this->documentBackFile);
+        } catch (FalhaLeituraDocumento $falha) {
+            $this->registrarFalhaOcr(DiagnosticoLeitura::daFalha($falha));
 
-            foreach ($result['fields'] as $field => $suggestion) {
-                if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
-                    continue;
-                }
-
-                $this->ocrFields[$field] = $suggestion['value'];
-                if (is_numeric($suggestion['confidence'] ?? null)) {
-                    $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
-                }
-            }
-
-            $this->name = $this->ocrFields['name'] ?? $this->name;
-            $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
-            $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
-            $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
-            $this->ocrEngine = (string) ($result['engine'] ?? '');
-            $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
-            $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
-            $this->portraitDetected = ($portrait['detected'] ?? false) === true;
-            $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
-
-            if ($this->ocrFields === []) {
-                $this->ocrStatus = 'failed';
-                $this->ocrMessage = 'Não conseguimos identificar dados com segurança. Confira a imagem e continue manualmente.';
-
-                return;
-            }
-
-            $this->ocrStatus = 'completed';
-            $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+            return;
         } catch (\Throwable) {
-            $this->ocrStatus = 'failed';
-            $this->ocrMessage = 'A leitura automática não ficou disponível agora. Seus dados e sua imagem foram mantidos; continue manualmente ou tente novamente.';
+            $this->registrarFalhaOcr(DiagnosticoLeitura::servico('erro_interno'));
+
+            return;
         }
+
+        foreach ($result['fields'] as $field => $suggestion) {
+            if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
+                continue;
+            }
+
+            $this->ocrFields[$field] = $suggestion['value'];
+            if (is_numeric($suggestion['confidence'] ?? null)) {
+                $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
+            }
+        }
+
+        $diagnostico = DiagnosticoLeitura::daResposta($result);
+        Log::info('leitura_documento', ['origem' => 'pre_cadastro', ...$diagnostico->paraLog()]);
+
+        if ($this->ocrFields === []) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'Não conseguimos identificar os dados com segurança. Veja abaixo o que ajustar, envie outra foto ou continue manualmente.';
+            $this->ocrDiagnostico = $diagnostico->paraTela();
+
+            return;
+        }
+
+        // Sugestões só preenchem; o solicitante confere e corrige antes do envio.
+        $this->name = $this->ocrFields['name'] ?? $this->name;
+        $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
+        $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
+        $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
+        $this->ocrEngine = (string) ($result['engine'] ?? '');
+        $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
+        $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
+        $this->portraitDetected = ($portrait['detected'] ?? false) === true;
+        $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
+
+        $this->ocrStatus = 'completed';
+        $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+        $this->ocrDiagnostico = $diagnostico->motivos() !== [] ? $diagnostico->paraTela() : null;
+    }
+
+    private function registrarFalhaOcr(DiagnosticoLeitura $diagnostico): void
+    {
+        Log::info('leitura_documento', ['origem' => 'pre_cadastro', ...$diagnostico->paraLog()]);
+
+        $this->ocrStatus = 'failed';
+        $this->ocrMessage = 'A leitura automática não foi concluída. Seus dados e sua imagem foram mantidos.';
+        $this->ocrDiagnostico = $diagnostico->paraTela();
     }
 
     public function removeSelfieFile(): void
@@ -478,6 +511,7 @@ class PublicPreRegistration extends Component
     {
         $this->ocrStatus = 'idle';
         $this->ocrMessage = '';
+        $this->ocrDiagnostico = null;
         $this->ocrFields = [];
         $this->ocrConfidences = [];
         $this->ocrEngine = '';

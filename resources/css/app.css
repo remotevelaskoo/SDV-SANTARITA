@@ -2123,3 +2123,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .pre-cadastro-analise__imagens { position: sticky; top: 1rem; }
     .pre-cadastro-analise__figura.is-documento .pre-cadastro-analise__moldura { min-height: 16rem; }
 }
+
+/* AJ-006 — motivos da leitura automática */
+.leitura-diagnostico ul { display: grid; gap: 0.25rem; padding-left: 1rem; margin: 0.25rem 0 0; }
+.leitura-diagnostico .ui-alert__action { display: grid; gap: 0.4rem; justify-items: start; }

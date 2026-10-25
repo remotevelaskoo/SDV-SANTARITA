@@ -2,9 +2,12 @@
 
 namespace App\Documentos\Infra;
 
+use App\Documentos\Dominio\DiagnosticoLeitura;
+use App\Documentos\Dominio\FalhaLeituraDocumento;
 use App\Documentos\Dominio\PortaOcrDocumento;
 use App\Documentos\Dominio\ResultadoOcr;
 use App\Services\DocumentOcrClient;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -37,9 +40,14 @@ class OcrServicoDocumento implements PortaOcrDocumento
 
         try {
             $resposta = $this->cliente->extractContents($tipoDocumento, $frente, $verso);
+        } catch (FalhaLeituraDocumento $falha) {
+            return $this->naoReconhecido(DiagnosticoLeitura::daFalha($falha));
         } catch (RuntimeException) {
-            return ResultadoOcr::naoReconhecido('A leitura automática não está disponível agora. Faça nova captura ou digite os dados.');
+            return $this->naoReconhecido(DiagnosticoLeitura::servico('erro_interno'));
         }
+
+        $diagnostico = DiagnosticoLeitura::daResposta($resposta);
+        Log::info('leitura_documento', ['origem' => 'cadastro_assistido', ...$diagnostico->paraLog()]);
 
         $campos = [];
         foreach (self::MAPA as $origem => $destino) {
@@ -52,6 +60,16 @@ class OcrServicoDocumento implements PortaOcrDocumento
             $campos[$destino] = ['valor' => $valor, 'confianca' => is_numeric($campo['confidence'] ?? null) ? (float) $campo['confidence'] : 0.0];
         }
 
-        return $campos === [] ? ResultadoOcr::naoReconhecido() : new ResultadoOcr(true, $campos);
+        return $campos === [] ? $this->naoReconhecido($diagnostico) : new ResultadoOcr(true, $campos);
+    }
+
+    /** Orientação objetiva no lugar da mensagem genérica (AJ-006). */
+    private function naoReconhecido(DiagnosticoLeitura $diagnostico): ResultadoOcr
+    {
+        $motivos = $diagnostico->motivos();
+
+        return ResultadoOcr::naoReconhecido(
+            $motivos === [] ? 'Documento não identificado. Faça nova captura ou digite os dados.' : implode(' ', $motivos),
+        );
     }
 }

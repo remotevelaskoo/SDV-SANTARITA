@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import io
+import logging
 import os
 import secrets
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
@@ -14,18 +17,37 @@ MAX_FILE_SIZE = 8 * 1024 * 1024
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_DOCUMENTS = {"cnh", "rg_cin"}
 
-app = FastAPI(
-    title="SDV Document OCR",
-    version="0.1.0",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
+logger = logging.getLogger("document_ocr")
 
 
 @lru_cache(maxsize=1)
 def extractor() -> DocumentExtractor:
     return DocumentExtractor()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # A primeira leitura carrega os modelos e pode passar do tempo limite do
+    # SDV; aquecer na subida evita que o primeiro documento falhe por isso.
+    if os.getenv("DOCUMENT_OCR_WARMUP", "1") == "1":
+        try:
+            blank = io.BytesIO()
+            Image.new("RGB", (64, 64), "white").save(blank, format="PNG")
+            extractor().extract("cnh", [("front", blank.getvalue())])
+        except Exception:
+            # Só o tipo do erro: nunca conteúdo de imagem ou documento.
+            logger.warning("warmup_failed", exc_info=False)
+    yield
+
+
+app = FastAPI(
+    title="SDV Document OCR",
+    version="0.2.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+    lifespan=lifespan,
+)
 
 
 def authorize(authorization: str | None = Header(default=None)) -> None:
@@ -65,9 +87,7 @@ async def _validated_image(upload: UploadFile) -> bytes:
         raise HTTPException(status_code=422, detail="invalid_image_size")
 
     try:
-        from io import BytesIO
-
-        with Image.open(BytesIO(content)) as image:
+        with Image.open(io.BytesIO(content)) as image:
             if image.width * image.height > 20_000_000:
                 raise HTTPException(status_code=422, detail="image_dimensions_too_large")
             image.verify()

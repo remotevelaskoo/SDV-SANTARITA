@@ -7,13 +7,26 @@ from datetime import datetime
 from threading import Lock
 from typing import Iterable
 
+import numpy as np
 from rapidocr import RapidOCR
 
 from .portrait import PortraitExtractor
+from .quality import PreparedImage, prepare
 
 
 ENGINE_NAME = "rapidocr"
 MODEL_VERSION = "PP-OCRv6-small"
+
+# Uma leitura com menos linhas úteis ou confiança média abaixo disto é
+# repetida com a imagem girada 90°, 180° e 270° (foto tirada de lado).
+MIN_USEFUL_LINES = 4
+MIN_MEAN_CONFIDENCE = 0.55
+LOW_FIELD_CONFIDENCE = 0.6
+
+TYPE_KEYWORDS = {
+    "cnh": ("CARTEIRA NACIONAL DE HABILITACAO", "HABILITACAO", "PERMISSAO PARA DIRIGIR", "CAT HAB", "1 HABILITACAO", "ACC"),
+    "rg_cin": ("REGISTRO GERAL", "CARTEIRA DE IDENTIDADE", "CEDULA DE IDENTIDADE", "IDENTIDADE NACIONAL", "SECRETARIA DE SEGURANCA", "INSTITUTO DE IDENTIFICACAO", "FILIACAO", "NATURALIDADE"),
+}
 
 
 @dataclass(frozen=True)
@@ -39,19 +52,15 @@ class DocumentExtractor:
     def extract(self, document_type: str, images: Iterable[tuple[str, bytes]], include_portrait: bool = False) -> dict:
         image_list = list(images)
         lines: list[OcrLine] = []
+        quality_reports: list[dict] = []
+        rotations: dict[str, int] = {}
 
         for source, content in image_list:
-            with self._lock:
-                result = self._engine(content)
-
-            if not result or not result.txts:
-                continue
-
-            boxes = result.boxes if getattr(result, "boxes", None) is not None else ()
-            scores = result.scores if getattr(result, "scores", None) is not None else ()
-            for index, (text, score) in enumerate(zip(result.txts, scores, strict=False)):
-                box = _bounding_box(boxes[index]) if index < len(boxes) else None
-                lines.append(OcrLine(text=text, confidence=float(score), source=source, box=box))
+            prepared = prepare(source, content)
+            quality_reports.append(prepared.quality)
+            source_lines, rotation = self._recognize(prepared, content)
+            lines.extend(source_lines)
+            rotations[source] = rotation
 
         try:
             portrait = self._portrait_extractor.extract(image_list, include_image=include_portrait)
@@ -64,15 +73,167 @@ class DocumentExtractor:
                 "status": "unavailable",
             }
 
+        fields = parse_fields(document_type, lines)
+        detected_type = detect_document_type(lines)
+
         return {
             "status": "completed",
             "engine": ENGINE_NAME,
             "model_version": MODEL_VERSION,
             "document_type": document_type,
-            "fields": parse_fields(document_type, lines),
+            "fields": fields,
             "portrait": portrait,
             "line_count": len(lines),
+            "diagnostics": diagnose(
+                document_type,
+                [source for source, _ in image_list],
+                quality_reports,
+                lines,
+                fields,
+                detected_type,
+                rotations,
+            ),
         }
+
+    def _recognize(self, prepared: PreparedImage, original: bytes) -> tuple[list[OcrLine], int]:
+        """Lê a imagem já orientada pelo EXIF; se a leitura vier pobre, tenta girada."""
+        if prepared.array is None:
+            return self._run(original, prepared.source), 0
+
+        best_lines = self._run(prepared.array, prepared.source)
+        best_rotation = 0
+        sideways = _looks_sideways(best_lines)
+        if _good_enough(best_lines) and not sideways:
+            return best_lines, 0
+
+        for rotation, turns in ((90, 3), (270, 1), (180, 2)):
+            rotated = np.ascontiguousarray(np.rot90(prepared.array, turns))
+            candidate = self._run(rotated, prepared.source)
+            if _reading_score(candidate) > _reading_score(best_lines):
+                best_lines, best_rotation = candidate, rotation
+            if _good_enough(best_lines) and not _looks_sideways(best_lines):
+                break
+
+        return best_lines, best_rotation
+
+    def _run(self, image, source: str) -> list[OcrLine]:
+        with self._lock:
+            result = self._engine(image)
+
+        if not result or not getattr(result, "txts", None):
+            return []
+
+        boxes = result.boxes if getattr(result, "boxes", None) is not None else ()
+        scores = result.scores if getattr(result, "scores", None) is not None else ()
+        lines = []
+        for index, (text, score) in enumerate(zip(result.txts, scores, strict=False)):
+            box = _bounding_box(boxes[index]) if index < len(boxes) else None
+            lines.append(OcrLine(text=text, confidence=float(score), source=source, box=box))
+
+        return lines
+
+
+def _useful(lines: list[OcrLine]) -> list[OcrLine]:
+    return [line for line in lines if len(re.sub(r"[^A-Z0-9]", "", line.normalized)) >= 3]
+
+
+def _reading_score(lines: list[OcrLine]) -> float:
+    return sum(line.confidence for line in _useful(lines))
+
+
+def _looks_sideways(lines: list[OcrLine]) -> bool:
+    """Foto de lado: a maior parte das linhas de texto fica mais alta que larga."""
+    boxes = [line.box for line in _useful(lines) if line.box]
+    if len(boxes) < 3:
+        return False
+
+    vertical = sum(1 for left, top, right, bottom in boxes if (bottom - top) > 1.5 * (right - left))
+    return vertical / len(boxes) > 0.5
+
+
+def _good_enough(lines: list[OcrLine]) -> bool:
+    useful = _useful(lines)
+    if len(useful) < MIN_USEFUL_LINES:
+        return False
+
+    return sum(line.confidence for line in useful) / len(useful) >= MIN_MEAN_CONFIDENCE
+
+
+def detect_document_type(lines: list[OcrLine]) -> str | None:
+    scores = {
+        document_type: sum(1 for line in lines for keyword in keywords if _has_label(line.normalized, keyword))
+        for document_type, keywords in TYPE_KEYWORDS.items()
+    }
+    best = max(scores, key=scores.get)
+    if scores[best] == 0 or list(scores.values()).count(scores[best]) > 1:
+        return None
+
+    return best
+
+
+def diagnose(
+    document_type: str,
+    sources: list[str],
+    quality_reports: list[dict],
+    lines: list[OcrLine],
+    fields: dict,
+    detected_type: str | None,
+    rotations: dict[str, int],
+) -> dict:
+    """Separa por que a leitura falhou, sem incluir texto lido nem valores.
+
+    Etapas: "capture" (arquivo inválido), "quality" (imagem ruim e nada
+    lido), "ocr" (nenhum texto reconhecido), "interpretation" (texto lido,
+    campos não localizados), "partial" (parte dos campos) e "ok".
+    """
+    quality_issues = sorted({issue for report in quality_reports for issue in report.get("issues", [])})
+    found = [name for name, value in fields.items() if value.get("value")]
+    issues: list[str] = []
+
+    if "imagem_invalida" in quality_issues and not lines:
+        stage = "capture"
+    elif not _useful(lines):
+        stage = "quality" if quality_issues else "ocr"
+        issues.append("sem_texto")
+    elif not found:
+        stage = "interpretation"
+        issues.append("campos_nao_localizados")
+    elif len(found) < len(fields):
+        stage = "partial"
+    else:
+        stage = "ok"
+
+    if detected_type is not None and detected_type != document_type:
+        issues.append("tipo_divergente")
+    if document_type == "rg_cin" and "back" not in sources and len(found) < len(fields):
+        issues.append("verso_recomendado")
+    if _invalid_cpf_seen(lines):
+        issues.append("cpf_digito_invalido")
+    if any(value.get("value") and (value.get("confidence") or 0) < LOW_FIELD_CONFIDENCE for value in fields.values()):
+        issues.append("confianca_baixa")
+
+    recapture = stage in ("capture", "quality", "ocr", "interpretation") or "tipo_divergente" in issues or (
+        bool(quality_issues) and stage != "ok"
+    )
+
+    return {
+        "stage": stage,
+        "issues": issues,
+        "quality_issues": quality_issues,
+        "quality": quality_reports,
+        "fields_found": found,
+        "detected_type": detected_type,
+        "rotation_applied": {source: degrees for source, degrees in rotations.items() if degrees},
+        "exif_rotated": [report["source"] for report in quality_reports if report.get("exif_rotated")],
+        "recapture_recommended": recapture,
+    }
+
+
+def _invalid_cpf_seen(lines: list[OcrLine]) -> bool:
+    pattern = re.compile(r"(?<!\d)(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2})(?!\d)")
+    candidates = [re.sub(r"\D", "", match) for line in lines for match in pattern.findall(line.normalized)]
+
+    return bool(candidates) and not any(_valid_cpf(digits) for digits in candidates)
 
 
 def parse_fields(document_type: str, lines: list[OcrLine]) -> dict:
@@ -84,12 +245,18 @@ def parse_fields(document_type: str, lines: list[OcrLine]) -> dict:
     }
 
 
-def _field(value: str | None, line: OcrLine | None) -> dict:
+def _field(value: str | None, line: OcrLine | None, validated: bool = False) -> dict:
     return {
         "value": value,
         "confidence": round(line.confidence, 4) if value and line else None,
         "source": line.source if value and line else None,
+        "validated": bool(value) and validated,
     }
+
+
+def _has_label(text: str, label: str) -> bool:
+    """Rótulo como palavra inteira: "RG" não casa dentro de "ORGAO"."""
+    return re.search(rf"(?<![A-Z0-9]){re.escape(label)}(?![A-Z0-9])", text) is not None
 
 
 def _name_field(lines: list[OcrLine]) -> dict:
@@ -99,7 +266,7 @@ def _name_field(lines: list[OcrLine]) -> dict:
         normalized = line.normalized
 
         for label in labels:
-            if label in normalized and line.box:
+            if _has_label(normalized, label) and line.box:
                 for candidate in _nearby_lines_below(line, lines):
                     if _looks_like_name(candidate.normalized) and not _is_document_label(candidate.normalized):
                         return _field(_title_name(candidate.text), candidate)
@@ -119,15 +286,31 @@ def _name_field(lines: list[OcrLine]) -> dict:
 
 def _cpf_field(lines: list[OcrLine]) -> dict:
     pattern = re.compile(r"(?<!\d)(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2})(?!\d)")
+    formatted = re.compile(r"\d{3}\.\d{3}\.\d{3}-\d{2}")
+    registry_labels = ("REGISTRO", "N REGISTRO", "RENACH", "ESPELHO")
 
+    # Ordem de preferência: linha com o rótulo CPF (ou logo abaixo dele),
+    # número no formato 000.000.000-00 e, por último, onze dígitos soltos.
+    # O registro da CNH também tem onze dígitos e pode passar no cálculo do
+    # CPF, por isso linhas de registro nunca entram como número solto.
+    labeled: list[OcrLine] = []
     for line in lines:
+        if _has_label(line.normalized, "CPF"):
+            labeled.append(line)
+            labeled.extend(_nearby_lines_below(line, lines)[:2])
+
+    ordered = labeled + [line for line in lines if formatted.search(line.normalized)] + [
+        line for line in lines if not any(_has_label(line.normalized, label) for label in registry_labels)
+    ]
+
+    for line in ordered:
         match = pattern.search(line.normalized)
         if not match:
             continue
 
         digits = re.sub(r"\D", "", match.group(1))
         if _valid_cpf(digits):
-            return _field(f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}", line)
+            return _field(f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}", line, validated=True)
 
     return _field(None, None)
 
@@ -140,21 +323,21 @@ def _birth_date_field(lines: list[OcrLine]) -> dict:
     # A posição visual evita confundir nascimento com validade, emissão ou
     # primeira habilitação, que também aparecem como datas no documento.
     for line in lines:
-        if not line.box or not any(label in line.normalized for label in labels):
+        if not line.box or not any(_has_label(line.normalized, label) for label in labels):
             continue
 
         match = pattern.search(line.normalized)
         if match and (value := _valid_birth_date(match)):
-            return _field(value, line)
+            return _field(value, line, validated=True)
 
         for candidate in _nearby_lines_below(line, lines):
             match = pattern.search(candidate.normalized)
             if match and (value := _valid_birth_date(match)):
-                return _field(value, candidate)
+                return _field(value, candidate, validated=True)
 
     prioritized = sorted(
         lines,
-        key=lambda line: 0 if any(label in line.normalized for label in labels) else 1,
+        key=lambda line: 0 if any(_has_label(line.normalized, label) for label in labels) else 1,
     )
 
     for line in prioritized:
@@ -163,7 +346,7 @@ def _birth_date_field(lines: list[OcrLine]) -> dict:
             continue
 
         if value := _valid_birth_date(match):
-            return _field(value, line)
+            return _field(value, line, validated=True)
 
     return _field(None, None)
 
@@ -177,7 +360,7 @@ def _document_number_field(document_type: str, lines: list[OcrLine]) -> dict:
 
     for index, line in enumerate(lines):
         normalized = line.normalized
-        if not any(label in normalized for label in labels):
+        if not any(_has_label(normalized, label) for label in labels):
             continue
 
         candidates = [normalized]
