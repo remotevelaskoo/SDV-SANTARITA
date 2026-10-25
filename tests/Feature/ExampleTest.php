@@ -18,7 +18,7 @@ use App\Livewire\PackageManagement;
 use App\Livewire\PerfilManagement;
 use App\Livewire\PersonRegistration;
 use App\Livewire\Portaria;
-use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PreRegistrationReview;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\ResetPassword;
@@ -98,16 +98,18 @@ class ExampleTest extends TestCase
             'password' => 'sdv2026',
         ]);
 
+        $chaves = ['pre-registro.analisar', 'pre-registro.aprovar'];
         if ($canEdit) {
-            $permissao = Permissao::query()->firstOrCreate(
-                ['chave' => 'pre-registro.editar'],
-                ['modulo' => 'pre-cadastro', 'descricao' => 'Corrigir dados de um pré-cadastro antes da aprovação']
-            );
-            $perfil = Perfil::factory()->create();
-            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
-
-            UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+            $chaves[] = 'pre-registro.editar';
         }
+
+        $perfil = Perfil::factory()->create();
+        foreach ($chaves as $chave) {
+            $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'pre-cadastro', 'descricao' => $chave]);
+            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => Implantacao::current()->id]);
+        }
+
+        UsuarioPerfil::factory()->for($user)->for($perfil)->create();
 
         return $user;
     }
@@ -820,9 +822,9 @@ class ExampleTest extends TestCase
     public function test_the_pre_registration_queue_renders_filters_and_analysis(): void
     {
         $this->withoutVite();
-        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar'));
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar', 'pre-registro.aprovar'));
 
-        PreRegistration::factory()->create([
+        $record = PreRegistration::factory()->create([
             'name' => 'Camila Andrade',
             'protocol' => 'PRE-SRA-X7K9M2',
             'status' => 'aguardando',
@@ -836,27 +838,40 @@ class ExampleTest extends TestCase
             ->assertSee('Aguardando análise')
             ->assertSee('Camila Andrade')
             ->assertSee('PRE-SRA-X7K9M2')
+            ->assertSee(route('pre-registrations.review', $record->id), escape: false)
+            ->assertDontSee('class="ui-drawer"', escape: false);
+
+        $this->get(route('pre-registrations.review', $record->id))
+            ->assertOk()
+            ->assertSee('Conferência visual protegida')
             ->assertSee('Aprovar pré-cadastro')
-            ->assertSee('Aprovação não garante entrada');
+            ->assertSee('Aprovar apenas prepara a solicitação para a Validação de Entrada.');
     }
 
     public function test_the_pre_registration_queue_records_each_demo_decision(): void
     {
         $first = PreRegistration::factory()->create(['status' => 'aguardando']);
         $second = PreRegistration::factory()->create(['status' => 'aguardando']);
+        $third = PreRegistration::factory()->create(['status' => 'aguardando']);
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar', 'pre-registro.aprovar', 'pre-registro.rejeitar', 'pre-registro.solicitar-correcao'));
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('approve', $first->id)
-            ->assertSet('feedback.variant', 'success')
-            ->call('requestCorrection', $second->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $first->id])
+            ->call('approve')
+            ->assertSet('feedback.variant', 'success');
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $second->id])
+            ->call('requestCorrection')
             ->assertSet('feedback.variant', 'warning')
-            ->call('reject', $second->id)
+            ->call('reject')
+            ->assertHasErrors('state');
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $third->id])
+            ->call('reject')
             ->assertSet('feedback.variant', 'danger')
             ->assertSee('A observação interna não será enviada ao solicitante.');
 
         $this->assertSame('aprovado', $first->fresh()->status);
-        $this->assertSame('rejeitado', $second->fresh()->status);
-        $this->assertSame(3, $second->fresh()->version, 'requestCorrection e reject cada um deve incrementar a versão.');
+        $this->assertSame('correcao', $second->fresh()->status, 'uma decisão já registrada não aceita outra por esta tela');
+        $this->assertSame(2, $second->fresh()->version);
+        $this->assertSame('rejeitado', $third->fresh()->status);
     }
 
     public function test_the_pre_registration_detail_shows_every_filled_field(): void
@@ -872,8 +887,9 @@ class ExampleTest extends TestCase
             'selfie_status' => 'Selfie enviada e adequada',
             'protocol' => 'PRE-SRA-X7K9M2',
         ]);
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar'));
 
-        Livewire::test(PreRegistrationQueue::class)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
             ->assertSee('Camila Andrade')
             ->assertSee('***.***.331-**')
             ->assertSee('(12) 99876-4321')
@@ -896,14 +912,14 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
             ->assertSee('***.***.789-**')
             ->assertDontSee('123.456.789-01')
-            ->call('toggleDocumentReveal', $record->id)
-            ->assertSet('revealedDocumentId', $record->id)
+            ->call('toggleDocumentReveal')
+            ->assertSet('documentRevealed', true)
             ->assertSee('123.456.789-01')
             ->call('hideSensitiveDocument')
-            ->assertSet('revealedDocumentId', null)
+            ->assertSet('documentRevealed', false)
             ->assertDontSee('123.456.789-01');
 
         $event = AuditoriaEvento::query()->where('action', 'revelou_dado_sensivel')->sole();
@@ -918,15 +934,15 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
-            ->assertSet('editingId', $record->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
+            ->assertSet('editing', true)
             ->assertSet('editPhone', '(12) 99876-4321')
             ->set('editPhone', '(12) 99999-0000')
             ->set('editReason', 'Telefone confirmado com a visitante.')
-            ->call('saveEdit', $record->id)
+            ->call('saveEdit')
             ->assertHasNoErrors()
-            ->assertSet('editingId', null)
+            ->assertSet('editing', false)
             ->assertSee('Correção salva com auditoria')
             ->assertSee('Telefone confirmado com a visitante.');
 
@@ -942,11 +958,11 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
             ->set('editName', 'Camila Andrade Ferreira')
             ->set('editReason', 'Nome completo corrigido conforme documento apresentado.')
-            ->call('saveEdit', $record->id)
+            ->call('saveEdit')
             ->assertHasNoErrors();
 
         $edit = PreRegistrationEdit::query()->where('pre_registration_id', $record->id)->where('field', 'Nome completo')->sole();
@@ -963,11 +979,11 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
             ->set('editEmail', 'novo-email@example.com')
             ->set('editReason', 'E-mail corrigido a pedido da visitante.')
-            ->call('saveEdit', $record->id)
+            ->call('saveEdit')
             ->assertHasNoErrors();
 
         $edit = PreRegistrationEdit::query()->where('pre_registration_id', $record->id)->where('field', 'E-mail')->sole();
@@ -986,9 +1002,9 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
-            ->call('approve', $record->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
+            ->call('approve')
             ->assertHasErrors('editReason');
 
         $this->assertSame('aguardando', $record->fresh()->status);
@@ -1001,9 +1017,9 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operatorWithoutPermission);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
-            ->assertSet('editingId', null);
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
+            ->assertSet('editing', false);
 
         $this->assertFalse($operatorWithoutPermission->fresh()->hasPermission('pre-registro.editar'));
     }
@@ -1012,9 +1028,8 @@ class ExampleTest extends TestCase
     {
         $record = PreRegistration::factory()->visitor()->create();
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
-            ->assertSet('editingId', null);
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->assertForbidden();
     }
 
     public function test_editing_is_blocked_once_the_pre_registration_left_the_analysis_state(): void
@@ -1024,9 +1039,9 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
-            ->assertSet('editingId', null)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
+            ->assertSet('editing', false)
             ->assertHasErrors('state');
     }
 
@@ -1037,8 +1052,8 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        $component = Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
+        $component = Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
             ->assertSet('editVersion', 1);
 
         // Outro operador salva uma correção no mesmo pré-cadastro entre a abertura e o salvamento desta edição.
@@ -1047,9 +1062,9 @@ class ExampleTest extends TestCase
         $component
             ->set('editPhone', '(12) 91111-1111')
             ->set('editReason', 'Telefone corrigido durante o atendimento.')
-            ->call('saveEdit', $record->id)
+            ->call('saveEdit')
             ->assertHasErrors('editReason')
-            ->assertSet('editingId', null);
+            ->assertSet('editing', false);
 
         $this->assertSame('(12) 90000-0000', $record->fresh()->phone, 'a edição desatualizada não pode sobrescrever a versão mais recente');
         $this->assertSame(2, $record->fresh()->version);
@@ -1063,8 +1078,9 @@ class ExampleTest extends TestCase
         $this->assertNull($record->destination_property);
         $this->assertNull($record->responsible_name);
         $this->assertSame('Praia do Santa Rita', $record->destination_label);
+        $this->actingAs($this->operatorWithPermissions('pre-registro.analisar'));
 
-        Livewire::test(PreRegistrationQueue::class)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
             ->assertSee('Praia do Santa Rita')
             ->assertSee('Não exige responsável de imóvel');
     }
@@ -1078,11 +1094,11 @@ class ExampleTest extends TestCase
 
         $this->actingAs($operator);
 
-        Livewire::test(PreRegistrationQueue::class)
-            ->call('beginEdit', $record->id)
+        Livewire::test(PreRegistrationReview::class, ['preRegistration' => $record->id])
+            ->call('beginEdit')
             ->set('editDestinationProperty', '')
             ->set('editReason', 'Ajuste de imóvel de destino.')
-            ->call('saveEdit', $record->id)
+            ->call('saveEdit')
             ->assertHasErrors('editDestinationProperty');
 
         $this->assertSame($record->destination_property, $record->fresh()->destination_property, 'sem imóvel válido a alteração não deve ser persistida');

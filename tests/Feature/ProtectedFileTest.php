@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\AccessValidation;
-use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PreRegistrationReview;
 use App\Livewire\PublicPreRegistration;
 use App\Models\Arquivo;
 use App\Models\AuditoriaEvento;
@@ -213,20 +213,20 @@ class ProtectedFileTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_queue_only_loads_the_image_after_an_explicit_authorized_click(): void
+    public function test_analysis_only_loads_the_image_after_an_explicit_authorized_click(): void
     {
-        [$file] = $this->storedDocument();
+        [$file, $preRegistration] = $this->storedDocument();
         $operator = $this->userWithPermission(
             'pre-registro.analisar',
             'arquivos.sensiveis.visualizar',
         );
 
         Livewire::actingAs($operator)
-            ->test(PreRegistrationQueue::class)
+            ->test(PreRegistrationReview::class, ['preRegistration' => $preRegistration->id])
             ->assertSee('Conferência visual protegida')
-            ->assertSee('Abrir documento')
+            ->assertSee('Exibir imagens para conferência')
             ->assertSee($file->id, escape: false)
-            ->assertSee('previewUrl =', escape: false)
+            ->assertSee('x-bind:src="exibir ?', escape: false)
             ->assertDontSee('src="'.route('protected-files.show', $file), escape: false)
             ->assertDontSee($file->object_key, escape: false);
     }
