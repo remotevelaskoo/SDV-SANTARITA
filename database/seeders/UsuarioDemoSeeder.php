@@ -57,12 +57,14 @@ class UsuarioDemoSeeder extends Seeder
         'documentos.capturar' => ['modulo' => 'cadastro', 'descricao' => 'Capturar documento pela câmera do posto no cadastro rápido (sugestão por OCR)'],
         'arquivos.sensiveis.visualizar' => ['modulo' => 'arquivos', 'descricao' => 'Visualizar documentos, fotos e selfies protegidos'],
         'dados-sensiveis.revelar' => ['modulo' => 'dados-sensiveis', 'descricao' => 'Revelar temporariamente documentos pessoais para conferência operacional'],
+        'facial.enviar' => ['modulo' => 'pessoas', 'descricao' => 'Enviar o cadastro de uma pessoa salva para o terminal facial (AJ-006)'],
     ];
 
     /** @var list<string> */
     private const PORTEIRO_CAIXA = [
         'dashboard.visualizar',
         'pessoas.gerenciar',
+        'facial.enviar',
         'pre-registro.analisar',
         'pre-registro.editar',
         'pre-registro.aprovar',

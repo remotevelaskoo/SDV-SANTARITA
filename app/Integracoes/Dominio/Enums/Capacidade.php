@@ -24,6 +24,8 @@ enum Capacidade: string
     case ConsultarResultadoComando = 'consultar_resultado_comando';
     case CredencialFacial = 'credencial_facial';
     case IdempotenciaNativa = 'idempotencia_nativa';
+    // O terminal aplica sozinho o início e o fim da vigência da credencial (AJ-006, turista 24h).
+    case ValidadeNativa = 'validade_nativa';
     // Imagem estática da câmera para conferência visual; nunca vira credencial biométrica.
     case CapturarImagem = 'capturar_imagem';
 }

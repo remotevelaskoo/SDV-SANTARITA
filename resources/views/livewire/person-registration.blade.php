@@ -64,6 +64,11 @@
                     @if ($duplicateFound)
                         <x-ui.alert variant="warning" title="Pessoa já cadastrada" class="registration-duplicate-alert">
                             Já existe uma pessoa com este documento. Selecione o cadastro existente para criar um vínculo.
+                            @if ($accessType === 'tourist' && $pessoaExistenteId)
+                                <div class="registration-duplicate-alert__action">
+                                    <x-ui.button variant="secondary" size="sm" wire:click="useExistingForVisit">Usar o cadastro existente e registrar nova visita</x-ui.button>
+                                </div>
+                            @endif
                         </x-ui.alert>
                     @endif
                 </x-ui.card>
@@ -181,15 +186,66 @@
                 </div>
             </x-ui.card>
 
+            @if ($podeEnviar)
+                <x-ui.card title="Terminal facial" description="Onde a pessoa será cadastrada. Isto não abre cancela nem catraca." class="registration-facial">
+                    @if ($terminais->isEmpty())
+                        <x-ui.empty-state title="Nenhum terminal disponível" description="Não há terminal facial ativo e vinculado a um ponto de acesso. O cadastro pode ser salvo e enviado depois." icon="alert" />
+                    @else
+                        <div class="registration-fields">
+                            <x-ui.select id="terminalId" label="Terminal" wire:model.live="terminalId" :error="$errors->first('terminalId')">
+                                <option value="">Selecione o terminal</option>
+                                @foreach ($terminais as $terminal)
+                                    <option value="{{ $terminal['id'] }}">{{ $terminal['nome'] }} — {{ $terminal['ponto'] }}{{ $terminal['do_posto'] ? ' (seu posto)' : '' }}{{ $terminal['simulador'] ? ' [SIMULADOR]' : '' }}</option>
+                                @endforeach
+                            </x-ui.select>
+                        </div>
+                        <x-ui.checkbox id="terminalConfirmado" label="Confirmo o terminal escolhido" description="O envio só cadastra a pessoa no terminal; a liberação continua decidida pelo SDV." wire:model.live="terminalConfirmado" />
+                        @error('terminalConfirmado') <small class="ui-field__error" role="alert">{{ $message }}</small> @enderror
+                    @endif
+                    @error('envio') <x-ui.alert variant="warning" title="Envio bloqueado">{{ $message }}</x-ui.alert> @enderror
+                    @if ($pendente)
+                        <x-ui.alert variant="warning" title="Alterações não salvas">
+                            Há alterações que ainda não foram salvas. Salve ou descarte antes de enviar para a facial.
+                        </x-ui.alert>
+                    @endif
+                </x-ui.card>
+            @endif
+
+            @if ($resultadoEnvio)
+                <div class="registration-results" aria-live="polite">
+                    <x-ui.alert :variant="$resultadoEnvio['variant']" :title="$resultadoEnvio['title']">
+                        {{ $resultadoEnvio['message'] }}
+                        @if ($resultadoEnvio['avisos'])
+                            <ul class="registration-results__avisos">
+                                @foreach ($resultadoEnvio['avisos'] as $aviso)
+                                    <li>{{ $aviso }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </x-ui.alert>
+                </div>
+            @endif
+
             <x-ui.card variant="status">
                 <x-ui.action-group>
-                    <x-ui.button variant="ghost" wire:click="cancel">Cancelar</x-ui.button>
-                    <x-ui.button variant="secondary" wire:click="saveDraft">Salvar rascunho</x-ui.button>
-                    <x-ui.button variant="success" wire:click="activate">
+                    <x-ui.button variant="ghost" wire:click="cancel" wire:confirm="Cancelar este atendimento? O que não foi salvo será descartado. Cadastros já salvos não são apagados.">Cancelar cadastro</x-ui.button>
+                    @if ($pessoaId === null)
+                        <x-ui.button variant="secondary" wire:click="saveDraft">Salvar rascunho</x-ui.button>
+                    @elseif ($pendente)
+                        <x-ui.button variant="secondary" wire:click="discardChanges">Descartar alterações</x-ui.button>
+                    @endif
+                    <x-ui.button variant="success" wire:click="activate" wire:loading.attr="disabled">
                         <x-slot:icon><x-icon name="check-circle" /></x-slot:icon>
-                        Salvar e ativar cadastro
+                        {{ $pessoaId === null ? 'Salvar e ativar cadastro' : ($pendente ? 'Salvar alterações' : 'Salvar cadastro') }}
                     </x-ui.button>
+                    @if ($podeEnviar)
+                        <x-ui.button variant="primary" wire:click="saveAndSend" wire:loading.attr="disabled" :disabled="$terminais->isEmpty()">Salvar e enviar para a facial</x-ui.button>
+                        @if ($pessoaId !== null)
+                            <x-ui.button variant="secondary" wire:click="send" wire:loading.attr="disabled" :disabled="$terminais->isEmpty() || $pendente">Enviar para a facial</x-ui.button>
+                        @endif
+                    @endif
                 </x-ui.action-group>
+                <p class="registration-hint" wire:loading wire:target="saveAndSend,send">Registrando o envio…</p>
             </x-ui.card>
         </div>
 
@@ -200,8 +256,8 @@
                 :document="$document !== '' ? $document : 'Não informado'"
                 :type="match ($accessType) { 'resident' => 'Morador', 'tenant' => 'Inquilino', 'provider' => 'Prestador', 'visitor' => 'Visitante', default => 'Turista' }"
                 :property="$linkedProperty['property']"
-                status="Rascunho"
-                tone="warning"
+                :status="$pessoaId === null ? 'Rascunho' : ($pendente ? 'Alterações não salvas' : 'Salvo')"
+                :tone="$pessoaId !== null && ! $pendente ? 'success' : 'warning'"
             />
 
             <x-ui.link-panel
@@ -217,13 +273,36 @@
                 <x-ui.empty-state title="Nenhum veículo vinculado" description="Veículos podem ser adicionados após ativar o cadastro." icon="car" />
             @endif
 
-            <x-ui.sync-status
-                status="Sincronização facial"
-                equipment="Controladora Principal"
-                last-attempt="Ainda não enviado"
-                tone="warning"
-                description="Será enfileirada somente após o cadastro ser ativado."
-            />
+            @if ($visita)
+                <x-ui.card title="Visita do turista" description="Autorização própria desta visita">
+                    <p class="registration-hint">De {{ $visita->inicio->format('d/m/Y H:i') }} até {{ $visita->fim->format('d/m/Y H:i') }}. Depois disso o SDV pede a remoção do cadastro nos terminais; a pessoa continua no SDV para próximas visitas.</p>
+                </x-ui.card>
+            @endif
+
+            @forelse ($situacaoFacial as $item)
+                <x-ui.sync-status
+                    status="Sincronização facial"
+                    :equipment="$item['terminal']"
+                    :last-attempt="$item['atualizado'] ?? '—'"
+                    :tone="match ($item['estado']) { 'sincronizado', 'removido' => 'success', 'falha', 'intervencao_necessaria' => 'danger', default => 'warning' }"
+                    :description="match ($item['estado']) {
+                        'sincronizado' => 'Confirmado pelo terminal.',
+                        'removido' => 'Removido do terminal (autorização encerrada).',
+                        'falha' => 'O terminal não aceitou o cadastro.',
+                        'intervencao_necessaria' => 'Sem resposta do terminal depois das tentativas.',
+                        'atualizacao_pendente' => 'Aguardando conferência com o terminal.',
+                        default => 'Na fila de envio.',
+                    }"
+                />
+            @empty
+                <x-ui.sync-status
+                    status="Sincronização facial"
+                    equipment="Nenhum terminal"
+                    last-attempt="Ainda não enviado"
+                    tone="warning"
+                    :description="$pessoaId === null ? 'O envio só é possível depois de salvar o cadastro.' : 'Cadastro salvo e ainda não enviado a nenhum terminal.'"
+                />
+            @endforelse
 
             <x-ui.card title="Histórico" description="Nenhum evento registrado para este cadastro ainda">
                 <x-ui.empty-state title="Sem histórico" description="Eventos de vínculo, autorização e sincronização aparecerão aqui após a ativação." icon="scroll" />

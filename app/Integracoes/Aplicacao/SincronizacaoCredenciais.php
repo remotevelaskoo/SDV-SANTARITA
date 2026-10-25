@@ -39,19 +39,13 @@ class SincronizacaoCredenciais
             $operacao = $this->outbox->registrar(
                 $equipamento,
                 OperacaoIntegracao::SincronizarCredencial,
-                [
-                    'credencial_id' => $credencial->credencialId,
-                    'tipo' => $credencial->tipo,
-                    'titular_referencia' => $credencial->titularReferencia,
-                    'nome_exibicao' => $credencial->nomeExibicao,
-                    'vigencia_inicio' => $credencial->vigenciaInicio->format(DATE_ATOM),
-                    'vigencia_fim' => $credencial->vigenciaFim?->format(DATE_ATOM),
-                    'direcao' => $credencial->direcao->value,
-                ],
+                self::payloadDe($credencial),
                 $chaveIdempotencia,
                 agregadoTipo: 'credencial',
                 agregadoId: $credencial->credencialId,
                 ator: $ator,
+                // Retentativa depois do fim da vigência não recoloca a credencial no terminal.
+                expiraEm: $credencial->vigenciaFim,
             );
 
             $this->marcar($equipamento, $credencial->credencialId, EstadoSincronizacao::Aguardando, $operacao);
@@ -59,6 +53,25 @@ class SincronizacaoCredenciais
 
             return $operacao;
         });
+    }
+
+    /**
+     * Conteúdo mínimo da operação de sincronização (ADR-005 §15). Público
+     * para quem precisa saber se um pedido igual já foi feito.
+     *
+     * @return array<string, scalar|null>
+     */
+    public static function payloadDe(CredencialParaSincronizar $credencial): array
+    {
+        return [
+            'credencial_id' => $credencial->credencialId,
+            'tipo' => $credencial->tipo,
+            'titular_referencia' => $credencial->titularReferencia,
+            'nome_exibicao' => $credencial->nomeExibicao,
+            'vigencia_inicio' => $credencial->vigenciaInicio->format(DATE_ATOM),
+            'vigencia_fim' => $credencial->vigenciaFim?->format(DATE_ATOM),
+            'direcao' => $credencial->direcao->value,
+        ];
     }
 
     public function solicitarRevogacao(Equipamento $equipamento, string $credencialId, string $motivo, string $chaveIdempotencia, ?User $ator = null): Operacao
