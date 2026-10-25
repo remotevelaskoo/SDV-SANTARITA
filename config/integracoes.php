@@ -121,6 +121,14 @@ return [
                 // Relé acionado em bancada em 27/09/2026 (docs/016 §5). A abertura
                 // operacional continua desligada (SDV_INTEGRACAO_ABERTURA_REMOTA).
                 'abertura_remota' => 'homologada',
+                // Usuário com período de validade, sem foto: gravar/alterar, consultar
+                // e remover validados em bancada em 25/10/2026 (AJ-006, docs/020).
+                'sincronizar_credencial' => 'homologada',
+                'consultar_sincronizacao' => 'homologada',
+                'revogar_credencial' => 'homologada',
+                // Período gravado e devolvido igual; a recusa de acesso depois do fim
+                // ainda não foi observada (exige credencial de teste no terminal).
+                'validade_nativa' => 'em_homologacao',
                 // Biometria depende do ADR-013.
                 'credencial_facial' => 'bloqueada',
             ],

@@ -43,6 +43,33 @@ class ClienteIsapi
             ->put($caminho));
     }
 
+    /** @param  array<string, mixed>  $corpo */
+    public function postJson(ContextoEquipamento $equipamento, string $caminho, array $corpo): Response
+    {
+        return $this->enviar($equipamento, fn (PendingRequest $r) => $r->asJson()->post($caminho, $corpo));
+    }
+
+    /** @param  array<string, mixed>  $corpo */
+    public function putJson(ContextoEquipamento $equipamento, string $caminho, array $corpo): Response
+    {
+        return $this->enviar($equipamento, fn (PendingRequest $r) => $r->asJson()->put($caminho, $corpo));
+    }
+
+    /**
+     * Lê o corpo JSON de uma resposta 2xx; fora do formato é `resposta_invalida`.
+     *
+     * @return array<string, mixed>
+     */
+    public function json(Response $resposta): array
+    {
+        $dados = json_decode($resposta->body(), true);
+        if (! is_array($dados)) {
+            throw new FalhaIsapi(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal respondeu em formato não reconhecido.', $resposta->status());
+        }
+
+        return $dados;
+    }
+
     /** Lê o corpo XML de uma resposta 2xx; resposta fora do formato é `resposta_invalida`. */
     public function xml(Response $resposta): SimpleXMLElement
     {

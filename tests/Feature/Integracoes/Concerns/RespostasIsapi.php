@@ -23,6 +23,10 @@ trait RespostasIsapi
             '*/ISAPI/Streaming/channels' => Http::response($this->xmlCanais(), 200, ['Content-Type' => 'application/xml']),
             '*/ISAPI/Streaming/channels/101/picture' => Http::response("\xFF\xD8\xFF\xE0".str_repeat('x', 64), 200, ['Content-Type' => 'image/jpeg']),
             '*/ISAPI/AccessControl/RemoteControl/door/1' => Http::response($this->xmlStatus(1, 'ok'), 200, ['Content-Type' => 'application/xml']),
+            '*/ISAPI/System/time' => fn () => Http::response($this->xmlHora(), 200, ['Content-Type' => 'application/xml']),
+            '*/ISAPI/AccessControl/UserInfo/SetUp*' => Http::response($this->jsonStatus(1), 200),
+            '*/ISAPI/AccessControl/UserInfo/Delete*' => Http::response($this->jsonStatus(1), 200),
+            '*/ISAPI/AccessControl/UserInfo/Search*' => Http::response(['UserInfoSearch' => ['responseStatusStrg' => 'NO MATCH', 'numOfMatches' => 0, 'totalMatches' => 0]], 200),
         ], $sobrescrever));
     }
 
@@ -50,6 +54,21 @@ trait RespostasIsapi
 
         return '<?xml version="1.0" encoding="UTF-8"?><StreamingChannelList version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
             .$canal(100, 'false').$canal(101, 'true').$canal(102, 'true').'</StreamingChannelList>';
+    }
+
+    /** Hora do terminal no formato observado em bancada; padrão: agora, no fuso da aplicação. */
+    protected function xmlHora(?\DateTimeImmutable $hora = null): string
+    {
+        $hora ??= new \DateTimeImmutable('now', new \DateTimeZone(config('app.timezone')));
+
+        return '<?xml version="1.0" encoding="UTF-8"?><Time version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
+            .'<timeMode>manual</timeMode><localTime>'.$hora->format(DATE_ATOM).'</localTime><timeZone>CST+3:00:00</timeZone></Time>';
+    }
+
+    /** @return array<string, mixed> */
+    protected function jsonStatus(int $codigo, string $sub = 'ok'): array
+    {
+        return ['statusCode' => $codigo, 'statusString' => $codigo === 1 ? 'OK' : 'Invalid Content', 'subStatusCode' => $sub];
     }
 
     protected function xmlStatus(int $codigo, string $sub): string

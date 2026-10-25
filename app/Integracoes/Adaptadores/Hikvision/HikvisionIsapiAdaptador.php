@@ -14,6 +14,7 @@ use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\EstadoHomologacao;
 use App\Integracoes\Dominio\Enums\ResultadoEquipamento;
 use DateTimeImmutable;
+use DateTimeZone;
 use SimpleXMLElement;
 
 /**
@@ -26,6 +27,14 @@ use SimpleXMLElement;
  * - GET  /ISAPI/Streaming/channels                      descoberta do canal de vídeo
  * - GET  /ISAPI/Streaming/channels/{canal}/picture      imagem estática (JPEG)
  * - PUT  /ISAPI/AccessControl/RemoteControl/door/{porta} comando `open` do relé
+ * - GET  /ISAPI/System/time                             hora e fuso do terminal
+ * - PUT  /ISAPI/AccessControl/UserInfo/SetUp            grava ou altera o usuário (com Valid)
+ * - POST /ISAPI/AccessControl/UserInfo/Search           consulta pelo employeeNo
+ * - PUT  /ISAPI/AccessControl/UserInfo/Delete           remove pelo employeeNo
+ *
+ * Os quatro últimos foram validados em bancada em 25/10/2026 (AJ-006, docs/020
+ * §9) com usuário fictício, sem foto: gravar, alterar, consultar e remover,
+ * com o período de validade devolvido igual ao enviado.
  *
  * Matriz de homologação: cada capacidade tem um estado por firmware
  * (`integracoes.hikvision.perfis_homologados`). Só executa o que está
@@ -54,6 +63,17 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
 
     public const CAMINHO_PORTA = '/ISAPI/AccessControl/RemoteControl/door/%d';
 
+    public const CAMINHO_HORA = '/ISAPI/System/time';
+
+    public const CAMINHO_USUARIO_GRAVAR = '/ISAPI/AccessControl/UserInfo/SetUp?format=json';
+
+    public const CAMINHO_USUARIO_CONSULTAR = '/ISAPI/AccessControl/UserInfo/Search?format=json';
+
+    public const CAMINHO_USUARIO_REMOVER = '/ISAPI/AccessControl/UserInfo/Delete?format=json';
+
+    /** Maior data aceita pelo terminal em Valid (UserInfo/capabilities). */
+    private const VALIDADE_MAXIMA = '2037-12-31T23:59:59';
+
     /** @var list<Capacidade> capacidades que ESTE código sabe executar */
     private const IMPLEMENTADAS = [
         Capacidade::TestarConexao,
@@ -61,6 +81,10 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         Capacidade::ConsultarCapacidades,
         Capacidade::CapturarImagem,
         Capacidade::AberturaRemota,
+        Capacidade::SincronizarCredencial,
+        Capacidade::RevogarCredencial,
+        Capacidade::ConsultarSincronizacao,
+        Capacidade::ValidadeNativa,
     ];
 
     /** Indicador em AccessControl/capabilities que o terminal usa para cada capacidade. */
@@ -72,6 +96,7 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         'sincronizar_credencial' => 'isSupportUserInfo',
         'consultar_sincronizacao' => 'isSupportUserInfo',
         'revogar_credencial' => 'isSupportUserInfoDetailDelete',
+        'validade_nativa' => 'isSupportUserInfo',
         'credencial_facial' => 'isSupportFDLib',
     ];
 
@@ -216,19 +241,95 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         };
     }
 
+    /**
+     * Grava (ou altera) a pessoa no terminal com o período de validade. Não
+     * envia foto, template, cartão nem senha: só identificação e validade.
+     * Antes de gravar, confere hora e fuso do terminal: com fuso diferente o
+     * terminal aplicaria o período em outra hora local.
+     */
     public function sincronizarCredencial(ContextoEquipamento $equipamento, CredencialParaSincronizar $credencial): ResultadoOperacao
     {
-        return ResultadoOperacao::capacidadeAusente(Capacidade::SincronizarCredencial, 'fora do escopo da primeira integração');
+        if (($motivo = $this->ausencia(Capacidade::SincronizarCredencial, $equipamento)) !== null) {
+            return ResultadoOperacao::capacidadeAusente(Capacidade::SincronizarCredencial, $motivo);
+        }
+        if ($credencial->ehFacial()) {
+            return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'biometria_bloqueada_adr013', 'Credencial facial bloqueada até a aprovação do ADR-013.');
+        }
+
+        $employeeNo = $this->employeeNo($credencial->credencialId);
+
+        try {
+            $fuso = $this->conferirRelogio($equipamento, $credencial->vigenciaInicio);
+            $resposta = $this->cliente->json($this->cliente->putJson($equipamento, self::CAMINHO_USUARIO_GRAVAR, ['UserInfo' => [
+                'employeeNo' => $employeeNo,
+                'name' => mb_substr($credencial->nomeExibicao, 0, 128),
+                'userType' => 'normal',
+                'Valid' => [
+                    'enable' => true,
+                    'beginTime' => $credencial->vigenciaInicio->setTimezone($fuso)->format('Y-m-d\TH:i:s'),
+                    'endTime' => $credencial->vigenciaFim?->setTimezone($fuso)->format('Y-m-d\TH:i:s') ?? self::VALIDADE_MAXIMA,
+                    'timeType' => 'local',
+                ],
+                'doorRight' => (string) $equipamento->portaRele,
+                'RightPlan' => [['doorNo' => $equipamento->portaRele, 'planTemplateNo' => '1']],
+            ]]));
+        } catch (FalhaIsapi $e) {
+            // Gravar é idempotente (SetUp): sem resposta, a reconciliação consulta antes de repetir.
+            return $e->comoResultado();
+        }
+
+        return $this->statusJson($resposta, $employeeNo, 'Cadastro gravado no terminal com o período de validade.');
     }
 
     public function revogarCredencial(ContextoEquipamento $equipamento, string $credencialId, ?string $idExterno): ResultadoOperacao
     {
-        return ResultadoOperacao::capacidadeAusente(Capacidade::RevogarCredencial, 'fora do escopo da primeira integração');
+        if (($motivo = $this->ausencia(Capacidade::RevogarCredencial, $equipamento)) !== null) {
+            return ResultadoOperacao::capacidadeAusente(Capacidade::RevogarCredencial, $motivo);
+        }
+
+        try {
+            $resposta = $this->cliente->json($this->cliente->putJson($equipamento, self::CAMINHO_USUARIO_REMOVER, ['UserInfoDelCond' => [
+                'EmployeeNoList' => [['employeeNo' => $idExterno ?? $this->employeeNo($credencialId)]],
+            ]]));
+        } catch (FalhaIsapi $e) {
+            return $e->comoResultado();
+        }
+
+        return $this->statusJson($resposta, null, 'Cadastro removido do terminal.');
     }
 
     public function consultarSincronizacao(ContextoEquipamento $equipamento, string $credencialId, ?string $idExterno): ResultadoOperacao
     {
-        return ResultadoOperacao::capacidadeAusente(Capacidade::ConsultarSincronizacao, 'fora do escopo da primeira integração');
+        if (($motivo = $this->ausencia(Capacidade::ConsultarSincronizacao, $equipamento)) !== null) {
+            return ResultadoOperacao::capacidadeAusente(Capacidade::ConsultarSincronizacao, $motivo);
+        }
+
+        $employeeNo = $idExterno ?? $this->employeeNo($credencialId);
+
+        try {
+            $resposta = $this->cliente->json($this->cliente->postJson($equipamento, self::CAMINHO_USUARIO_CONSULTAR, ['UserInfoSearchCond' => [
+                'searchID' => substr(hash('sha256', $equipamento->correlationId.$employeeNo), 0, 16),
+                'searchResultPosition' => 0,
+                'maxResults' => 1,
+                'EmployeeNoList' => [['employeeNo' => $employeeNo]],
+            ]]));
+        } catch (FalhaIsapi $e) {
+            return $e->comoResultado();
+        }
+
+        $busca = $resposta['UserInfoSearch'] ?? null;
+        if (! is_array($busca) || ! isset($busca['numOfMatches'])) {
+            return new ResultadoOperacao(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal respondeu à consulta fora do formato esperado.');
+        }
+
+        $presente = (int) $busca['numOfMatches'] > 0;
+        $usuario = $presente ? ($busca['UserInfo'][0] ?? []) : [];
+
+        return ResultadoOperacao::confirmado($presente ? $employeeNo : null, array_filter([
+            'presente' => $presente,
+            'validade_inicio' => $this->texto((string) ($usuario['Valid']['beginTime'] ?? '')),
+            'validade_fim' => $this->texto((string) ($usuario['Valid']['endTime'] ?? '')),
+        ], fn ($v) => $v !== null));
     }
 
     public function coletarEventos(ContextoEquipamento $equipamento, ?string $cursor): ResultadoColetaEventos
@@ -245,6 +346,64 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
     }
 
     // ---- Internos ---------------------------------------------------------
+
+    /**
+     * Identificador do usuário no terminal, derivado do UUID interno da
+     * credencial (32 caracteres, limite do terminal). Fica registrado como
+     * referência externa e nunca substitui o UUID do SDV.
+     */
+    private function employeeNo(string $credencialId): string
+    {
+        return substr(str_replace('-', '', strtolower($credencialId)), 0, 32);
+    }
+
+    /**
+     * Hora e fuso do terminal. Fuso diferente do da vigência, ou relógio fora
+     * da tolerância, recusa o envio: o terminal liberaria fora do período.
+     */
+    private function conferirRelogio(ContextoEquipamento $equipamento, DateTimeImmutable $referencia): DateTimeZone
+    {
+        $xml = $this->cliente->xml($this->cliente->get($equipamento, self::CAMINHO_HORA));
+        $local = $this->texto((string) $xml->localTime);
+        $horaTerminal = $local !== null ? DateTimeImmutable::createFromFormat(DATE_ATOM, $local) : false;
+        if ($horaTerminal === false) {
+            throw new FalhaIsapi(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal não informou a hora local.');
+        }
+
+        $agora = new DateTimeImmutable;
+        $esperado = $referencia->getOffset();
+        if ($horaTerminal->getOffset() !== $esperado) {
+            throw new FalhaIsapi(ResultadoEquipamento::Recusado, 'fuso_terminal_divergente', sprintf(
+                'O terminal está no fuso UTC%s e a portaria em UTC%s. Ajuste o fuso do terminal (Configuração › Hora) antes de enviar cadastros com validade.',
+                $horaTerminal->format('P'),
+                $referencia->format('P'),
+            ));
+        }
+
+        $diferenca = abs($horaTerminal->getTimestamp() - $agora->getTimestamp());
+        $tolerancia = (int) config('integracoes.tolerancia_relogio_segundos', 120);
+        if ($diferenca > $tolerancia) {
+            throw new FalhaIsapi(ResultadoEquipamento::Recusado, 'relogio_terminal_divergente', sprintf(
+                'O relógio do terminal está %d min diferente do servidor. Acerte a hora do terminal antes de enviar cadastros com validade.',
+                (int) round($diferenca / 60),
+            ));
+        }
+
+        return $horaTerminal->getTimezone();
+    }
+
+    /** @param  array<string, mixed>  $resposta */
+    private function statusJson(array $resposta, ?string $idExterno, string $mensagem): ResultadoOperacao
+    {
+        $codigo = (string) ($resposta['statusCode'] ?? '');
+        $sub = $this->texto((string) ($resposta['subStatusCode'] ?? ''));
+
+        return match ($codigo) {
+            '1' => new ResultadoOperacao(ResultadoEquipamento::Confirmado, 'ok', $mensagem, $idExterno, ['status_terminal' => $sub ?? 'ok']),
+            '' => new ResultadoOperacao(ResultadoEquipamento::FalhaTecnica, 'resposta_invalida', 'O terminal respondeu sem o status da operação.'),
+            default => new ResultadoOperacao(ResultadoEquipamento::Recusado, 'recusado_pelo_terminal', 'O terminal recusou a operação.', dados: ['status_terminal' => $sub, 'codigo_terminal' => $codigo]),
+        };
+    }
 
     /**
      * @return array{modelo: string, firmware: string, numero_serie: ?string, nome_dispositivo: ?string, tipo_dispositivo: ?string}

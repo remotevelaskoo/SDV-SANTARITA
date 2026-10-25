@@ -37,8 +37,11 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
                 'consultar_capacidades' => 'homologada',
                 'capturar_imagem' => 'homologada',
                 'abertura_remota' => 'em_homologacao',
-                // Registrar estado executável não habilita o que o adaptador não implementa.
                 'sincronizar_credencial' => 'homologada',
+                'consultar_sincronizacao' => 'homologada',
+                'revogar_credencial' => 'homologada',
+                // Registrar estado executável não habilita o que o adaptador não implementa.
+                'coletar_eventos' => 'homologada',
                 'credencial_facial' => 'bloqueada',
             ],
         ]]);
@@ -88,10 +91,11 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->assertTrue($capacidades->consultadoNoEquipamento);
         $this->assertSame(self::FIRMWARE, $capacidades->firmwareVersao);
         $this->assertEqualsCanonicalizing(
-            [Capacidade::TestarConexao, Capacidade::ConsultarInformacoes, Capacidade::ConsultarCapacidades, Capacidade::CapturarImagem, Capacidade::AberturaRemota],
+            [Capacidade::TestarConexao, Capacidade::ConsultarInformacoes, Capacidade::ConsultarCapacidades, Capacidade::CapturarImagem, Capacidade::AberturaRemota,
+                Capacidade::SincronizarCredencial, Capacidade::ConsultarSincronizacao, Capacidade::RevogarCredencial],
             $capacidades->suportadas,
         );
-        $this->assertFalse($capacidades->suporta(Capacidade::SincronizarCredencial), 'Perfil não habilita capacidade não implementada.');
+        $this->assertFalse($capacidades->suporta(Capacidade::ColetarEventos), 'Perfil não habilita capacidade não implementada.');
     }
 
     public function test_matriz_tem_estado_independente_por_capacidade(): void
@@ -100,7 +104,8 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
 
         $this->assertSame(EstadoHomologacao::Homologada, $capacidades->estado(Capacidade::CapturarImagem));
         $this->assertSame(EstadoHomologacao::EmHomologacao, $capacidades->estado(Capacidade::AberturaRemota));
-        $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::SincronizarCredencial));
+        $this->assertSame(EstadoHomologacao::Homologada, $capacidades->estado(Capacidade::SincronizarCredencial));
+        $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::ValidadeNativa));
         $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::GerenciarPessoas));
         $this->assertSame(EstadoHomologacao::Detectada, $capacidades->estado(Capacidade::ColetarEventos));
         $this->assertSame(EstadoHomologacao::Bloqueada, $capacidades->estado(Capacidade::CredencialFacial));
@@ -241,5 +246,78 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->adaptador()->testarConexao($contexto);
 
         Http::assertSent(fn (Request $r) => str_starts_with($r->url(), 'https://192.168.50.10:8443/ISAPI/System/deviceInfo'));
+    }
+
+    public function test_grava_pessoa_com_validade_local_sem_foto_e_id_derivado_do_uuid(): void
+    {
+        $credencial = $this->credencial();
+        $resultado = $this->adaptador()->sincronizarCredencial($this->contexto(), $credencial);
+
+        $this->assertSame(ResultadoEquipamento::Confirmado, $resultado->resultado);
+        $this->assertSame(str_replace('-', '', $credencial->credencialId), $resultado->idExterno);
+        Http::assertSent(function (Request $r) use ($credencial) {
+            if (! str_contains($r->url(), '/ISAPI/AccessControl/UserInfo/SetUp')) {
+                return false;
+            }
+            $usuario = $r->data()['UserInfo'];
+
+            return $r->method() === 'PUT'
+                && $usuario['employeeNo'] === str_replace('-', '', $credencial->credencialId)
+                && $usuario['Valid'] === [
+                    'enable' => true,
+                    'beginTime' => $credencial->vigenciaInicio->format('Y-m-d\TH:i:s'),
+                    'endTime' => $credencial->vigenciaFim->format('Y-m-d\TH:i:s'),
+                    'timeType' => 'local',
+                ]
+                // Só identificação, validade e porta: nada de foto, template, cartão ou senha.
+                && array_keys($usuario) === ['employeeNo', 'name', 'userType', 'Valid', 'doorRight', 'RightPlan'];
+        });
+    }
+
+    public function test_fuso_ou_relogio_do_terminal_divergente_recusa_sem_gravar(): void
+    {
+        // Como na bancada: terminal em UTC+8 com a portaria em UTC-3.
+        $this->terminal(['*/ISAPI/System/time' => Http::response($this->xmlHora(new \DateTimeImmutable('now', new \DateTimeZone('+08:00'))), 200)]);
+        $resultado = $this->adaptador()->sincronizarCredencial($this->contexto(), $this->credencial());
+        $this->assertSame(ResultadoEquipamento::Recusado, $resultado->resultado);
+        $this->assertSame('fuso_terminal_divergente', $resultado->codigo);
+
+        $this->terminal(['*/ISAPI/System/time' => Http::response($this->xmlHora(new \DateTimeImmutable('+10 minutes', new \DateTimeZone(config('app.timezone')))), 200)]);
+        $resultado = $this->adaptador()->sincronizarCredencial($this->contexto(), $this->credencial());
+        $this->assertSame('relogio_terminal_divergente', $resultado->codigo);
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), 'UserInfo/SetUp'));
+    }
+
+    public function test_consulta_presenca_e_remocao_pelo_employee_no(): void
+    {
+        $credencial = $this->credencial();
+        $employeeNo = str_replace('-', '', $credencial->credencialId);
+
+        $ausente = $this->adaptador()->consultarSincronizacao($this->contexto(), $credencial->credencialId, null);
+        $this->assertFalse($ausente->dados['presente']);
+
+        $this->terminal(['*/ISAPI/AccessControl/UserInfo/Search*' => Http::response(['UserInfoSearch' => [
+            'numOfMatches' => 1,
+            'UserInfo' => [['employeeNo' => $employeeNo, 'Valid' => ['beginTime' => '2026-10-25T17:40:50', 'endTime' => '2026-10-26T17:40:50']]],
+        ]], 200)]);
+        $presente = $this->adaptador()->consultarSincronizacao($this->contexto(), $credencial->credencialId, $employeeNo);
+        $this->assertTrue($presente->dados['presente']);
+        $this->assertSame('2026-10-26T17:40:50', $presente->dados['validade_fim']);
+
+        $removido = $this->adaptador()->revogarCredencial($this->contexto(), $credencial->credencialId, $employeeNo);
+        $this->assertSame(ResultadoEquipamento::Confirmado, $removido->resultado);
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'UserInfo/Delete') && $r->data()['UserInfoDelCond']['EmployeeNoList'][0]['employeeNo'] === $employeeNo);
+    }
+
+    public function test_recusa_do_terminal_e_timeout_na_gravacao(): void
+    {
+        $this->terminal(['*/ISAPI/AccessControl/UserInfo/SetUp*' => Http::response($this->jsonStatus(6, 'badJsonContent'), 200)]);
+        $recusa = $this->adaptador()->sincronizarCredencial($this->contexto(), $this->credencial());
+        $this->assertSame(ResultadoEquipamento::Recusado, $recusa->resultado);
+        $this->assertSame('badJsonContent', $recusa->dados['status_terminal']);
+
+        $this->terminal(['*/ISAPI/AccessControl/UserInfo/SetUp*' => $this->falhaDeConexao('cURL error 28: Operation timed out after 2000 milliseconds')]);
+        $timeout = $this->adaptador()->sincronizarCredencial($this->contexto(), $this->credencial());
+        $this->assertSame(ResultadoEquipamento::ConfirmacaoDesconhecida, $timeout->resultado, 'Timeout nunca conta como sucesso.');
     }
 }
