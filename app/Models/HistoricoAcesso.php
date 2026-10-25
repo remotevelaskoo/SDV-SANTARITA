@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 // implantacao_id é fillable pelo mesmo motivo documentado em PreRegistration.
 #[Fillable([
@@ -55,6 +56,12 @@ class HistoricoAcesso extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operator_id');
+    }
+
+    /** @return HasOne<Contribuicao, $this> */
+    public function contribuicao(): HasOne
+    {
+        return $this->hasOne(Contribuicao::class);
     }
 
     /** @return BelongsTo<Posto, $this> */

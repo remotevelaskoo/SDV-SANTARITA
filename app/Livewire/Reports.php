@@ -3,10 +3,12 @@
 namespace App\Livewire;
 
 use App\Models\CaixaMovimentacao;
+use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\ContribuicoesAtendimento;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -38,6 +40,17 @@ class Reports extends Component
 
     public string $paymentMethodFilter = 'todos';
 
+    /** Situação do pagamento no relatório de acessos (AJ-006): pago, sem_pagamento, isento, sem_registro. */
+    public string $paymentStatusFilter = 'todos';
+
+    public string $ticketFilter = '';
+
+    public ?string $correctingContribuicaoId = null;
+
+    public string $novoTicket = '';
+
+    public string $justificativaTicket = '';
+
     public function mount(): void
     {
         $this->dateFrom = now()->startOfMonth()->toDateString();
@@ -66,21 +79,34 @@ class Reports extends Component
         $type = $this->reportType === 'caixa' ? 'caixa' : 'acessos';
         $filename = "relatorio-{$type}-{$this->dateFrom}-a-{$this->dateTo}.csv";
 
+        $financeiro = $this->canViewPayments();
+
         $audit->record(
             action: 'exportou_csv',
             module: 'relatorios',
             entityType: 'relatorio_'.$type,
             classification: 'restrita',
-            metadata: ['date_from' => $this->dateFrom, 'date_to' => $this->dateTo],
+            metadata: [
+                'date_from' => $this->dateFrom,
+                'date_to' => $this->dateTo,
+                'colunas_financeiras' => $financeiro,
+                'filtro_pagamento' => $this->paymentStatusFilter,
+                'filtro_ticket' => $this->ticketFilter !== '',
+            ],
         );
 
-        return response()->streamDownload(function () use ($type): void {
+        return response()->streamDownload(function () use ($type, $financeiro): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
 
             if ($type === 'acessos') {
-                fputcsv($output, ['Data e hora', 'Pessoa', 'Imóvel', 'Ponto', 'Tipo', 'Resultado', 'Placa', 'Operador', 'Protocolo'], ';');
-                $this->accessQuery()->orderBy('occurred_at')->each(function (HistoricoAcesso $entry) use ($output): void {
+                fputcsv($output, [
+                    'Data e hora', 'Pessoa', 'Imóvel', 'Ponto', 'Direção', 'Resultado', 'Situação do pagamento',
+                    ...($financeiro ? ['Valor', 'Forma de pagamento'] : []),
+                    'Ticket', 'Placa', 'Operador', 'Protocolo',
+                ], ';');
+                $this->accessQuery()->orderBy('occurred_at')->each(function (HistoricoAcesso $entry) use ($output, $financeiro): void {
+                    $contribuicao = $entry->contribuicao;
                     fputcsv($output, [
                         $entry->occurred_at->format('d/m/Y H:i'),
                         $entry->pessoa?->nomeExibicao() ?? 'Não identificado',
@@ -88,6 +114,13 @@ class Reports extends Component
                         $entry->ponto_acesso,
                         $entry->tipo,
                         $entry->resultado,
+                        Contribuicao::rotuloSituacao($contribuicao?->situacao_pagamento),
+                        ...($financeiro ? [
+                            $contribuicao?->valor !== null ? number_format((float) $contribuicao->valor, 2, ',', '') : '',
+                            $contribuicao?->forma_pagamento ? Contribuicao::rotuloForma($contribuicao->forma_pagamento) : '',
+                        ] : []),
+                        // Prefixo evita que planilhas removam zeros à esquerda ou interpretem fórmula.
+                        $contribuicao?->ticket_numero !== null ? "'".$contribuicao->ticket_numero : '',
                         $entry->veiculo?->plate_display ?? '',
                         $entry->operator?->name ?? 'Sistema',
                         $entry->protocol,
@@ -116,7 +149,7 @@ class Reports extends Component
     /** @return Builder<HistoricoAcesso> */
     private function accessQuery(): Builder
     {
-        $query = HistoricoAcesso::query()->with(['pessoa', 'imovel', 'veiculo', 'operator'])
+        $query = HistoricoAcesso::query()->with(['pessoa', 'imovel', 'veiculo', 'operator', 'contribuicao'])
             ->whereDate('occurred_at', '>=', $this->dateFrom)
             ->whereDate('occurred_at', '<=', $this->dateTo);
 
@@ -128,6 +161,9 @@ class Reports extends Component
             ->when($this->pointFilter !== 'todos', fn (Builder $query) => $query->where('ponto_acesso', $this->pointFilter))
             ->when($this->propertyFilter !== 'todos', fn (Builder $query) => $query->where('imovel_id', $this->propertyFilter))
             ->when($this->operatorFilter !== 'todos' && $this->canViewConsolidated(), fn (Builder $query) => $query->where('operator_id', $this->operatorFilter))
+            ->when($this->paymentStatusFilter === 'sem_registro', fn (Builder $query) => $query->whereDoesntHave('contribuicao'))
+            ->when(in_array($this->paymentStatusFilter, ['pago', 'sem_pagamento', 'isento'], true), fn (Builder $query) => $query->whereHas('contribuicao', fn (Builder $q) => $q->where('situacao_pagamento', $this->paymentStatusFilter)))
+            ->when(trim($this->ticketFilter) !== '', fn (Builder $query) => $query->whereHas('contribuicao', fn (Builder $q) => $q->where('ticket_numero', trim($this->ticketFilter))))
             ->when(trim($this->search) !== '', function (Builder $query): void {
                 $search = '%'.trim($this->search).'%';
                 $query->where(function (Builder $query) use ($search): void {
@@ -183,6 +219,55 @@ class Reports extends Component
             || Auth::user()?->hasPermission('relatorios.consolidado.consultar');
     }
 
+    /** Valor e forma de pagamento só para quem opera ou consulta caixa (AJ-006). */
+    private function canViewPayments(): bool
+    {
+        return Auth::user()?->hasPermission('caixa.proprio.gerenciar')
+            || Auth::user()?->hasPermission('caixa.consolidado.consultar');
+    }
+
+    private function canCorrectTicket(): bool
+    {
+        return Auth::user()?->hasPermission(ContribuicoesAtendimento::PERMISSAO_CORRECAO) ?? false;
+    }
+
+    public function startTicketCorrection(string $contribuicaoId): void
+    {
+        abort_unless($this->canCorrectTicket(), 403);
+
+        // Só contribuições visíveis no escopo do relatório podem ser corrigidas.
+        $contribuicao = Contribuicao::query()
+            ->whereKey($contribuicaoId)
+            ->whereHas('historicoAcesso', fn (Builder $query) => $this->applyOperatorScope($query))
+            ->firstOrFail();
+
+        $this->correctingContribuicaoId = $contribuicao->id;
+        $this->novoTicket = (string) $contribuicao->ticket_numero;
+        $this->justificativaTicket = '';
+        $this->resetErrorBag();
+    }
+
+    public function cancelTicketCorrection(): void
+    {
+        $this->reset(['correctingContribuicaoId', 'novoTicket', 'justificativaTicket']);
+        $this->resetErrorBag();
+    }
+
+    public function saveTicketCorrection(ContribuicoesAtendimento $contribuicoes): void
+    {
+        abort_unless($this->canCorrectTicket() && $this->correctingContribuicaoId !== null, 403);
+
+        Contribuicao::query()
+            ->whereKey($this->correctingContribuicaoId)
+            ->whereHas('historicoAcesso', fn (Builder $query) => $this->applyOperatorScope($query))
+            ->firstOrFail();
+
+        $contribuicoes->corrigirTicket($this->correctingContribuicaoId, $this->novoTicket, $this->justificativaTicket, Auth::user());
+
+        $this->cancelTicketCorrection();
+        session()->flash('ticket-corrigido', 'Ticket corrigido. O valor anterior ficou preservado no histórico e na auditoria.');
+    }
+
     private function canViewConsolidated(): bool
     {
         return Auth::user()?->hasPermission('relatorios.consolidado.consultar') ?? false;
@@ -199,6 +284,8 @@ class Reports extends Component
             'accessRows' => $accessRows,
             'cashRows' => $cashRows,
             'canViewConsolidated' => $this->canViewConsolidated(),
+            'canViewPayments' => $this->canViewPayments(),
+            'canCorrectTicket' => $this->canCorrectTicket(),
             'operators' => $this->canViewConsolidated()
                 ? User::query()->whereHas('implantacoes')->orderBy('name')->get(['id', 'name'])
                 : collect(),

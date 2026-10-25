@@ -531,6 +531,7 @@ class ExampleTest extends TestCase
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
             ->assertSet('contribution', 'yes')
+            ->set('ticketNumero', '000101')
             ->set('notes', 'Visitante conferido pela portaria.')
             ->call('savePending')
             ->assertSet('feedback.variant', 'warning');
@@ -543,6 +544,7 @@ class ExampleTest extends TestCase
         ]);
 
         $test
+            ->set('ticketNumero', '000103')
             ->call('release')
             ->assertSet('feedback.variant', 'success')
             ->assertSee('Nenhum portão ou equipamento real foi acionado.');
@@ -646,6 +648,7 @@ class ExampleTest extends TestCase
             ->set('quickResponsible', 'Marcos Vinicius da Silva')
             ->set('quickPropertyCode', 'SRA-A-102')
             ->call('saveQuickRegistration')
+            ->set('ticketNumero', '000102')
             ->call('release')
             ->assertSet('feedback.variant', 'warning')
             ->assertSet('feedback.title', 'Liberação não realizada')

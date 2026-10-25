@@ -2074,3 +2074,9 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .validation-search__results li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
     .validation-search__results li > .ui-badge, .validation-search__results li > .ui-button { grid-column: auto; justify-self: end; }
 }
+
+/* AJ-006 — ticket de acesso */
+.validation-ticket { display: grid; gap: 0.6rem; max-width: 32rem; margin-top: 0.85rem; }
+.validation-ticket__confirm { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.45rem; font-weight: 700; }
+.reports-ticket-fix { display: grid; gap: 0.5rem; padding: 0.75rem; margin-top: 0.5rem; border: 1px dashed var(--neutral-300); border-radius: var(--radius-md); background: var(--neutral-050); }
+.reports-ticket-fix footer { display: flex; flex-wrap: wrap; gap: 0.5rem; }

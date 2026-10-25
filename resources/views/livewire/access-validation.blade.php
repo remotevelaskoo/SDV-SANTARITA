@@ -271,7 +271,7 @@
                 <h2 id="validation-contribution-title">Contribuição / taxa de acesso</h2>
                 <p>O pagamento é registrado separadamente e não autoriza a entrada por si só.</p>
             </div>
-            <x-ui.badge variant="success">Caixa aberto</x-ui.badge>
+            <x-ui.badge :variant="$this->caixaAberto ? 'success' : 'warning'">{{ $this->caixaAberto ? 'Caixa aberto' : 'Caixa fechado para você' }}</x-ui.badge>
         </header>
 
         <fieldset class="validation-contribution-options">
@@ -281,10 +281,14 @@
             <x-ui.radio id="contribution-exempt" name="contribution" value="exempt" label="Isento" description="Pessoa isenta de contribuição" :checked="$contribution === 'exempt'" wire:model.live="contribution" />
         </fieldset>
 
+        @php($valorContribuicao = \App\Services\ContribuicoesAtendimento::valorPadrao())
+        @php($valorFormatado = 'R$ '.number_format((float) $valorContribuicao, 2, ',', '.'))
+        @php($duplicado = $this->ticketDuplicado)
+
         @if ($contribution === 'yes')
             <div class="validation-contribution-details">
                 <div class="validation-contribution-fields">
-                    <x-ui.field id="contribution-value" label="Valor da contribuição" value="R$ 15,00" readonly />
+                    <x-ui.field id="contribution-value" label="Valor da contribuição" :value="$valorFormatado" readonly />
                     <x-ui.select id="payment-method" label="Forma de pagamento" wire:model.live="paymentMethod" :error="$errors->first('paymentMethod')">
                         <option value="dinheiro">Dinheiro</option>
                         <option value="pix">PIX</option>
@@ -296,11 +300,11 @@
                 <aside class="validation-payment-summary" aria-label="Resumo do pagamento">
                     <span>Resumo do pagamento</span>
                     <dl>
-                        <div><dt>Valor</dt><dd>R$ 15,00</dd></div>
+                        <div><dt>Valor</dt><dd>{{ $valorFormatado }}</dd></div>
                         <div><dt>Desconto</dt><dd>R$ 0,00</dd></div>
-                        <div class="is-total"><dt>Total</dt><dd>R$ 15,00</dd></div>
+                        <div class="is-total"><dt>Total</dt><dd>{{ $valorFormatado }}</dd></div>
                     </dl>
-                    <small>Caixa: Portaria Principal · {{ auth()->user()?->name ?? 'Operador identificado na sessão' }}</small>
+                    <small>Operador: {{ auth()->user()?->name ?? 'Operador identificado na sessão' }}</small>
                 </aside>
             </div>
         @elseif ($contribution === 'no')
@@ -312,6 +316,26 @@
                 A isenção será registrada no atendimento e poderá ser consultada posteriormente.
             </x-ui.alert>
         @endif
+
+        <div class="validation-ticket">
+            <x-ui.field
+                id="ticket-number"
+                label="Número do ticket de acesso"
+                wire:model.live.debounce.400ms="ticketNumero"
+                maxlength="30"
+                inputmode="text"
+                autocomplete="off"
+                :required="$contribution === 'yes'"
+                :help="$contribution === 'yes' ? 'Obrigatório para contribuição paga. Digite exatamente como no ticket, inclusive zeros à esquerda.' : 'Opcional para não contribuinte ou isento.'"
+                :error="$errors->first('ticketNumero')"
+            />
+            @if ($duplicado)
+                <x-ui.alert variant="warning" title="Ticket já registrado">
+                    Este número aparece em outro atendimento ({{ $duplicado['quando'] }}{{ $duplicado['protocolo'] ? ' · '.$duplicado['protocolo'] : '' }}). O SDV não valida série fiscal: confira o ticket físico.
+                    <label class="validation-ticket__confirm"><input type="checkbox" wire:model.live="ticketDuplicadoConfirmado"> Conferi e quero registrar mesmo assim</label>
+                </x-ui.alert>
+            @endif
+        </div>
     </section>
 
     <section class="validation-section" aria-labelledby="validation-notes-title">

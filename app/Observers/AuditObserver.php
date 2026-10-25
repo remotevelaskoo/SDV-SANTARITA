@@ -6,6 +6,7 @@ use App\Models\Bloco;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Condominio;
+use App\Models\Contribuicao;
 use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
@@ -39,7 +40,7 @@ class AuditObserver
     {
         return [
             Bloco::class, CaixaMovimentacao::class, CaixaTurno::class,
-            Condominio::class, Empresa::class, EmpresaDocumento::class,
+            Condominio::class, Contribuicao::class, Empresa::class, EmpresaDocumento::class,
             EmpresaPrestador::class, EmpresaServico::class, Encomenda::class,
             EnderecoImovel::class, HistoricoAcesso::class, Imovel::class,
             ImovelResponsabilidade::class, Pessoa::class, PessoaContato::class,

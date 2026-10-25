@@ -3,8 +3,10 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
+use App\Models\CaixaTurno;
 use App\Models\Catalogo;
 use App\Models\CatalogoItem;
+use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\Pessoa;
@@ -16,12 +18,15 @@ use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Services\AuditService;
 use App\Services\BuscaPessoasValidacao;
+use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
 use App\Support\NormalizadorBusca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -37,6 +42,11 @@ class AccessValidation extends Component
     public string $paymentMethod = 'dinheiro';
 
     public string $notes = '';
+
+    /** Número do ticket de acesso: texto, preserva zeros à esquerda (AJ-006). */
+    public string $ticketNumero = '';
+
+    public bool $ticketDuplicadoConfirmado = false;
 
     public string $denialReason = 'sem_autorizacao';
 
@@ -270,7 +280,7 @@ class AccessValidation extends Component
     {
         $this->validateCommonFields();
 
-        $historico = $this->recordHistorico('pendente');
+        $historico = $this->recordHistoricoComContribuicao('pendente');
 
         $this->feedback = [
             'variant' => 'warning',
@@ -285,7 +295,7 @@ class AccessValidation extends Component
         $this->validateCommonFields();
 
         if ($this->quickPersonRegistered) {
-            $historico = $this->recordHistorico('pendente');
+            $historico = $this->recordHistoricoComContribuicao('pendente');
             $this->feedback = [
                 'variant' => 'warning',
                 'title' => 'Liberação não realizada',
@@ -296,7 +306,7 @@ class AccessValidation extends Component
             return;
         }
 
-        $historico = $this->recordHistorico('liberado');
+        $historico = $this->recordHistoricoComContribuicao('liberado');
 
         $this->feedback = [
             'variant' => 'success',
@@ -310,6 +320,7 @@ class AccessValidation extends Component
     {
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
+            'ticketNumero', 'ticketDuplicadoConfirmado',
             'quickDuplicateFound', 'quickName', 'quickDocument', 'quickPhone', 'quickAccessType',
             'quickResponsible', 'quickPropertyCode', 'quickNotes',
         ]);
@@ -490,6 +501,50 @@ class AccessValidation extends Component
         ];
     }
 
+    public function updatedTicketNumero(): void
+    {
+        $this->ticketDuplicadoConfirmado = false;
+        unset($this->ticketDuplicado);
+    }
+
+    /** @return array{quando: string, protocolo: ?string}|null */
+    #[Computed]
+    public function ticketDuplicado(): ?array
+    {
+        $ticket = ContribuicoesAtendimento::normalizarTicket($this->ticketNumero);
+        $existente = $ticket !== null ? Contribuicao::ticketJaUsado($ticket) : null;
+
+        return $existente ? [
+            'quando' => $existente->registrada_em->format('d/m/Y H:i'),
+            'protocolo' => $existente->historicoAcesso?->protocol,
+        ] : null;
+    }
+
+    #[Computed]
+    public function caixaAberto(): bool
+    {
+        return CaixaTurno::query()->where('operator_id', Auth::id())->where('status', 'aberto')->exists();
+    }
+
+    /** Atendimento e contribuição na mesma transação: ticket inválido não deixa atendimento órfão. */
+    private function recordHistoricoComContribuicao(string $resultado): HistoricoAcesso
+    {
+        return DB::transaction(function () use ($resultado): HistoricoAcesso {
+            $historico = $this->recordHistorico($resultado);
+
+            app(ContribuicoesAtendimento::class)->registrar(
+                $historico,
+                ContribuicoesAtendimento::DA_TELA[$this->contribution],
+                $this->paymentMethod,
+                $this->ticketNumero,
+                $this->ticketDuplicadoConfirmado,
+                Auth::user(),
+            );
+
+            return $historico;
+        });
+    }
+
     private function recordHistorico(string $resultado, ?string $motivo = null): HistoricoAcesso
     {
         $pessoa = $this->currentPessoaId ? Pessoa::query()->find($this->currentPessoaId) : null;
@@ -547,8 +602,18 @@ class AccessValidation extends Component
         $this->validate([
             'contribution' => ['required', Rule::in(['yes', 'no', 'exempt'])],
             'paymentMethod' => ['required_if:contribution,yes', Rule::in(['dinheiro', 'pix', 'cartao'])],
+            'ticketNumero' => ['required_if:contribution,yes', 'nullable', 'string', 'max:30', 'regex:'.ContribuicoesAtendimento::TICKET_REGEX],
             'notes' => ['nullable', 'string', 'max:200'],
+        ], [
+            'ticketNumero.required_if' => 'Informe o número do ticket de acesso para contribuição paga.',
+            'ticketNumero.regex' => 'Use até 30 letras, números, ponto, barra ou hífen.',
         ]);
+
+        if ($this->ticketDuplicado !== null && ! $this->ticketDuplicadoConfirmado) {
+            throw ValidationException::withMessages([
+                'ticketNumero' => 'Este ticket já foi registrado em outro atendimento. Confira e confirme para continuar.',
+            ]);
+        }
     }
 
     private function resetQuickRegistrationFields(): void
