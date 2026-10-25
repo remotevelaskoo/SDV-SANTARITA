@@ -81,7 +81,8 @@ class ProtectedFileController extends Controller
 
     /**
      * O arquivo só é servido quando está ligado, como versão vigente, a um
-     * pré-cadastro ou a uma pessoa da implantação.
+     * pré-cadastro ou a uma pessoa da implantação, ou quando é a evidência de
+     * uma captura de placa.
      *
      * @return array{0: string, 1: string, 2: array<string, mixed>}
      */
@@ -95,6 +96,11 @@ class ProtectedFileController extends Controller
         $pessoa = $arquivo->pessoaLinks()->where('is_current', true)->first();
         if ($pessoa !== null) {
             return ['pessoas', $pessoa->category, ['category' => $pessoa->category, 'pessoa_id' => $pessoa->pessoa_id]];
+        }
+
+        $captura = $arquivo->capturaPlaca;
+        if ($captura !== null) {
+            return ['validacao', 'evidencia_placa', ['category' => 'evidencia_placa', 'captura_placa_id' => $captura->id, 'simulada' => $captura->simulada()]];
         }
 
         abort(404);

@@ -7,6 +7,7 @@ use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\AuditLog;
+use App\Livewire\CameraPlacasManagement;
 use App\Livewire\CashRegister;
 use App\Livewire\CatalogoManagement;
 use App\Livewire\CompanyManagement;
@@ -86,6 +87,7 @@ Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth',
 Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permissao:catalogos.gerenciar'])->name('catalogs');
 Route::get('/equipamentos', EquipamentoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('equipment');
 Route::get('/pontos-acesso', PontoAcessoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('access-points');
+Route::get('/cameras-placas', CameraPlacasManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('plate-cameras');
 Route::get('/postos', PostoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('posts');
 Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::class)
     ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])

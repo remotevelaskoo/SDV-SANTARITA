@@ -1,6 +1,8 @@
 <?php
 
+use App\Integracoes\Adaptadores\CameraHttp\SnapshotHttpAdaptador;
 use App\Integracoes\Adaptadores\Hikvision\HikvisionIsapiAdaptador;
+use App\Integracoes\Adaptadores\Simulador\SimuladorCameraPlacas;
 use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 
 /*
@@ -59,6 +61,22 @@ return [
     'captura' => [
         'tamanho_maximo_bytes' => 3 * 1024 * 1024,
         'retencao_segundos' => 300,
+    ],
+
+    // Câmeras de placas (AJ-006): imagem estática sob demanda, sem vídeo
+    // contínuo. Código do adaptador => classe de PortaCameraSnapshot.
+    // "gateway-video" é o caminho para câmeras RTSP/ONVIF: um gateway na rede
+    // interna converte o fluxo em snapshot HTTP e o SDV fala só com ele.
+    // O simulador segue a mesma regra do simulador de terminais.
+    'cameras_placa' => [
+        'adaptadores' => [
+            'snapshot-http' => SnapshotHttpAdaptador::class,
+            'gateway-video' => SnapshotHttpAdaptador::class,
+            'simulador-camera' => SimuladorCameraPlacas::class,
+        ],
+        'tamanho_maximo_bytes' => 3 * 1024 * 1024,
+        // Intervalo mínimo entre capturas da mesma câmera, contra cliques repetidos.
+        'intervalo_minimo_segundos' => 2,
     ],
 
     // Valores sugeridos no formulário de cadastro da bancada de homologação.

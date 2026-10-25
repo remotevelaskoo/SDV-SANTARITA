@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'origem', 'excepcional', 'identificacao_excepcional', 'justificativa_excepcional', 'motivo',
     'posto_id', 'operador_turno_id', 'fora_do_posto', 'ponto_acesso_id', 'equipamento_id', 'operacao_integracao_id',
     'resultado_tecnico', 'correlation_id', 'chave_idempotencia',
+    'placa_informada', 'placa_origem', 'captura_placa_id',
 ])]
 class HistoricoAcesso extends Model
 {

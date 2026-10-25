@@ -186,7 +186,7 @@ class LiberacaoManual
         $posto = $turno->posto;
 
         // Relidos na implantação atual: id de outra implantação não é encontrado.
-        $equipamento = Equipamento::query()->findOrFail($dados['equipamento_id']);
+        $equipamento = Equipamento::query()->terminais()->findOrFail($dados['equipamento_id']);
         $pessoa = ! empty($dados['pessoa_id']) ? Pessoa::query()->findOrFail($dados['pessoa_id']) : null;
 
         $existente = HistoricoAcesso::query()->where('chave_idempotencia', $chaveIdempotencia)->first();

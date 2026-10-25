@@ -253,6 +253,9 @@ class CadastroEquipamentos
                 if ($equipamento->status === StatusEquipamento::Inativo) {
                     throw new RegraIntegracaoViolada('equipamento_inativo', 'Equipamento inativo não pode ser vinculado.');
                 }
+                if ($equipamento->tipo !== TipoEquipamento::TerminalFacial) {
+                    throw new RegraIntegracaoViolada('tipo_equipamento_invalido', 'Câmeras de placas são vinculadas pela tela de câmeras, sem ocupar o ponto do terminal.');
+                }
                 if ($ponto->status === StatusPontoAcesso::Inativo) {
                     throw new RegraIntegracaoViolada('ponto_inativo', 'Ponto de acesso inativo não pode receber equipamento.');
                 }

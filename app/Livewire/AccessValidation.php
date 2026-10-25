@@ -2,8 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Integracoes\Aplicacao\CamerasPlaca;
+use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
 use App\Models\CaixaTurno;
+use App\Models\CapturaPlaca;
 use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Models\Contribuicao;
@@ -36,6 +39,20 @@ class AccessValidation extends Component
     use CapturaDocumentoAssistida;
 
     private const PONTO_ACESSO = 'Portaria Principal';
+
+    /** Placa antiga (ABC1234) ou Mercosul (ABC1D23). */
+    public const PLACA_REGEX = '/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/';
+
+    /** Câmera escolhida pelo operador; só o identificador interno chega ao navegador (AJ-006). */
+    public string $cameraPlacaId = '';
+
+    #[Locked]
+    public ?string $capturaPlacaId = null;
+
+    public ?string $capturaPlacaFalha = null;
+
+    /** Placa digitada ou conferida sobre a imagem; contingência quando não há câmera. */
+    public string $placaInformada = '';
 
     public string $contribution = 'yes';
 
@@ -316,11 +333,93 @@ class AccessValidation extends Component
         $this->protocol = $historico->protocol;
     }
 
+    /**
+     * Captura estática sob demanda (AJ-006). A imagem vira evidência privada;
+     * a leitura da placa é outra etapa e a captura não decide nada.
+     */
+    public function capturarPlaca(CamerasPlaca $cameras): void
+    {
+        abort_unless(Auth::user()?->hasPermission('validacao.registrar'), 403);
+        $this->capturaPlacaFalha = null;
+
+        if (! collect($this->camerasPlaca)->contains('id', $this->cameraPlacaId)) {
+            $this->addError('cameraPlacaId', 'Escolha uma câmera deste posto.');
+
+            return;
+        }
+
+        try {
+            $resultado = $cameras->capturar($this->cameraPlacaId, Auth::user());
+        } catch (RegraIntegracaoViolada $e) {
+            $this->capturaPlacaFalha = $e->getMessage();
+
+            return;
+        }
+
+        if (! $resultado['ok']) {
+            $this->capturaPlacaFalha = $resultado['mensagem'].' Você pode digitar a placa.';
+
+            return;
+        }
+
+        $this->capturaPlacaId = $resultado['captura']->id;
+        unset($this->capturaPlaca);
+    }
+
+    public function descartarCapturaPlaca(): void
+    {
+        $this->capturaPlacaId = null;
+        $this->capturaPlacaFalha = null;
+        unset($this->capturaPlaca);
+    }
+
+    public function updatedPlacaInformada(): void
+    {
+        $this->placaInformada = NormalizadorBusca::documento($this->placaInformada);
+    }
+
+    /** @return list<array{id: string, nome: string, ponto: string, ponto_id: string, simulador: bool}> */
+    #[Computed]
+    public function camerasPlaca(): array
+    {
+        $usuario = Auth::user();
+        if (! $usuario?->hasPermission('validacao.registrar')) {
+            return [];
+        }
+
+        return app(CamerasPlaca::class)->disponiveisPara($usuario)->all();
+    }
+
+    /** @return array{id: string, camera: string, ponto: ?string, capturada_em: string, simulada: bool, url: ?string}|null */
+    #[Computed]
+    public function capturaPlaca(): ?array
+    {
+        if ($this->capturaPlacaId === null) {
+            return null;
+        }
+
+        $captura = CapturaPlaca::query()
+            ->with(['equipamento', 'pontoAcesso', 'arquivo'])
+            ->where('operador_id', Auth::id())
+            ->find($this->capturaPlacaId);
+
+        return $captura === null ? null : [
+            'id' => $captura->id,
+            'camera' => $captura->equipamento?->nome ?? 'Câmera',
+            'ponto' => $captura->pontoAcesso?->nome,
+            'capturada_em' => $captura->capturada_em->format('d/m/Y \à\s H:i:s'),
+            'simulada' => $captura->simulada(),
+            'url' => $this->canViewImage() && $captura->arquivo?->isAvailable()
+                ? route('protected-files.show', ['arquivo' => $captura->arquivo_id, 'contexto' => 'evidencia_placa'])
+                : null,
+        ];
+    }
+
     public function startNewValidation(): void
     {
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
-            'ticketNumero', 'ticketDuplicadoConfirmado',
+            'ticketNumero', 'ticketDuplicadoConfirmado', 'capturaPlacaId', 'capturaPlacaFalha', 'placaInformada',
             'quickDuplicateFound', 'quickName', 'quickDocument', 'quickPhone', 'quickAccessType',
             'quickResponsible', 'quickPropertyCode', 'quickNotes',
         ]);
@@ -547,10 +646,38 @@ class AccessValidation extends Component
 
     private function recordHistorico(string $resultado, ?string $motivo = null): HistoricoAcesso
     {
+        $placa = NormalizadorBusca::documento($this->placaInformada);
+        if ($placa !== '' && ! preg_match(self::PLACA_REGEX, $placa)) {
+            throw ValidationException::withMessages(['placaInformada' => 'Placa inválida. Use o formato ABC1234 ou ABC1D23.']);
+        }
+
+        return DB::transaction(function () use ($resultado, $motivo, $placa): HistoricoAcesso {
+            $captura = $this->capturaPlacaId === null ? null : CapturaPlaca::query()
+                ->where('operador_id', Auth::id())
+                ->lockForUpdate()
+                ->find($this->capturaPlacaId);
+            if ($captura?->historico_acesso_id !== null) {
+                throw ValidationException::withMessages(['placaInformada' => 'Esta imagem já foi usada em outro atendimento. Capture de novo.']);
+            }
+
+            $historico = $this->criarHistorico($resultado, $motivo, $placa, $captura);
+
+            // A evidência fica ligada à decisão e não muda mais (CapturaPlaca::booted).
+            $captura?->forceFill(['historico_acesso_id' => $historico->id, 'vinculada_em' => now()])->save();
+
+            return $historico;
+        });
+    }
+
+    private function criarHistorico(string $resultado, ?string $motivo, string $placa, ?CapturaPlaca $captura): HistoricoAcesso
+    {
         $pessoa = $this->currentPessoaId ? Pessoa::query()->find($this->currentPessoaId) : null;
         $vinculo = $pessoa ? Vinculo::query()->where('pessoa_id', $pessoa->id)->whereNull('ended_at')->first() : null;
 
         return HistoricoAcesso::query()->create([
+            'placa_informada' => $placa !== '' ? $placa : null,
+            'placa_origem' => $placa === '' ? null : ($captura !== null ? 'conferida' : 'manual'),
+            'captura_placa_id' => $captura?->id,
             'pessoa_id' => $pessoa?->id,
             'imovel_id' => $vinculo?->imovel_id,
             'ponto_acesso' => self::PONTO_ACESSO,

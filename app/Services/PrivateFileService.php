@@ -244,6 +244,41 @@ class PrivateFileService
     }
 
     /**
+     * Imagem da câmera de placas como evidência privada (AJ-006). Só o
+     * catálogo é criado aqui; a captura que aponta para ele fica com o
+     * serviço de câmeras, na mesma transação.
+     */
+    public function storeEvidenciaPlaca(string $implantacaoId, string $contents, string $origin): Arquivo
+    {
+        $image = @getimagesizefromstring($contents);
+        if ($contents === '' || ! is_array($image) || ! in_array($image['mime'] ?? null, ['image/jpeg', 'image/png'], true)) {
+            throw new RuntimeException('A imagem da câmera não é um JPEG ou PNG válido.');
+        }
+
+        $extension = self::EXTENSIONS_BY_MIME[$image['mime']];
+        $temporaryPath = tempnam(storage_path('framework/cache'), 'sdv-placa-');
+        if ($temporaryPath === false || file_put_contents($temporaryPath, $contents) === false) {
+            throw new RuntimeException('Não foi possível preparar a imagem para armazenamento privado.');
+        }
+
+        try {
+            $metadata = $this->storeObject($implantacaoId, 'evidencia_placa', new UploadedFile($temporaryPath, 'placa.'.$extension, $image['mime'], null, true));
+        } finally {
+            @unlink($temporaryPath);
+        }
+
+        return Arquivo::query()->create([
+            ...$metadata,
+            'display_name' => 'Imagem da placa',
+            'classification' => 'sensivel',
+            'purpose' => 'evidencia_placa',
+            'status' => 'disponivel',
+            'origin' => $origin,
+            'created_by' => Auth::id(),
+        ]);
+    }
+
+    /**
      * Grava o binário no disco privado e devolve o catálogo para `arquivos`.
      * Usado pelos fluxos novos; o pré-cadastro mantém o próprio método.
      *

@@ -20,7 +20,7 @@ class ReconciliarEquipamentos extends Command
 
         Implantacao::query()->where('status', 'ativa')->each(function (Implantacao $implantacao) use ($reconciliador, &$consultas, &$intervencoes) {
             ImplantacaoContext::executarNo($implantacao, function () use ($reconciliador, &$consultas, &$intervencoes) {
-                Equipamento::query()->where('status', '!=', 'inativo')->each(function (Equipamento $equipamento) use ($reconciliador, &$consultas, &$intervencoes) {
+                Equipamento::query()->terminais()->where('status', '!=', 'inativo')->each(function (Equipamento $equipamento) use ($reconciliador, &$consultas, &$intervencoes) {
                     $resultado = $reconciliador->reconciliar($equipamento);
                     $consultas += $resultado['consultas'];
                     $intervencoes += $resultado['intervencoes'];
