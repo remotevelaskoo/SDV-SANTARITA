@@ -2043,3 +2043,34 @@ button:disabled, input:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* AJ-006 — busca e identificação na Validação de Entrada */
+.validation-search { display: grid; gap: 0.6rem; margin-top: 0.85rem; }
+.validation-search > label > span:first-child { display: block; margin-bottom: 0.3rem; font-size: 0.68rem; font-weight: 750; }
+.validation-search__input { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.7rem; border: 1px solid var(--neutral-300); border-radius: var(--radius-md); background: var(--white); }
+.validation-search__input:focus-within { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+.validation-search__input .app-icon { width: 1rem; height: 1rem; color: var(--neutral-600); }
+.validation-search__input input { flex: 1; min-width: 0; padding: 0.65rem 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 0.75rem; }
+.validation-search > small, .validation-search__hint { color: var(--neutral-600); font-size: 0.63rem; }
+.validation-search__state { align-items: center; gap: 0.4rem; color: var(--neutral-600); font-size: 0.65rem; }
+.validation-search__state .app-icon { width: 0.9rem; height: 0.9rem; }
+.validation-search__results { display: grid; gap: 0.5rem; padding: 0; margin: 0.4rem 0; list-style: none; }
+.validation-search__results li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.5rem 0.75rem; padding: 0.65rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--white); }
+.validation-search__results li > .ui-badge, .validation-search__results li > .ui-button { grid-column: 2; justify-self: start; }
+.validation-search__photo { width: 3rem; height: 3rem; border-radius: 999px; object-fit: cover; background: var(--neutral-100); }
+.validation-search__photo.is-empty { display: grid; place-items: center; color: var(--neutral-600); font-size: 0.7rem; font-weight: 800; }
+.validation-search__data strong, .validation-search__data small { display: block; overflow-wrap: anywhere; }
+.validation-search__data strong { font-size: 0.75rem; }
+.validation-search__data small { color: var(--neutral-600); font-size: 0.62rem; }
+.ui-person-summary > header.has-photo { grid-template-columns: auto minmax(0, 1fr); }
+.ui-person-summary__photo { display: grid; justify-items: center; gap: 0.25rem; margin: 0; }
+.ui-person-summary__photo img, .ui-person-summary__photo > span { width: 5.5rem; height: 5.5rem; border-radius: var(--radius-md); object-fit: cover; background: var(--neutral-100); }
+.ui-person-summary__photo > span { display: grid; place-items: center; color: var(--neutral-400); }
+.ui-person-summary__photo > span .app-icon { width: 2rem; height: 2rem; }
+.ui-person-summary__photo figcaption { max-width: 6rem; color: var(--neutral-600); font-size: 0.56rem; text-align: center; }
+.validation-person-extra { border-top: 1px solid var(--neutral-200); }
+
+@media (min-width: 768px) {
+    .validation-search__results li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+    .validation-search__results li > .ui-badge, .validation-search__results li > .ui-button { grid-column: auto; justify-self: end; }
+}

@@ -247,11 +247,11 @@ class ProtectedFileTest extends TestCase
         [$file] = app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
             'documento' => UploadedFile::fake()->image('documento-validacao.jpg'),
         ]);
-        $operator = $this->userWithPermission('arquivos.sensiveis.visualizar');
+        $operator = $this->userWithPermission('arquivos.sensiveis.visualizar', 'validacao.registrar');
 
         Livewire::actingAs($operator)
             ->test(AccessValidation::class)
-            ->set('currentPessoaId', $person->id)
+            ->call('selecionarPessoa', $person->id)
             ->assertSee('Conferência visual protegida')
             ->assertSee('Abrir documento')
             ->assertSee($file->id, escape: false)

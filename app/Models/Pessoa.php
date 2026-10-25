@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToImplantacao;
+use App\Support\NormalizadorBusca;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,14 @@ class Pessoa extends Model
     use BelongsToImplantacao, HasFactory, HasUuids;
 
     protected $table = 'pessoas';
+
+    protected static function booted(): void
+    {
+        // Coluna derivada para a busca da Validação de Entrada (AJ-006).
+        static::saving(function (self $pessoa): void {
+            $pessoa->nome_busca = NormalizadorBusca::texto(trim($pessoa->nome.' '.($pessoa->nome_social ?? '')));
+        });
+    }
 
     protected function casts(): array
     {
@@ -56,6 +65,21 @@ class Pessoa extends Model
     public function veiculoVinculos(): HasMany
     {
         return $this->hasMany(VeiculoVinculo::class);
+    }
+
+    /** @return HasMany<PessoaArquivo, $this> */
+    public function arquivos(): HasMany
+    {
+        return $this->hasMany(PessoaArquivo::class)->orderByDesc('linked_at');
+    }
+
+    public function fotoVigente(): ?PessoaArquivo
+    {
+        return $this->arquivos()
+            ->where('category', 'foto')
+            ->where('is_current', true)
+            ->with('file')
+            ->first();
     }
 
     public function nomeExibicao(): string

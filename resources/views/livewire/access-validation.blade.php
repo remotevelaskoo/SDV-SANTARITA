@@ -14,7 +14,7 @@
                 <x-ui.protocol
                     :number="$protocol"
                     :status="$feedback['title']"
-                    datetime="10/08/2026 às 14:32"
+                    :datetime="now()->format('d/m/Y \\à\\s H:i')"
                     :tone="$feedback['variant'] === 'danger' ? 'danger' : ($feedback['variant'] === 'warning' ? 'warning' : 'success')"
                 />
             @endif
@@ -36,7 +36,7 @@
                 <p>Confira o cadastro, o vínculo e a autorização antes da decisão.</p>
             </div>
             <div class="validation-person-actions">
-                <time datetime="2026-08-10T14:32:15-03:00">10/08/2026 · 14:32:15</time>
+                <time datetime="{{ now()->toAtomString() }}">{{ now()->format('d/m/Y · H:i') }}</time>
                 <x-ui.button variant="warning" size="sm" wire:click="openQuickRegistration">
                     Pessoa não encontrada? Cadastro rápido
                 </x-ui.button>
@@ -97,6 +97,68 @@
             </section>
         @endif
 
+        @unless ($currentPerson['selected'] || $quickRegistrationOpen)
+            @php($busca = $this->resultadosBusca)
+            <div class="validation-search" role="search">
+                <label for="validation-search-input">
+                    <span>Buscar pessoa</span>
+                    <span class="validation-search__input">
+                        <x-icon name="search" />
+                        <input
+                            id="validation-search-input"
+                            type="search"
+                            wire:model.live.debounce.400ms="busca"
+                            maxlength="80"
+                            autocomplete="off"
+                            placeholder="Nome, CPF ou documento, telefone, protocolo ou código do imóvel"
+                            aria-describedby="validation-search-help"
+                        >
+                    </span>
+                </label>
+                <small id="validation-search-help">A busca considera somente esta implantação. Documento e telefone precisam ser digitados completos.</small>
+
+                <div class="validation-search__state" wire:loading.flex wire:target="busca" aria-live="polite">
+                    <x-icon name="refresh" /> Buscando…
+                </div>
+
+                <div wire:loading.remove wire:target="busca">
+                    @if (mb_strlen(trim($this->busca)) < \App\Services\BuscaPessoasValidacao::TAMANHO_MINIMO)
+                        <p class="validation-search__hint">Digite ao menos {{ \App\Services\BuscaPessoasValidacao::TAMANHO_MINIMO }} caracteres. Nenhuma pessoa é selecionada automaticamente.</p>
+                    @elseif ($busca['resultados'] === [])
+                        <x-ui.empty-state title="Nenhuma pessoa localizada" description="Confira o termo digitado ou faça o cadastro rápido sem perder este atendimento." icon="search">
+                            <x-slot:action>
+                                <x-ui.button variant="warning" size="sm" wire:click="openQuickRegistration">Cadastro rápido</x-ui.button>
+                            </x-slot:action>
+                        </x-ui.empty-state>
+                    @else
+                        <p class="validation-search__hint" aria-live="polite">
+                            {{ count($busca['resultados']) }} {{ count($busca['resultados']) === 1 ? 'pessoa encontrada' : 'pessoas encontradas' }}{{ $busca['mais'] ? ' (há mais: refine a busca)' : '' }}. Selecione quem está sendo atendido.
+                        </p>
+                        <ul class="validation-search__results" aria-label="Pessoas encontradas">
+                            @foreach ($busca['resultados'] as $resultado)
+                                <li wire:key="busca-{{ $resultado['id'] }}">
+                                    @if ($resultado['foto_url'])
+                                        <img class="validation-search__photo" src="{{ $resultado['foto_url'] }}" alt="Foto de {{ $resultado['nome'] }}" loading="lazy" referrerpolicy="no-referrer">
+                                    @else
+                                        <span class="validation-search__photo is-empty" title="{{ $resultado['foto_estado'] === 'sem_permissao' ? 'Foto protegida pelo seu perfil' : 'Sem foto cadastrada' }}">{{ $resultado['iniciais'] }}</span>
+                                    @endif
+                                    <div class="validation-search__data">
+                                        <strong>{{ $resultado['nome'] }}</strong>
+                                        <small>{{ $resultado['documento'] }} · {{ $resultado['tipo'] }} · {{ $resultado['destino'] }}{{ $resultado['vinculos_extras'] > 0 ? ' (+'.$resultado['vinculos_extras'].')' : '' }}</small>
+                                        <small>Vigência: {{ $resultado['vigencia'] }} · Encontrado por {{ implode(', ', $resultado['motivos']) }}</small>
+                                    </div>
+                                    <x-ui.badge :variant="$resultado['situacao_tom']">{{ $resultado['situacao'] }}</x-ui.badge>
+                                    <x-ui.button variant="secondary" size="sm" wire:click="selecionarPessoa('{{ $resultado['id'] }}')" wire:loading.attr="disabled">Selecionar</x-ui.button>
+                                </li>
+                            @endforeach
+                        </ul>
+                        <p class="validation-search__hint">Não é quem procura? <button type="button" class="sensitive-reveal" wire:click="openQuickRegistration">Fazer cadastro rápido</button></p>
+                    @endif
+                </div>
+            </div>
+        @endunless
+
+        @if ($currentPerson['selected'])
         <div class="validation-person-grid">
             <x-ui.person-summary
                 :name="$currentPerson['name']"
@@ -107,42 +169,49 @@
                 :responsible="$currentPerson['responsible']"
                 :status="$currentPerson['status']"
                 :validity="$currentPerson['validity']"
-                :tone="$quickPersonRegistered ? 'warning' : 'success'"
+                :tone="$currentPerson['tone']"
+                :photo-url="$currentPerson['photo_url']"
+                :photo-state="$currentPerson['photo_state']"
+                :photo-origin="$currentPerson['photo_origin']"
             >
+                @if (count($currentPerson['links']) > 1 || $currentPerson['vehicles'] !== [])
+                    <dl class="validation-person-extra">
+                        @foreach (array_slice($currentPerson['links'], 1) as $link)
+                            <div><dt>Outro vínculo</dt><dd>{{ $link['type'] }} · {{ $link['property'] }} · {{ $link['validity'] }}</dd></div>
+                        @endforeach
+                        @foreach ($currentPerson['vehicles'] as $vehicle)
+                            <div><dt>Veículo</dt><dd>{{ $vehicle['plate'] }} · {{ $vehicle['description'] }}</dd></div>
+                        @endforeach
+                    </dl>
+                @endif
                 <x-slot:actions>
                     @if (auth()->user()?->hasPermission('dados-sensiveis.revelar'))
                         <x-ui.button variant="ghost" size="sm" wire:click="toggleDocumentReveal">
                             {{ $documentRevealed ? 'Ocultar documento' : 'Revelar documento' }}
                         </x-ui.button>
                     @endif
-                    <x-ui.button variant="secondary" size="sm" disabled title="Consulta completa será conectada ao cadastro em uma próxima etapa">
-                        Ver cadastro completo
+                    <x-ui.button variant="secondary" size="sm" wire:click="trocarPessoa">
+                        Trocar pessoa
                     </x-ui.button>
                 </x-slot:actions>
             </x-ui.person-summary>
 
             <article class="validation-status-panel">
                 <header>
-                    <div><span>Status para decisão</span><strong>{{ $quickPersonRegistered ? 'Revisão obrigatória' : 'Condições verificadas' }}</strong></div>
-                    <x-ui.badge :variant="$quickPersonRegistered ? 'warning' : 'success'">{{ $quickPersonRegistered ? 'Pendente' : 'Pronto' }}</x-ui.badge>
+                    <div><span>Status para decisão</span><strong>{{ $currentPerson['tone'] === 'success' ? 'Conferir e decidir' : 'Revisão obrigatória' }}</strong></div>
+                    <x-ui.badge :variant="$currentPerson['tone'] === 'success' ? 'info' : 'warning'">{{ $currentPerson['tone'] === 'success' ? 'Sem pendências de cadastro' : 'Pendente' }}</x-ui.badge>
                 </header>
                 <ul>
-                    @if ($quickPersonRegistered)
-                        <li class="is-pending"><x-icon name="clock" /><span><strong>Cadastro</strong><small>Mínimo e provisório</small></span></li>
-                        <li class="is-pending"><x-icon name="clock" /><span><strong>Vínculo</strong><small>Aguardando conferência</small></span></li>
-                        <li class="is-pending"><x-icon name="clock" /><span><strong>Autorização</strong><small>Não concedida</small></span></li>
-                        <li class="is-pending"><x-icon name="clock" /><span><strong>Documento</strong><small>Não validado</small></span></li>
-                        <li class="is-pending"><x-icon name="clock" /><span><strong>Face</strong><small>Não sincronizada</small></span></li>
-                    @else
-                        <li><x-icon name="check-circle" /><span><strong>Cadastro</strong><small>Ativo</small></span></li>
-                        <li><x-icon name="check-circle" /><span><strong>Vínculo</strong><small>Morador vigente</small></span></li>
-                        <li><x-icon name="check-circle" /><span><strong>Autorização</strong><small>Entrada permitida</small></span></li>
-                        <li><x-icon name="check-circle" /><span><strong>Documento</strong><small>Validado</small></span></li>
-                        <li><x-icon name="check-circle" /><span><strong>Face</strong><small>Sincronizada</small></span></li>
-                    @endif
+                    @foreach ($currentPerson['checks'] as $check)
+                        <li @class(['is-pending' => $check['ok'] !== true])><x-icon :name="$check['ok'] === true ? 'check-circle' : ($check['ok'] === false ? 'alert' : 'clock')" /><span><strong>{{ $check['label'] }}</strong><small>{{ $check['value'] }}</small></span></li>
+                    @endforeach
                 </ul>
             </article>
         </div>
+
+        @foreach ($currentPerson['alerts'] as $alerta)
+            <x-ui.alert :variant="$alerta['tone']" title="Atenção">{{ $alerta['text'] }}</x-ui.alert>
+        @endforeach
 
         @php($protectedFiles = $this->currentProtectedFiles)
         @if ($protectedFiles['pre_registration_id'])
@@ -167,6 +236,7 @@
             <x-ui.alert variant="info" title="Cadastro localizado">
                 Estes dados vêm do cadastro real da pessoa e do imóvel vinculado.
             </x-ui.alert>
+        @endif
         @endif
     </section>
 
@@ -220,7 +290,7 @@
                         <option value="pix">PIX</option>
                         <option value="cartao">Cartão</option>
                     </x-ui.select>
-                    <x-ui.field id="received-from" label="Recebido de" value="Marcos Vinicius da Silva" readonly />
+                    <x-ui.field id="received-from" label="Recebido de" :value="$currentPerson['selected'] ? $currentPerson['name'] : 'Selecione a pessoa atendida'" readonly />
                 </div>
 
                 <aside class="validation-payment-summary" aria-label="Resumo do pagamento">

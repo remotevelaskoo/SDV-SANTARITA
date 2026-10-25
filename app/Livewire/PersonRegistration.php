@@ -7,13 +7,21 @@ use App\Models\Pessoa;
 use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\Vinculo;
+use App\Services\PrivateFileService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class PersonRegistration extends Component
 {
+    use WithFileUploads;
+
+    /** Foto real da pessoa (AJ-006): armazenamento privado, exibida na Validação de Entrada. */
+    public ?TemporaryUploadedFile $photo = null;
+
     public string $accessType = 'resident';
 
     public int $currentStep = 1;
@@ -169,6 +177,8 @@ class PersonRegistration extends Component
             $this->rulesForStep(4),
         );
 
+        $rules['photo'] = ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'];
+
         $this->validate($rules, [], $this->attributeNames());
 
         $this->checkDocument();
@@ -240,6 +250,12 @@ class PersonRegistration extends Component
             'ended_at' => $this->indefiniteTerm ? null : $this->endDate,
             'versao' => 1,
         ]);
+
+        if ($this->photo !== null) {
+            app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->photo);
+            $this->photo->delete();
+            $this->photo = null;
+        }
 
         $this->feedback = [
             'variant' => 'success',

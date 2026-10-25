@@ -503,13 +503,14 @@ class ExampleTest extends TestCase
 
         $response = $this->get('/validacao');
 
+        // AJ-006: a tela abre sem pessoa selecionada; a identificação vem da busca.
         $response
             ->assertOk()
             ->assertSee('Validação de entrada')
             ->assertSee('Identificação da pessoa')
-            ->assertSee('Marcos Vinicius da Silva')
+            ->assertSee('Buscar pessoa')
+            ->assertDontSee('Marcos Vinicius da Silva')
             ->assertSee('Veículo e leitura da placa')
-            ->assertSee('ABC1D23')
             ->assertSee('Contribuição / taxa de acesso')
             ->assertSee('Observações')
             ->assertSee('Negar entrada')
@@ -526,7 +527,9 @@ class ExampleTest extends TestCase
         $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
         Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
 
-        $test = Livewire::test(AccessValidation::class)
+        $test = Livewire::actingAs($this->operatorWithPermissions('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
             ->assertSet('contribution', 'yes')
             ->set('notes', 'Visitante conferido pela portaria.')
             ->call('savePending')
@@ -3060,7 +3063,9 @@ class ExampleTest extends TestCase
             ->call('deny')
             ->assertHasErrors('denialReason');
 
-        Livewire::test(AccessValidation::class)
+        Livewire::actingAs($this->operatorWithPermissions('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
             ->set('denialReason', 'vinculo_irregular')
             ->call('deny')
             ->assertHasNoErrors();

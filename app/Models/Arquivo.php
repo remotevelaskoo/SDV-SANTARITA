@@ -51,6 +51,12 @@ class Arquivo extends Model
         return $this->hasMany(PreRegistrationArquivo::class, 'arquivo_id');
     }
 
+    /** @return HasMany<PessoaArquivo, $this> */
+    public function pessoaLinks(): HasMany
+    {
+        return $this->hasMany(PessoaArquivo::class, 'arquivo_id');
+    }
+
     public function isAvailable(): bool
     {
         return $this->status === 'disponivel';

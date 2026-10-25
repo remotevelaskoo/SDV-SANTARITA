@@ -12,13 +12,18 @@ use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationArquivo;
+use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Services\AuditService;
+use App\Services\BuscaPessoasValidacao;
+use App\Services\FotoPessoaResolver;
+use App\Support\NormalizadorBusca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class AccessValidation extends Component
@@ -64,15 +69,68 @@ class AccessValidation extends Component
 
     public string $quickNotes = '';
 
+    /**
+     * Pessoa do atendimento. Só muda pelos métodos do servidor (seleção na
+     * busca ou cadastro rápido); nunca é escolhida automaticamente (AJ-006).
+     */
+    #[Locked]
     public ?string $currentPessoaId = null;
 
-    public function mount(): void
+    /** Termo da busca de "Identificação da pessoa" (nome, documento, telefone, protocolo ou imóvel). */
+    public string $busca = '';
+
+    public function selecionarPessoa(string $pessoaId, AuditService $audit): void
     {
-        $this->currentPessoaId = $this->findResidentWithActiveVinculo();
+        abort_unless(Auth::user()?->hasPermission('validacao.registrar'), 403);
+
+        // O escopo da implantação ativa vale também aqui: id de outra implantação não existe.
+        $pessoa = Pessoa::query()->find($pessoaId);
+        abort_if($pessoa === null, 404);
+
+        $this->currentPessoaId = $pessoa->id;
+        $this->quickPersonRegistered = false;
+        $this->documentRevealed = false;
+        $this->busca = '';
+        unset($this->currentPerson, $this->currentProtectedFiles);
+
+        $audit->record(
+            action: 'selecionou_pessoa',
+            module: 'validacao',
+            entityType: 'pessoas',
+            entityId: $pessoa->id,
+            metadata: ['origem' => 'busca'],
+        );
+    }
+
+    public function trocarPessoa(): void
+    {
+        $this->currentPessoaId = null;
+        $this->quickPersonRegistered = false;
+        $this->documentRevealed = false;
+        unset($this->currentPerson, $this->currentProtectedFiles);
+    }
+
+    /** @return array{resultados: list<array<string, mixed>>, mais: bool, criterios: list<string>} */
+    #[Computed]
+    public function resultadosBusca(): array
+    {
+        if (! Auth::user()?->hasPermission('validacao.registrar')) {
+            return ['resultados' => [], 'mais' => false, 'criterios' => []];
+        }
+
+        return app(BuscaPessoasValidacao::class)->buscar($this->busca, $this->canViewImage());
     }
 
     public function openQuickRegistration(): void
     {
+        // O que o operador já digitou na busca vira ponto de partida do cadastro.
+        $termo = trim($this->busca);
+        if ($this->quickName === '' && preg_match('/^[\p{L} \'.-]{3,}$/u', $termo)) {
+            $this->quickName = $termo;
+        } elseif ($this->quickDocument === '' && strlen(NormalizadorBusca::digitos($termo)) === 11) {
+            $this->quickDocument = $termo;
+        }
+
         $this->quickRegistrationOpen = true;
         $this->quickDuplicateFound = false;
         $this->feedback = null;
@@ -258,7 +316,8 @@ class AccessValidation extends Component
         $this->contribution = 'yes';
         $this->paymentMethod = 'dinheiro';
         $this->denialReason = 'sem_autorizacao';
-        $this->currentPessoaId = $this->findResidentWithActiveVinculo();
+        $this->currentPessoaId = null;
+        $this->busca = '';
         $this->documentRevealed = false;
     }
 
@@ -285,15 +344,22 @@ class AccessValidation extends Component
         );
     }
 
-    /** @return array{name: string, initials: string, document: string, type: string, property: string, responsible: string, status: string, validity: string} */
+    /**
+     * Pessoa selecionada com vínculos, veículos, foto e alertas (AJ-006).
+     *
+     * @return array<string, mixed>
+     */
     #[Computed]
     public function currentPerson(): array
     {
-        $pessoa = $this->currentPessoaId ? Pessoa::query()->with('documentos')->find($this->currentPessoaId) : null;
+        $pessoa = $this->currentPessoaId
+            ? Pessoa::query()->with(['documentos' => fn ($q) => $q->whereNull('ended_at')])->find($this->currentPessoaId)
+            : null;
 
         if (! $pessoa) {
             return [
-                'name' => 'Nenhuma pessoa identificada',
+                'selected' => false,
+                'name' => 'Nenhuma pessoa selecionada',
                 'initials' => '—',
                 'document' => 'Não informado',
                 'type' => 'Não identificado',
@@ -301,32 +367,93 @@ class AccessValidation extends Component
                 'responsible' => 'A confirmar',
                 'status' => 'Sem cadastro',
                 'validity' => '—',
+                'tone' => 'neutral',
+                'photo_url' => null,
+                'photo_state' => 'sem_foto',
+                'photo_origin' => null,
+                'links' => [],
+                'vehicles' => [],
+                'alerts' => [],
+                'checks' => [],
             ];
         }
 
-        $vinculo = Vinculo::query()->where('pessoa_id', $pessoa->id)->whereNull('ended_at')->with('imovel')->first();
+        $vinculos = Vinculo::query()->where('pessoa_id', $pessoa->id)->whereNull('ended_at')->with('imovel')->orderBy('started_at')->get();
+        $vinculo = $vinculos->first();
+        $documento = $pessoa->documentos->first()?->valor_apresentacao;
+        $foto = $this->canViewImage() ? app(FotoPessoaResolver::class)->paraPessoa($pessoa) : null;
+        $veiculos = VeiculoVinculo::query()
+            ->where('pessoa_id', $pessoa->id)
+            ->whereNull('ended_at')
+            ->with('veiculo')
+            ->get()
+            ->filter(fn (VeiculoVinculo $vinculoVeiculo) => $vinculoVeiculo->veiculo !== null)
+            ->map(fn (VeiculoVinculo $vinculoVeiculo) => [
+                'plate' => $vinculoVeiculo->veiculo->plate_display,
+                'description' => collect([$vinculoVeiculo->veiculo->brand, $vinculoVeiculo->veiculo->model, $vinculoVeiculo->veiculo->color])->filter()->join(' · ') ?: 'Sem descrição',
+                'status' => $vinculoVeiculo->veiculo->status,
+            ])
+            ->values()
+            ->all();
+
+        $alertas = [];
+        if ($pessoa->status !== 'ativo') {
+            $alertas[] = ['tone' => 'danger', 'text' => 'Cadastro '.str_replace('_', ' ', (string) $pessoa->status).'. Confirme antes de liberar.'];
+        }
+        if ($vinculo === null) {
+            $alertas[] = ['tone' => 'warning', 'text' => 'Sem vínculo vigente com imóvel.'];
+        } elseif ($vinculo->status !== 'ativo') {
+            $alertas[] = ['tone' => 'warning', 'text' => 'Vínculo '.str_replace('_', ' ', (string) $vinculo->status).'.'];
+        }
+        if ($documento === null) {
+            $alertas[] = ['tone' => 'warning', 'text' => 'Nenhum documento ativo no cadastro.'];
+        }
+        if ($foto === null && $this->canViewImage()) {
+            $alertas[] = ['tone' => 'info', 'text' => 'Sem foto cadastrada: confira o documento original.'];
+        }
+
+        $cadastroOk = $pessoa->status === 'ativo' && ! $this->quickPersonRegistered;
+        $vinculoOk = $vinculo !== null && $vinculo->status === 'ativo';
 
         return [
+            'selected' => true,
             'name' => $pessoa->nomeExibicao(),
-            'initials' => $this->initialsFromName($pessoa->nome),
+            'initials' => BuscaPessoasValidacao::iniciais($pessoa->nome),
             'document' => $this->documentRevealed
-                ? ($pessoa->documentos->first()?->valor_apresentacao ?? 'Não informado')
-                : $this->maskDocument($pessoa->documentos->first()?->valor_apresentacao),
-            'type' => $this->relationLabel($vinculo?->tipo),
+                ? ($documento ?? 'Não informado')
+                : NormalizadorBusca::mascararDocumento($documento),
+            'type' => BuscaPessoasValidacao::rotuloVinculo($vinculo?->tipo),
             'property' => $vinculo?->imovel?->label() ?? 'Não vinculado',
-            'responsible' => $this->quickPersonRegistered && $this->quickResponsible !== '' ? $this->quickResponsible : 'Próprio morador',
-            'status' => $this->quickPersonRegistered ? 'Cadastro mínimo' : 'Cadastro ativo',
-            'validity' => $this->quickPersonRegistered ? 'Aguardando análise' : 'Acesso permanente',
+            'responsible' => $this->quickPersonRegistered && $this->quickResponsible !== '' ? $this->quickResponsible : null,
+            'status' => $this->quickPersonRegistered ? 'Cadastro mínimo' : ($pessoa->status === 'ativo' ? 'Cadastro ativo' : 'Cadastro '.$pessoa->status),
+            'validity' => $this->quickPersonRegistered
+                ? 'Aguardando análise'
+                : ($vinculo ? BuscaPessoasValidacao::vigencia($vinculo->started_at, $vinculo->ended_at) : 'Sem vínculo vigente'),
+            'tone' => $this->quickPersonRegistered || ! $cadastroOk || ! $vinculoOk ? 'warning' : 'success',
+            'photo_url' => $foto ? route('protected-files.show', ['arquivo' => $foto['arquivo'], 'contexto' => 'validacao']) : null,
+            'photo_state' => $foto ? 'disponivel' : ($this->canViewImage() ? 'sem_foto' : 'sem_permissao'),
+            'photo_origin' => $foto ? ($foto['origem'] === 'cadastro' ? 'Foto do cadastro' : 'Selfie do pré-cadastro aprovado') : null,
+            'links' => $vinculos->map(fn (Vinculo $item) => [
+                'type' => BuscaPessoasValidacao::rotuloVinculo($item->tipo),
+                'property' => $item->imovel?->label() ?? 'Sem imóvel',
+                'validity' => BuscaPessoasValidacao::vigencia($item->started_at, $item->ended_at),
+                'status' => $item->status,
+            ])->all(),
+            'vehicles' => $veiculos,
+            'alerts' => $alertas,
+            'checks' => [
+                ['label' => 'Cadastro', 'value' => $this->quickPersonRegistered ? 'Mínimo e provisório' : ($cadastroOk ? 'Ativo' : 'Requer atenção'), 'ok' => $cadastroOk],
+                ['label' => 'Vínculo', 'value' => $vinculoOk ? BuscaPessoasValidacao::rotuloVinculo($vinculo->tipo).' vigente' : 'Sem vínculo vigente', 'ok' => $vinculoOk],
+                ['label' => 'Autorização', 'value' => 'Conferir pelo vínculo e pelo responsável', 'ok' => null],
+                ['label' => 'Documento', 'value' => $documento ? 'Cadastrado (conferência visual)' : 'Não cadastrado', 'ok' => $documento ? null : false],
+                ['label' => 'Facial', 'value' => 'Não sincronizada', 'ok' => null],
+            ],
         ];
     }
 
-    private function maskDocument(?string $document): string
+    private function canViewImage(): bool
     {
-        $digits = preg_replace('/\D/', '', (string) $document) ?? '';
-
-        return strlen($digits) === 11
-            ? '***.***.'.substr($digits, 6, 3).'-**'
-            : ($document ? 'Documento protegido' : 'Não informado');
+        return (bool) Auth::user()?->hasPermission('arquivos.sensiveis.visualizar');
     }
 
     /** @return array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, document_portrait: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string} */
@@ -380,11 +507,6 @@ class AccessValidation extends Component
             'notes' => $this->notes !== '' ? $this->notes : null,
             'occurred_at' => now(),
         ]);
-    }
-
-    private function findResidentWithActiveVinculo(): ?string
-    {
-        return Vinculo::query()->whereNull('ended_at')->value('pessoa_id');
     }
 
     private function generateProtocol(): string
@@ -445,27 +567,6 @@ class AccessValidation extends Component
     private function normalizeDocument(string $document): string
     {
         return preg_replace('/\D/', '', $document) ?? '';
-    }
-
-    private function relationLabel(?string $tipo): string
-    {
-        return match ($tipo) {
-            'proprietario' => 'Proprietário',
-            'inquilino' => 'Inquilino',
-            'morador' => 'Morador',
-            'prestador' => 'Prestador',
-            'visitante' => 'Visitante',
-            default => 'Outro acesso',
-        };
-    }
-
-    private function initialsFromName(string $name): string
-    {
-        return collect(explode(' ', trim($name)))
-            ->filter(fn (string $part): bool => ! in_array(mb_strtolower($part), ['da', 'de', 'do', 'das', 'dos'], true))
-            ->map(fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)))
-            ->take(2)
-            ->join('');
     }
 
     public function render(): View
