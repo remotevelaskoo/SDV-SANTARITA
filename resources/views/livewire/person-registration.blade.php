@@ -258,6 +258,13 @@
                 :property="$linkedProperty['property']"
                 :status="$pessoaId === null ? 'Rascunho' : ($pendente ? 'Alterações não salvas' : 'Salvo')"
                 :tone="$pessoaId !== null && ! $pendente ? 'success' : 'warning'"
+                :validity="match (true) {
+                    $visita !== null => 'Visita de '.$visita->inicio->format('d/m H:i').' até '.$visita->fim->format('d/m H:i'),
+                    $accessType === 'tourist' => 'Visita de até 24h',
+                    $indefiniteTerm => 'Prazo indeterminado',
+                    $endDate !== '' => 'Até '.\Illuminate\Support\Carbon::parse($endDate)->format('d/m/Y'),
+                    default => 'A definir',
+                }"
             />
 
             <x-ui.link-panel

@@ -65,7 +65,9 @@ class TuristaVisitaTest extends TestCase
         $this->turista(fim: '2026-10-30')
             ->call('saveAndSend')
             ->assertSet('resultadoEnvio.variant', 'success')
-            ->assertSee('Visita autorizada de 25/10/2026 10:00 até 26/10/2026 10:00');
+            ->assertSee('Visita autorizada de 25/10/2026 10:00 até 26/10/2026 10:00')
+            ->assertSee('Visita de 25/10 10:00 até 26/10 10:00')
+            ->assertDontSee('Acesso permanente');
 
         $autorizacao = AutorizacaoAcesso::query()->sole();
         $this->assertSame(AutorizacaoAcesso::TIPO_TURISTA, $autorizacao->tipo);
