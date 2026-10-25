@@ -13,6 +13,7 @@
  *   2. capacidades  GET  /ISAPI/AccessControl/UserInfo/capabilities?format=json
  *   3. gravar       POST /ISAPI/AccessControl/UserInfo/Record?format=json   (Valid begin/end)
  *   4. consultar    POST /ISAPI/AccessControl/UserInfo/Search?format=json
+ *   4b. atualizar   PUT  /ISAPI/AccessControl/UserInfo/SetUp?format=json    (cria ou altera; fim +5 min)
  *   5. remover      PUT  /ISAPI/AccessControl/UserInfo/Delete?format=json
  *
  * Os caminhos vêm da documentação ISAPI de controle de acesso e estão sendo
@@ -94,7 +95,6 @@ function chamar(string $metodo, string $caminho, ?array $corpo = null): array
     $resposta = curl_exec($curl);
     $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
     $erro = $resposta === false ? 'curl '.curl_errno($curl).': '.curl_error($curl) : null;
-    curl_close($curl);
 
     return ['metodo' => $metodo, 'caminho' => $caminho, 'enviado' => $corpo, 'status' => $status, 'erro' => $erro, 'resposta' => $resposta === false ? null : mb_substr((string) $resposta, 0, 20000)];
 }
@@ -134,6 +134,23 @@ foreach ($passos as $passo) {
                     'enable' => true,
                     'beginTime' => $inicio->format('Y-m-d\TH:i:s'),
                     'endTime' => $fim->format('Y-m-d\TH:i:s'),
+                    'timeType' => 'local',
+                ],
+                'doorRight' => (string) $porta,
+                'RightPlan' => [['doorNo' => $porta, 'planTemplateNo' => '1']],
+            ]]));
+            break;
+
+        case 'atualizar':
+            // SetUp aparece em supportFunction: cria se não existe, altera se existe.
+            registrar('atualizar', chamar('PUT', '/ISAPI/AccessControl/UserInfo/SetUp?format=json', ['UserInfo' => [
+                'employeeNo' => EMPLOYEE_NO,
+                'name' => NOME.' ATUALIZADO',
+                'userType' => 'normal',
+                'Valid' => [
+                    'enable' => true,
+                    'beginTime' => $inicio->format('Y-m-d\TH:i:s'),
+                    'endTime' => $fim->modify('+5 minutes')->format('Y-m-d\TH:i:s'),
                     'timeType' => 'local',
                 ],
                 'doorRight' => (string) $porta,
