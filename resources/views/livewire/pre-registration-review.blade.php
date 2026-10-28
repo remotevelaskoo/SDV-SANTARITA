@@ -159,10 +159,10 @@
                     <div><dt>Nome completo</dt><dd>{{ $record->name }}</dd></div>
                     <div><dt>Documento</dt><dd>{{ $documentRevealed ? $record->document : $record->maskedDocument() }}</dd></div>
                     <div><dt>Tipo de documento</dt><dd>{{ $record->documentTypeLabel() }}</dd></div>
-                    <div><dt>Data de nascimento</dt><dd>{{ $record->birth_date->format('d/m/Y') }}</dd></div>
-                    <div><dt>Telefone</dt><dd>{{ $record->phone }}</dd></div>
-                    <div><dt>E-mail</dt><dd>{{ $record->email }}</dd></div>
-                    <div><dt>Endereço informado</dt><dd>{{ $record->address_informed }}</dd></div>
+                    <div><dt>Data de nascimento</dt><dd>{{ $record->birth_date?->format('d/m/Y') ?? 'Não informada' }}</dd></div>
+                    <div><dt>Telefone</dt><dd>{{ $record->phone ?: 'Não informado' }}</dd></div>
+                    <div><dt>E-mail</dt><dd>{{ $record->email ?: 'Não informado' }}</dd></div>
+                    <div><dt>Endereço informado</dt><dd>{{ $record->address_informed ?: 'Não informado' }}</dd></div>
                     <div><dt>Tipo de acesso</dt><dd>{{ ucfirst($record->access_type) }}</dd></div>
                     <div><dt>Destino</dt><dd>{{ $record->destination_label }}</dd></div>
                     @if ($record->requiresProperty())
@@ -187,10 +187,10 @@
                     <div class="registration-fields">
                         <x-ui.field id="edit-name" label="Nome completo" wire:model="editName" :error="$errors->first('editName')" required />
                         <x-ui.field id="edit-document" label="Documento" wire:model="editDocument" :error="$errors->first('editDocument')" required />
-                        <x-ui.field id="edit-birth-date" type="date" label="Data de nascimento" wire:model="editBirthDate" :error="$errors->first('editBirthDate')" required />
-                        <x-ui.field id="edit-phone" label="Telefone" wire:model="editPhone" :error="$errors->first('editPhone')" required />
-                        <x-ui.field id="edit-email" type="email" label="E-mail" wire:model="editEmail" :error="$errors->first('editEmail')" required />
-                        <x-ui.field id="edit-address" label="Endereço informado" wire:model="editAddressInformed" :error="$errors->first('editAddressInformed')" required />
+                        <x-ui.field id="edit-birth-date" type="date" label="Data de nascimento" wire:model="editBirthDate" :error="$errors->first('editBirthDate')" />
+                        <x-ui.field id="edit-phone" label="Telefone" wire:model="editPhone" :error="$errors->first('editPhone')" />
+                        <x-ui.field id="edit-email" type="email" label="E-mail" wire:model="editEmail" :error="$errors->first('editEmail')" />
+                        <x-ui.field id="edit-address" label="Endereço informado" wire:model="editAddressInformed" :error="$errors->first('editAddressInformed')" />
 
                         @if ($record->access_type === 'turista')
                             <x-ui.field id="edit-destination" label="Destino" value="Praia do Santa Rita" readonly help="Turista não exige imóvel nem responsável." />

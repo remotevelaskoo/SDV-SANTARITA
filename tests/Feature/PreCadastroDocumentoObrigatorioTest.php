@@ -204,6 +204,72 @@ class PreCadastroDocumentoObrigatorioTest extends TestCase
         $this->assertDatabaseCount('equipamento_credenciais', 0);
     }
 
+    public function test_somente_nome_e_cpf_sao_obrigatorios_nos_dados(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->call('nextStep')
+            ->assertSet('step', 1)
+            ->assertHasErrors(['name' => 'required', 'cpf' => 'required'])
+            ->assertHasNoErrors(['birthDate', 'phone', 'email'])
+            ->set('name', 'Pessoa Ficticia de Teste')
+            ->set('cpf', '000.000.001-91')
+            ->call('nextStep')
+            ->assertHasNoErrors()
+            ->assertSet('step', 2)
+            ->call('nextStep')
+            ->assertHasNoErrors()
+            ->assertSet('step', 3)
+            ->call('nextStep')
+            ->assertSet('step', 3)
+            ->assertHasErrors(['documentFile' => 'required'])
+            ->set('documentFile', $this->imagem('frente.jpg'))
+            ->call('nextStep')
+            ->assertSet('step', 4)
+            ->call('nextStep')
+            ->assertSet('step', 4)
+            ->assertHasErrors(['selfieFile' => 'required'])
+            ->set('selfieFile', $this->imagem('selfie.jpg', 480, 640))
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('privacyAccepted', true)
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertSet('submitted', true);
+
+        $registro = PreRegistration::query()->sole();
+        $this->assertNull($registro->birth_date);
+        $this->assertNull($registro->phone);
+        $this->assertNull($registro->email);
+        $this->assertNull($registro->address_informed);
+
+        Livewire::actingAs($this->operador('pre-registro.analisar', 'pre-registro.editar'))
+            ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
+            ->assertSee('Não informada')
+            ->call('beginEdit')
+            ->set('editReason', 'Conferido na portaria')
+            ->set('editPhone', '(12) 90000-0000')
+            ->call('saveEdit')
+            ->assertHasNoErrors();
+
+        $registro->refresh();
+        $this->assertSame('(12) 90000-0000', $registro->phone);
+        $this->assertNull($registro->birth_date);
+    }
+
+    public function test_dados_opcionais_informados_ainda_sao_validados(): void
+    {
+        Livewire::test(PublicPreRegistration::class)
+            ->call('start')
+            ->set('name', 'Pessoa Ficticia de Teste')
+            ->set('cpf', '000.000.001-91')
+            ->set('email', 'nao-e-email')
+            ->set('birthDate', now()->addDay()->format('Y-m-d'))
+            ->call('nextStep')
+            ->assertSet('step', 1)
+            ->assertHasErrors(['email', 'birthDate']);
+    }
+
     private function ateEtapaDoDocumento(): Testable
     {
         return Livewire::test(PublicPreRegistration::class)

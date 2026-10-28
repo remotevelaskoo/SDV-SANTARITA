@@ -118,9 +118,9 @@
                             <div class="pre-registration-fields">
                                 <x-ui.field id="pre-name" label="Nome completo" wire:model="name" :error="$errors->first('name')" required />
                                 <x-ui.field id="pre-cpf" label="CPF" wire:model="cpf" placeholder="000.000.000-00" :error="$errors->first('cpf')" required />
-                                <x-ui.field id="pre-birth-date" type="date" label="Data de nascimento" wire:model="birthDate" :error="$errors->first('birthDate')" required />
-                                <x-ui.field id="pre-phone" type="tel" label="Telefone com DDD" wire:model="phone" placeholder="(12) 99999-9999" :error="$errors->first('phone')" required />
-                                <x-ui.field id="pre-email" type="email" label="E-mail" wire:model="email" :error="$errors->first('email')" required />
+                                <x-ui.field id="pre-birth-date" type="date" label="Data de nascimento" wire:model="birthDate" :error="$errors->first('birthDate')" />
+                                <x-ui.field id="pre-phone" type="tel" label="Telefone com DDD" wire:model="phone" placeholder="(12) 99999-9999" :error="$errors->first('phone')" />
+                                <x-ui.field id="pre-email" type="email" label="E-mail" wire:model="email" :error="$errors->first('email')" />
                                 <x-ui.select id="pre-access-type" label="Tipo de acesso" wire:model="accessType" :error="$errors->first('accessType')" required>
                                     <option value="visitante">Visitante</option>
                                     <option value="turista">Turista</option>
@@ -139,13 +139,13 @@
                                 <x-ui.alert variant="warning" title="CEP não encontrado">Não localizamos este CEP automaticamente. Preencha o endereço manualmente.</x-ui.alert>
                             @endif
                             <div class="pre-registration-fields pre-registration-fields--address">
-                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required />
-                                <x-ui.field id="pre-address" label="Endereço" wire:model="address" :error="$errors->first('address')" required />
-                                <x-ui.field id="pre-address-number" label="Número" wire:model="addressNumber" :error="$errors->first('addressNumber')" required />
+                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" />
+                                <x-ui.field id="pre-address" label="Endereço" wire:model="address" :error="$errors->first('address')" />
+                                <x-ui.field id="pre-address-number" label="Número" wire:model="addressNumber" :error="$errors->first('addressNumber')" />
                                 <x-ui.field id="pre-address-complement" label="Complemento" wire:model="addressComplement" />
-                                <x-ui.field id="pre-district" label="Bairro" wire:model="district" :error="$errors->first('district')" required />
-                                <x-ui.field id="pre-city" label="Cidade" wire:model="city" :error="$errors->first('city')" required />
-                                <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" required />
+                                <x-ui.field id="pre-district" label="Bairro" wire:model="district" :error="$errors->first('district')" />
+                                <x-ui.field id="pre-city" label="Cidade" wire:model="city" :error="$errors->first('city')" />
+                                <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" />
                             </div>
                             @if ($accessType === 'turista')
                                 <article class="pre-registration-destination"><span>Destino da estadia</span><strong>Praia do Santa Rita</strong><small>Área comum — sem vínculo com um imóvel específico</small></article>
@@ -287,8 +287,8 @@
                             @if ($hasVehicle)
                                 <div class="pre-registration-fields pre-registration-vehicle-fields">
                                     <x-ui.field id="pre-plate" label="Placa" wire:model="plate" placeholder="ABC1D23" :error="$errors->first('plate')" required />
-                                    <x-ui.field id="pre-vehicle-model" label="Marca e modelo" wire:model="vehicleModel" :error="$errors->first('vehicleModel')" required />
-                                    <x-ui.field id="pre-vehicle-color" label="Cor" wire:model="vehicleColor" :error="$errors->first('vehicleColor')" required />
+                                    <x-ui.field id="pre-vehicle-model" label="Marca e modelo" wire:model="vehicleModel" :error="$errors->first('vehicleModel')" />
+                                    <x-ui.field id="pre-vehicle-color" label="Cor" wire:model="vehicleColor" :error="$errors->first('vehicleColor')" />
                                 </div>
                                 <x-ui.alert variant="warning" title="O veículo será conferido na chegada">
                                     Uma placa informada no pré-cadastro não libera o acesso automaticamente.

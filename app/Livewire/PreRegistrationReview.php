@@ -99,6 +99,9 @@ class PreRegistrationReview extends Component
         'editVehicleColor' => ['column' => 'vehicle_color', 'label' => 'Cor do veículo'],
     ];
 
+    /** Só nome e CPF são obrigatórios; estes ficam nulos quando apagados. */
+    private const OPTIONAL_COLUMNS = ['phone', 'email', 'address_informed'];
+
     public function mount(string $preRegistration): void
     {
         abort_unless(Auth::user()?->hasPermission('pre-registro.analisar'), 403);
@@ -231,10 +234,10 @@ class PreRegistrationReview extends Component
         $this->editVersion = $record->version;
         $this->editName = $record->name;
         $this->editDocument = $record->document;
-        $this->editBirthDate = $record->birth_date->format('Y-m-d');
-        $this->editPhone = $record->phone;
-        $this->editEmail = $record->email;
-        $this->editAddressInformed = $record->address_informed;
+        $this->editBirthDate = (string) $record->birth_date?->format('Y-m-d');
+        $this->editPhone = (string) $record->phone;
+        $this->editEmail = (string) $record->email;
+        $this->editAddressInformed = (string) $record->address_informed;
         $this->editDestinationProperty = (string) $record->destination_property;
         $this->editDestinationLabel = $record->destination_label;
         $this->editResponsibleName = (string) $record->responsible_name;
@@ -274,10 +277,10 @@ class PreRegistrationReview extends Component
         $rules = [
             'editName' => ['required', 'string', 'min:3', 'max:120'],
             'editDocument' => ['required', 'string', 'max:20'],
-            'editBirthDate' => ['required', 'date', 'before:today'],
-            'editPhone' => ['required', 'string', 'min:8', 'max:20'],
-            'editEmail' => ['required', 'email', 'max:120'],
-            'editAddressInformed' => ['required', 'string', 'max:200'],
+            'editBirthDate' => ['nullable', 'date', 'before:today'],
+            'editPhone' => ['nullable', 'string', 'min:8', 'max:20'],
+            'editEmail' => ['nullable', 'email', 'max:120'],
+            'editAddressInformed' => ['nullable', 'string', 'max:200'],
             'editPeriodStart' => ['required', 'date'],
             'editPeriodEnd' => ['required', 'date', 'after:editPeriodStart'],
             'editVehiclePlate' => ['nullable', 'string', 'max:10'],
@@ -345,7 +348,9 @@ class PreRegistrationReview extends Component
                 $changes[] = [$meta['column'], $meta['label'], $old, $new];
             }
 
-            $record->{$meta['column']} = $this->{$property};
+            $record->{$meta['column']} = $this->{$property} === '' && in_array($meta['column'], self::OPTIONAL_COLUMNS, true)
+                ? null
+                : $this->{$property};
         }
 
         if ($record->access_type === 'visitante') {
@@ -374,10 +379,12 @@ class PreRegistrationReview extends Component
         $record->period_start = $newStart;
         $record->period_end = $newEnd;
 
-        if (! $record->birth_date->equalTo($this->editBirthDate)) {
-            $changes[] = ['birth_date', 'Data de nascimento', $record->birth_date->format('d/m/Y'), Carbon::parse($this->editBirthDate)->format('d/m/Y')];
+        $oldBirthDate = (string) $record->birth_date?->format('d/m/Y');
+        $newBirthDate = $this->editBirthDate !== '' ? Carbon::parse($this->editBirthDate)->format('d/m/Y') : '';
+        if ($oldBirthDate !== $newBirthDate) {
+            $changes[] = ['birth_date', 'Data de nascimento', $oldBirthDate, $newBirthDate];
         }
-        $record->birth_date = $this->editBirthDate;
+        $record->birth_date = $this->editBirthDate !== '' ? $this->editBirthDate : null;
 
         $record->version = $record->version + 1;
         $record->save();

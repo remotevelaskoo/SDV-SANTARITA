@@ -378,14 +378,7 @@ class PublicPreRegistration extends Component
             $this->fileValidationMessages(),
         ));
 
-        $addressLine = "{$this->address}, {$this->addressNumber}";
-
-        if ($this->addressComplement !== '') {
-            $addressLine .= " · {$this->addressComplement}";
-        }
-
-        $addressLine .= " · {$this->district} · {$this->city}/{$this->state}";
-
+        $addressLine = $this->addressLine();
         $isTourist = $this->accessType === 'turista';
         $portraitBytes = $this->preparePortraitCrop();
 
@@ -396,9 +389,9 @@ class PublicPreRegistration extends Component
                     'name' => $this->name,
                     'document' => $this->cpf,
                     'document_type' => $this->documentType,
-                    'birth_date' => $this->birthDate,
-                    'phone' => $this->phone,
-                    'email' => $this->email,
+                    'birth_date' => $this->birthDate ?: null,
+                    'phone' => $this->phone ?: null,
+                    'email' => $this->email ?: null,
                     'access_type' => $this->accessType,
                     'address_informed' => $addressLine,
                     'destination_property' => $isTourist ? null : $this->destinationProperty,
@@ -491,6 +484,16 @@ class PublicPreRegistration extends Component
         return 'Arquivo protegido disponível para conferência';
     }
 
+    /** Junta só as partes do endereço que foram informadas; nenhuma é obrigatória. */
+    private function addressLine(): ?string
+    {
+        $street = implode(', ', array_filter([trim($this->address), trim($this->addressNumber)]));
+        $city = implode('/', array_filter([trim($this->city), trim($this->state)]));
+        $line = implode(' · ', array_filter([$street, trim($this->addressComplement), trim($this->district), $city]));
+
+        return $line !== '' ? $line : null;
+    }
+
     private function generateProtocol(): string
     {
         return 'PRE-SRA-'.strtoupper(Str::random(6));
@@ -539,36 +542,15 @@ class PublicPreRegistration extends Component
     private function validateCurrentStep(): void
     {
         $rules = match ($this->step) {
-            1 => [
-                'name' => ['required', 'string', 'min:3', 'max:120'],
-                'cpf' => ['required', 'string', 'min:11', 'max:14'],
-                'birthDate' => ['required', 'date', 'before:today'],
-                'phone' => ['required', 'string', 'min:10', 'max:20'],
-                'email' => ['required', 'email', 'max:120'],
-                'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
-            ],
-            2 => [
-                'zipCode' => ['required', 'string', 'min:8', 'max:9'],
-                'address' => ['required', 'string', 'max:160'],
-                'addressNumber' => ['required', 'string', 'max:20'],
-                'district' => ['required', 'string', 'max:80'],
-                'city' => ['required', 'string', 'max:80'],
-                'state' => ['required', 'string', 'size:2'],
-                'destinationProperty' => $this->accessType === 'turista'
-                    ? []
-                    : ['required', Rule::in($this->destinationOptions())],
-            ],
+            1 => $this->personalRules(),
+            2 => $this->addressRules(),
             3 => [
                 'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
                 'documentFile' => $this->protectedImageRules(),
                 'documentBackFile' => $this->documentBackRules(),
             ],
             4 => ['selfieFile' => $this->protectedImageRules()],
-            5 => $this->hasVehicle ? [
-                'plate' => ['required', 'string', 'min:7', 'max:8'],
-                'vehicleModel' => ['required', 'string', 'max:100'],
-                'vehicleColor' => ['required', 'string', 'max:40'],
-            ] : [],
+            5 => $this->vehicleRules(),
             6 => ['privacyAccepted' => ['accepted']],
             default => [],
         };
@@ -584,28 +566,57 @@ class PublicPreRegistration extends Component
     private function submissionRules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:120'],
-            'cpf' => ['required', 'string', 'min:11', 'max:14'],
-            'birthDate' => ['required', 'date', 'before:today'],
-            'phone' => ['required', 'string', 'min:10', 'max:20'],
-            'email' => ['required', 'email', 'max:120'],
-            'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
-            'zipCode' => ['required', 'string', 'min:8', 'max:9'],
-            'address' => ['required', 'string', 'max:160'],
-            'addressNumber' => ['required', 'string', 'max:20'],
-            'district' => ['required', 'string', 'max:80'],
-            'city' => ['required', 'string', 'max:80'],
-            'state' => ['required', 'string', 'size:2'],
-            'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
+            ...$this->personalRules(),
+            ...$this->addressRules(),
             'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
             'documentFile' => $this->protectedImageRules(),
             'documentBackFile' => $this->documentBackRules(),
             'selfieFile' => $this->protectedImageRules(),
-            'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
-            'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],
-            'vehicleColor' => $this->hasVehicle ? ['required', 'string', 'max:40'] : [],
+            ...$this->vehicleRules(),
             'privacyAccepted' => ['accepted'],
         ];
+    }
+
+    /**
+     * Só nome e CPF são obrigatórios (decisão do PO, 28/10/2026); os demais
+     * dados, quando informados, ainda precisam ser válidos.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function personalRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'min:3', 'max:120'],
+            'cpf' => ['required', 'string', 'min:11', 'max:14'],
+            'birthDate' => ['nullable', 'date', 'before:today'],
+            'phone' => ['nullable', 'string', 'min:10', 'max:20'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    private function addressRules(): array
+    {
+        return [
+            'zipCode' => ['nullable', 'string', 'min:8', 'max:9'],
+            'address' => ['nullable', 'string', 'max:160'],
+            'addressNumber' => ['nullable', 'string', 'max:20'],
+            'district' => ['nullable', 'string', 'max:80'],
+            'city' => ['nullable', 'string', 'max:80'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    private function vehicleRules(): array
+    {
+        return $this->hasVehicle ? [
+            'plate' => ['required', 'string', 'min:7', 'max:8'],
+            'vehicleModel' => ['nullable', 'string', 'max:100'],
+            'vehicleColor' => ['nullable', 'string', 'max:40'],
+        ] : [];
     }
 
     /** @return array<int, string> */
