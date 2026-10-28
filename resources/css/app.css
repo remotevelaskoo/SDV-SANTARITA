@@ -2103,9 +2103,9 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .pre-cadastro-analise h3 { margin: 0; color: var(--navy-900); font-size: 0.8rem; }
 .pre-cadastro-analise__imagens > header p, .pre-cadastro-analise__nota, .pre-cadastro-analise__bloco > header small, .pre-cadastro-analise__decisao > header small { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.6rem; line-height: 1.5; }
 .pre-cadastro-analise__exibir { display: flex; justify-content: flex-start; }
-.pre-cadastro-analise__galeria { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.pre-cadastro-analise__galeria { display: grid; grid-template-columns: minmax(0, 13rem); gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
 .pre-cadastro-analise__figura { display: grid; gap: 0.3rem; margin: 0; }
-.pre-cadastro-analise__moldura { display: grid; height: 8.5rem; place-items: center; overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--neutral-050); }
+.pre-cadastro-analise__moldura { display: grid; height: 15rem; place-items: center; overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--neutral-050); }
 .pre-cadastro-analise__figura.is-ausente .pre-cadastro-analise__moldura { height: 3.25rem; border-style: dashed; }
 .pre-cadastro-analise__moldura img { display: block; width: 100%; height: 100%; object-fit: contain; background: #111827; }
 .pre-cadastro-analise__oculta { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem; color: var(--neutral-600); font-size: 0.6rem; text-align: center; }
@@ -2155,7 +2155,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 }
 
 @media (min-width: 64rem) {
-    .pre-cadastro-analise__grade { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+    .pre-cadastro-analise__grade { grid-template-columns: minmax(15rem, 16rem) minmax(0, 1fr); }
     .pre-cadastro-analise__decisao { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
     .pre-cadastro-analise__acoes { justify-content: flex-end; }
     .pre-cadastro-analise__motivo { flex-wrap: nowrap; }

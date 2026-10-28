@@ -509,10 +509,10 @@ class PreRegistrationReview extends Component
             // Só ocorre em fichas enviadas antes da correção que tornou a frente obrigatória.
             $alerts[] = ['variant' => 'warning', 'title' => 'Documento não enviado', 'message' => 'A frente do documento é obrigatória. Confira o documento original presencialmente antes de decidir.'];
         } elseif ($record->documentExtractions->isEmpty()) {
-            $alerts[] = ['variant' => 'warning', 'title' => 'Conferência manual obrigatória', 'message' => 'A leitura automática não foi realizada. Compare nome, CPF e nascimento com a imagem do documento.'];
+            $alerts[] = ['variant' => 'warning', 'title' => 'Conferência manual obrigatória', 'message' => 'A leitura automática não foi realizada. Compare nome, CPF e nascimento com o documento original.'];
         }
         if ($divergencias > 0) {
-            $alerts[] = ['variant' => 'warning', 'title' => $divergencias === 1 ? '1 campo para conferir' : "{$divergencias} campos para conferir", 'message' => 'A leitura automática e os dados confirmados não coincidem ou têm confiança baixa. Compare com a imagem do documento.'];
+            $alerts[] = ['variant' => 'warning', 'title' => $divergencias === 1 ? '1 campo para conferir' : "{$divergencias} campos para conferir", 'message' => 'A leitura automática e os dados confirmados não coincidem ou têm confiança baixa. Compare com o documento original.'];
         }
         if ($record->period_end->isPast()) {
             $alerts[] = ['variant' => 'warning', 'title' => 'Período encerrado', 'message' => 'O período informado já terminou.'];
@@ -529,8 +529,10 @@ class PreRegistrationReview extends Component
         $linhasOcr = $leitura ? ComparacaoOcrPreCadastro::linhas($record, $leitura) : [];
         $divergencias = ComparacaoOcrPreCadastro::divergencias($linhasOcr);
 
+        // Decisão do PO (28/10/2026): a conferência visual exibe só a selfie.
+        // Frente, verso e foto recortada seguem guardados de forma privada.
         $imagens = [];
-        foreach (['selfie' => 'Selfie', 'documento_foto' => 'Foto recortada do documento', 'documento' => 'Documento (frente)', 'documento_verso' => 'Documento (verso)'] as $categoria => $rotulo) {
+        foreach (['selfie' => 'Selfie'] as $categoria => $rotulo) {
             $link = $record->currentFileLink($categoria);
             $imagens[] = [
                 'categoria' => $categoria,

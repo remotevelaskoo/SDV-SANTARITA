@@ -64,22 +64,22 @@
             <header>
                 <div>
                     <h3 id="analise-imagens-titulo">Conferência visual protegida</h3>
-                    <p>As imagens só carregam depois do clique, e cada uma aberta é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada.</p>
+                    <p>A selfie só carrega depois do clique, e cada abertura é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada.</p>
                 </div>
                 <x-ui.badge variant="warning">Dados sensíveis</x-ui.badge>
             </header>
 
             @if ($podeVerImagens)
                 <div class="pre-cadastro-analise__exibir" x-show="!exibir">
-                    <x-ui.button variant="secondary" x-on:click="exibir = true">Exibir imagens para conferência</x-ui.button>
+                    <x-ui.button variant="secondary" x-on:click="exibir = true">Exibir selfie para conferência</x-ui.button>
                 </div>
             @else
-                <x-ui.alert variant="info" title="Imagens protegidas pelo seu perfil">
-                    Seu perfil não permite abrir selfie e documento. Analise os dados ou peça apoio a quem tem a permissão.
+                <x-ui.alert variant="info" title="Selfie protegida pelo seu perfil">
+                    Seu perfil não permite abrir a selfie. Analise os dados ou peça apoio a quem tem a permissão.
                 </x-ui.alert>
             @endif
 
-            <ul class="pre-cadastro-analise__galeria" aria-label="Miniaturas das evidências">
+            <ul class="pre-cadastro-analise__galeria" aria-label="Selfie para conferência">
                 @foreach ($imagens as $imagem)
                     <li @class(['pre-cadastro-analise__figura', 'is-ausente' => ! $imagem['arquivo']])>
                         <div class="pre-cadastro-analise__moldura">

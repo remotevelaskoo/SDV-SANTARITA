@@ -113,10 +113,10 @@ class AnaliseSimplificadaTest extends TestCase
         $this->assertRecolhidos($html);
     }
 
-    public function test_miniaturas_em_grade_compacta_e_ampliacao_protegida(): void
+    public function test_somente_a_selfie_em_miniatura_com_ampliacao_protegida(): void
     {
         $registro = PreRegistration::factory()->create();
-        $arquivos = app(PrivateFileService::class)->storePreRegistrationFiles($registro, [
+        [$selfie, $frente, $verso] = app(PrivateFileService::class)->storePreRegistrationFiles($registro, [
             'selfie' => UploadedFile::fake()->image('selfie.jpg', 480, 640),
             'documento' => UploadedFile::fake()->image('frente.jpg', 1200, 800),
             'documento_verso' => UploadedFile::fake()->image('verso.jpg', 1200, 800),
@@ -124,18 +124,30 @@ class AnaliseSimplificadaTest extends TestCase
 
         $html = Livewire::actingAs($this->operador('pre-registro.analisar', 'arquivos.sensiveis.visualizar'))
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
-            ->assertSee('Exibir imagens para conferência')
+            ->assertSee('Exibir selfie para conferência')
             ->assertSee('Ampliar Selfie', escape: false)
             ->assertSee('Download não é oferecido')
             ->html();
 
-        $galeria = $this->entre($html, 'aria-label="Miniaturas das evidências"', '</ul>');
-        $this->assertSame(4, substr_count($galeria, 'pre-cadastro-analise__figura'));
-        $this->assertSame(1, substr_count($galeria, 'is-ausente'), 'foto recortada ausente vira cartão compacto');
-        foreach ($arquivos as $arquivo) {
-            $this->assertStringContainsString($arquivo->id, $galeria);
-            $this->assertStringNotContainsString('src="'.route('protected-files.show', $arquivo), $html);
+        $galeria = $this->entre($html, 'aria-label="Selfie para conferência"', '</ul>');
+        $this->assertSame(1, substr_count($galeria, 'pre-cadastro-analise__figura'));
+        $this->assertStringContainsString($selfie->id, $galeria);
+        $this->assertStringNotContainsString('src="'.route('protected-files.show', $selfie), $html);
+        foreach ([$frente, $verso] as $arquivo) {
+            $this->assertStringNotContainsString($arquivo->id, $html, 'documento não é exposto na análise');
         }
+    }
+
+    public function test_selfie_ausente_vira_cartao_compacto(): void
+    {
+        $registro = PreRegistration::factory()->create();
+
+        $html = Livewire::actingAs($this->operador('pre-registro.analisar', 'arquivos.sensiveis.visualizar'))
+            ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
+            ->assertSee('Não enviado neste pré-cadastro')
+            ->html();
+
+        $this->assertSame(1, substr_count($this->entre($html, 'aria-label="Selfie para conferência"', '</ul>'), 'is-ausente'));
     }
 
     public function test_motivo_so_aparece_depois_de_escolher_a_acao(): void

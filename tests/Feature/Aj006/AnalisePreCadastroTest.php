@@ -101,10 +101,10 @@ class AnalisePreCadastroTest extends TestCase
         $this->assertSame('aprovado', $registro->fresh()->status);
     }
 
-    public function test_mostra_as_quatro_imagens_somente_apos_clique_e_com_contexto_auditado(): void
+    public function test_mostra_so_a_selfie_apos_clique_e_com_contexto_auditado(): void
     {
         $registro = PreRegistration::factory()->create();
-        $arquivos = app(PrivateFileService::class)->storePreRegistrationFiles($registro, [
+        [$selfie, $frente, $verso] = app(PrivateFileService::class)->storePreRegistrationFiles($registro, [
             'selfie' => UploadedFile::fake()->image('selfie.jpg', 480, 640),
             'documento' => UploadedFile::fake()->image('frente.jpg', 1200, 800),
             'documento_verso' => UploadedFile::fake()->image('verso.jpg', 1200, 800),
@@ -113,19 +113,21 @@ class AnalisePreCadastroTest extends TestCase
 
         $teste = Livewire::actingAs($operador)
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
-            ->assertSee('Exibir imagens para conferência')
+            ->assertSee('Exibir selfie para conferência')
             ->assertSee('Selfie')
-            ->assertSee('Documento (frente)')
-            ->assertSee('Documento (verso)')
-            ->assertSee('Foto recortada do documento')
-            ->assertSee('Não enviado neste pré-cadastro');
+            ->assertDontSee('Documento (frente)')
+            ->assertDontSee('Documento (verso)')
+            ->assertDontSee('Foto recortada do documento')
+            ->assertSee($selfie->id, escape: false)
+            ->assertDontSee('src="'.route('protected-files.show', $selfie), escape: false);
 
-        foreach ($arquivos as $arquivo) {
-            $teste->assertSee($arquivo->id, escape: false)
-                ->assertDontSee('src="'.route('protected-files.show', $arquivo), escape: false);
+        // Frente e verso continuam guardados, mas não são expostos na análise.
+        foreach ([$frente, $verso] as $arquivo) {
+            $teste->assertDontSee($arquivo->id, escape: false);
+            $this->assertNotNull($registro->fresh()->currentFileLink($arquivo === $frente ? 'documento' : 'documento_verso')?->file);
         }
 
-        $url = route('protected-files.show', ['arquivo' => $arquivos[0], 'contexto' => 'analise_pre_cadastro']);
+        $url = route('protected-files.show', ['arquivo' => $selfie, 'contexto' => 'analise_pre_cadastro']);
         $teste->assertSee(str_replace('/', '\/', $url), escape: false);
 
         $this->actingAs($operador)->get($url)->assertOk();
@@ -142,8 +144,8 @@ class AnalisePreCadastroTest extends TestCase
 
         Livewire::actingAs($this->operador('pre-registro.analisar'))
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
-            ->assertSee('Imagens protegidas pelo seu perfil')
-            ->assertDontSee('Exibir imagens para conferência')
+            ->assertSee('Selfie protegida pelo seu perfil')
+            ->assertDontSee('Exibir selfie para conferência')
             ->assertDontSee($selfie->id, escape: false);
     }
 

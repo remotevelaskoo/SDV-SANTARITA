@@ -225,3 +225,7 @@ Implementado em 28/10/2026 na branch `claude/project-thread-1rctvb`, somente na 
 - barra de decisão fixa ao rolar (a partir de 48rem) com Editar dados, Solicitar correção, Rejeitar e Aprovar pré-cadastro; o motivo da rejeição ou o item da correção só aparece depois da escolha (`chooseDecision`, conferida pela permissão específica).
 
 Cobertura em `tests/Feature/Aj006/AnaliseSimplificadaTest.php`, além dos testes existentes em `AnalisePreCadastroTest`.
+
+### 13.7 Somente a selfie na conferência visual
+
+Decisão do PO em 28/10/2026, que altera o item 2 dos critérios da seção 13.5: a área de dados sensíveis da análise exibe **somente a selfie**. Frente, verso e foto recortada do documento continuam obrigatórios no envio e guardados como arquivos privados, mas não são exibidos nem referenciados nesta tela. Os avisos de divergência passam a orientar a comparação com o documento original. A selfie mantém a revelação por clique, a permissão `arquivos.sensiveis.visualizar`, a ampliação protegida sem download e o registro de auditoria.
