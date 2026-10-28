@@ -213,3 +213,15 @@ A tela deverá apresentar, nesta ordem:
 8. Layout responsivo, navegação por teclado, foco visível e títulos acessíveis são preservados.
 9. Nenhuma mudança reduz permissões, mascaramento, auditoria ou armazenamento privado.
 10. Testes existentes de segurança e decisão continuam passando; novos testes cobrem a presença da hierarquia e dos controles essenciais.
+
+### 13.6 Situação da implementação
+
+Implementado em 28/10/2026 na branch `claude/project-thread-1rctvb`, somente na apresentação de `PreRegistrationReview`; permissões, mascaramento, arquivos privados, auditoria e as regras de decisão no backend não mudaram.
+
+- cabeçalho compacto com período e protocolo; um único painel "Pendências para conferir" agrupa os avisos, cada um com título e orientação;
+- miniaturas em grade 2×2 com altura fixa e `object-fit: contain`; imagem ausente vira cartão tracejado compacto; "Ampliar" abre o visualizador protegido existente, sem download;
+- "Dados essenciais" (nome, documento mascarado, nascimento, telefone, tipo, imóvel/destino, responsável, período) e, ao lado, só os campos divergentes ou de baixa confiança da leitura;
+- "Ver mais detalhes", "Comparação completa da leitura" e "Histórico" em `<details>` recolhidos;
+- barra de decisão fixa ao rolar (a partir de 48rem) com Editar dados, Solicitar correção, Rejeitar e Aprovar pré-cadastro; o motivo da rejeição ou o item da correção só aparece depois da escolha (`chooseDecision`, conferida pela permissão específica).
+
+Cobertura em `tests/Feature/Aj006/AnaliseSimplificadaTest.php`, além dos testes existentes em `AnalisePreCadastroTest`.

@@ -34,6 +34,9 @@ class PreRegistrationReview extends Component
 
     public string $correctionItems = 'documento';
 
+    /** Ação condicional escolhida ('corrigir' ou 'rejeitar'); só então o motivo aparece. */
+    public ?string $pendingDecision = null;
+
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
@@ -216,6 +219,26 @@ class PreRegistrationReview extends Component
         ];
     }
 
+    public function chooseDecision(string $decision): void
+    {
+        $permission = match ($decision) {
+            'corrigir' => 'pre-registro.solicitar-correcao',
+            'rejeitar' => 'pre-registro.rejeitar',
+            default => null,
+        };
+        abort_if($permission === null, 404);
+        $this->authorizeDecision($permission);
+
+        $this->pendingDecision = $decision;
+        $this->resetErrorBag(['rejectionReason', 'correctionItems']);
+    }
+
+    public function cancelDecision(): void
+    {
+        $this->pendingDecision = null;
+        $this->resetErrorBag(['rejectionReason', 'correctionItems']);
+    }
+
     public function beginEdit(): void
     {
         $record = $this->record();
@@ -231,6 +254,7 @@ class PreRegistrationReview extends Component
         }
 
         $this->editing = true;
+        $this->pendingDecision = null;
         $this->editVersion = $record->version;
         $this->editName = $record->name;
         $this->editDocument = $record->document;
@@ -522,6 +546,7 @@ class PreRegistrationReview extends Component
             'record' => $record,
             'leitura' => $leitura,
             'linhasOcr' => $linhasOcr,
+            'linhasDivergentes' => array_values(array_filter($linhasOcr, fn (array $linha) => ! in_array($linha['tom'], ['success', 'neutral'], true))),
             'alerts' => $this->alerts($record, $divergencias),
             'imagens' => $imagens,
             'podeVerImagens' => (bool) $user?->hasPermission('arquivos.sensiveis.visualizar'),

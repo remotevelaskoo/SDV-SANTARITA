@@ -2078,29 +2078,60 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .reports-ticket-fix footer { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 /* AJ-006 — análise do pré-cadastro em página própria */
-.pre-cadastro-analise { display: grid; gap: 1rem; }
+/* SDV-OPE-020 §13: hierarquia compacta — nenhuma imagem ocupa a largura toda. */
+.pre-cadastro-analise { display: grid; gap: 0.85rem; padding-bottom: 0.5rem; }
 .pre-cadastro-analise__voltar a { color: var(--blue-700); font-size: 0.68rem; font-weight: 750; text-decoration: none; }
-.pre-cadastro-analise__pessoa { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
-.pre-cadastro-analise__pessoa h2 { margin: 0; color: var(--navy-900); font-size: 1.05rem; }
-.pre-cadastro-analise__pessoa p { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.65rem; }
-.pre-cadastro-analise__situacao { display: grid; grid-column: 1 / -1; justify-items: start; gap: 0.25rem; }
+.pre-cadastro-analise__voltar a:focus-visible, .pre-cadastro-analise__recolhido > summary:focus-visible { outline: 2px solid var(--blue-700); outline-offset: 2px; border-radius: var(--radius-sm, 0.25rem); }
+.pre-cadastro-analise__pessoa { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.6rem 0.75rem; padding: 0.7rem 0.9rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.pre-cadastro-analise__pessoa .pre-registration-person-avatar { width: 2.25rem; height: 2.25rem; font-size: 0.7rem; }
+.pre-cadastro-analise__pessoa h2 { margin: 0; color: var(--navy-900); font-size: 0.95rem; }
+.pre-cadastro-analise__pessoa p { margin: 0.1rem 0 0; color: var(--neutral-600); font-size: 0.63rem; }
+.pre-cadastro-analise__situacao { display: grid; grid-column: 1 / -1; justify-items: start; gap: 0.2rem; }
 .pre-cadastro-analise__situacao small { color: var(--neutral-600); font-size: 0.6rem; }
-.pre-cadastro-analise__alertas { display: grid; gap: 0.6rem; }
-.pre-cadastro-analise__grade { display: grid; gap: 1rem; align-items: start; }
-.pre-cadastro-analise__imagens, .pre-cadastro-analise__bloco, .pre-cadastro-analise__decisao { display: grid; gap: 0.8rem; padding: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
-.pre-cadastro-analise__imagens { border-color: #f1cf72; background: #fffbeb; }
+.pre-cadastro-analise__pendencias { display: grid; gap: 0.45rem; padding: 0.7rem 0.9rem; border: 1px solid #f1cf72; border-radius: var(--radius-lg); background: #fffbeb; }
+.pre-cadastro-analise__pendencias.is-vazio { border-color: #a7e3c0; background: #f0fdf4; }
+.pre-cadastro-analise__pendencias ul { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.pre-cadastro-analise__pendencias li { display: grid; gap: 0.05rem; padding-left: 0.6rem; border-left: 3px solid var(--blue-700); font-size: 0.62rem; line-height: 1.45; }
+.pre-cadastro-analise__pendencias li.is-warning { border-left-color: #d97706; }
+.pre-cadastro-analise__pendencias li.is-danger { border-left-color: #dc2626; }
+.pre-cadastro-analise__pendencias li strong { color: var(--navy-900); }
+.pre-cadastro-analise__pendencias li span { color: var(--neutral-700, #374151); }
+.pre-cadastro-analise__contador { display: inline-grid; min-width: 1.2rem; height: 1.2rem; place-items: center; margin-left: 0.3rem; padding: 0 0.3rem; border-radius: 999px; background: #d97706; color: var(--white); font-size: 0.6rem; }
+.pre-cadastro-analise__grade { display: grid; gap: 0.85rem; align-items: start; }
+.pre-cadastro-analise__imagens, .pre-cadastro-analise__bloco, .pre-cadastro-analise__decisao { display: grid; gap: 0.7rem; padding: 0.85rem 0.9rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
 .pre-cadastro-analise__imagens > header, .pre-cadastro-analise__bloco > header, .pre-cadastro-analise__decisao > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
 .pre-cadastro-analise h3 { margin: 0; color: var(--navy-900); font-size: 0.8rem; }
 .pre-cadastro-analise__imagens > header p, .pre-cadastro-analise__nota, .pre-cadastro-analise__bloco > header small, .pre-cadastro-analise__decisao > header small { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.6rem; line-height: 1.5; }
-.pre-cadastro-analise__exibir { display: flex; justify-content: center; }
-.pre-cadastro-analise__galeria { display: grid; gap: 0.75rem; }
-.pre-cadastro-analise__figura { display: grid; gap: 0.35rem; margin: 0; }
-.pre-cadastro-analise__moldura { display: grid; min-height: 14rem; place-items: center; overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--neutral-050); }
-.pre-cadastro-analise__moldura img { display: block; width: 100%; height: 100%; max-height: 26rem; object-fit: contain; background: #111827; }
-.pre-cadastro-analise__oculta { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.75rem; color: var(--neutral-600); font-size: 0.62rem; text-align: center; }
+.pre-cadastro-analise__exibir { display: flex; justify-content: flex-start; }
+.pre-cadastro-analise__galeria { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.pre-cadastro-analise__figura { display: grid; gap: 0.3rem; margin: 0; }
+.pre-cadastro-analise__moldura { display: grid; height: 8.5rem; place-items: center; overflow: hidden; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--neutral-050); }
+.pre-cadastro-analise__figura.is-ausente .pre-cadastro-analise__moldura { height: 3.25rem; border-style: dashed; }
+.pre-cadastro-analise__moldura img { display: block; width: 100%; height: 100%; object-fit: contain; background: #111827; }
+.pre-cadastro-analise__oculta { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem; color: var(--neutral-600); font-size: 0.6rem; text-align: center; }
 .pre-cadastro-analise__oculta .app-icon { width: 1rem; height: 1rem; }
-.pre-cadastro-analise__figura figcaption { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.64rem; }
-.pre-cadastro-analise__dados { display: grid; gap: 1rem; }
+.pre-cadastro-analise__legenda { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.62rem; }
+.pre-cadastro-analise__legenda .sensitive-reveal { margin-left: 0; }
+.pre-cadastro-analise__dados { display: grid; gap: 0.85rem; }
+.pre-cadastro-analise__essenciais { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.55rem 0.9rem; margin: 0; }
+.pre-cadastro-analise__essenciais div { display: grid; gap: 0.1rem; min-width: 0; }
+.pre-cadastro-analise__essenciais dt { color: var(--neutral-600); font-size: 0.57rem; font-weight: 750; text-transform: uppercase; }
+.pre-cadastro-analise__essenciais dd { margin: 0; overflow-wrap: anywhere; color: var(--navy-900); font-size: 0.7rem; font-weight: 650; }
+.pre-cadastro-analise__divergencias { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.pre-cadastro-analise__divergencias li { display: grid; gap: 0.35rem; padding: 0.55rem 0.65rem; border: 1px solid #f1cf72; border-radius: var(--radius-md); background: #fffbeb; }
+.pre-cadastro-analise__divergencias li > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.66rem; }
+.pre-cadastro-analise__divergencias dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); gap: 0.3rem 0.6rem; margin: 0; font-size: 0.62rem; }
+.pre-cadastro-analise__divergencias dt { color: var(--neutral-600); font-size: 0.56rem; text-transform: uppercase; }
+.pre-cadastro-analise__divergencias dd { margin: 0; overflow-wrap: anywhere; font-weight: 650; }
+.pre-cadastro-analise__secundario { display: grid; gap: 0.5rem; }
+.pre-cadastro-analise__recolhido { border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); }
+.pre-cadastro-analise__recolhido > summary { padding: 0.65rem 0.9rem; color: var(--navy-900); font-size: 0.7rem; font-weight: 750; cursor: pointer; }
+.pre-cadastro-analise__recolhido[open] > summary { border-bottom: 1px solid var(--neutral-200); }
+.pre-cadastro-analise__recolhido > :not(summary) { margin: 0.75rem 0.9rem; }
+.pre-cadastro-analise__decisao { z-index: 5; border-color: var(--blue-200, #bfdbfe); }
+.pre-cadastro-analise__motivo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; gap: 0.5rem; }
+.pre-cadastro-analise__motivo > :first-child { flex: 0 1 18rem; }
+.pre-cadastro-analise__bloco > header .sensitive-reveal { font-size: 0.62rem; }
 .pre-cadastro-analise__tabela { overflow-x: auto; }
 .pre-cadastro-analise__tabela table { width: 100%; border-collapse: collapse; font-size: 0.63rem; }
 .pre-cadastro-analise__tabela th, .pre-cadastro-analise__tabela td { padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--neutral-200); text-align: left; vertical-align: middle; }
@@ -2113,19 +2144,21 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .pre-cadastro-analise__tabela tr { display: grid; gap: 0.2rem; padding: 0.5rem 0; border-bottom: 1px solid var(--neutral-200); }
     .pre-cadastro-analise__tabela th, .pre-cadastro-analise__tabela td { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; border: 0; }
     .pre-cadastro-analise__tabela td::before { content: attr(data-label); color: var(--neutral-600); }
-    .pre-cadastro-analise__acoes, .pre-cadastro-analise__acao { display: grid; align-items: stretch; }
+    .pre-cadastro-analise__acoes, .pre-cadastro-analise__acao, .pre-cadastro-analise__motivo { display: grid; align-items: stretch; }
 }
 
 @media (min-width: 48rem) {
     .pre-cadastro-analise__pessoa { grid-template-columns: auto minmax(0, 1fr) auto; }
     .pre-cadastro-analise__situacao { grid-column: auto; justify-items: end; }
-    .pre-cadastro-analise__galeria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* Ações sempre ao alcance: a barra de decisão acompanha a rolagem. */
+    .pre-cadastro-analise__decisao { position: sticky; bottom: 0.5rem; box-shadow: var(--shadow-3); }
 }
 
-@media (min-width: 75rem) {
-    .pre-cadastro-analise__grade { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
-    .pre-cadastro-analise__imagens { position: sticky; top: 1rem; }
-    .pre-cadastro-analise__figura.is-documento .pre-cadastro-analise__moldura { min-height: 16rem; }
+@media (min-width: 64rem) {
+    .pre-cadastro-analise__grade { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+    .pre-cadastro-analise__decisao { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+    .pre-cadastro-analise__acoes { justify-content: flex-end; }
+    .pre-cadastro-analise__motivo { flex-wrap: nowrap; }
 }
 
 /* AJ-006 — motivos da leitura automática */

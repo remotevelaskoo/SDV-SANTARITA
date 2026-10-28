@@ -860,7 +860,8 @@ class ExampleTest extends TestCase
             ->assertSee('Não enviado')
             ->assertSee('Não enviada')
             ->assertSee('PRE-SRA-X7K9M2')
-            ->assertSee('Dados preenchidos');
+            ->assertSee('Dados essenciais')
+            ->assertSee('Ver mais detalhes');
     }
 
     public function test_an_authorized_operator_can_temporarily_reveal_a_document_with_audit(): void
