@@ -162,3 +162,50 @@ Essa correção deve incluir testes que comprovem:
 4. selfie e documento armazenados como arquivos distintos;
 5. conferência protegida na análise da portaria;
 6. ausência de autorização, credencial ou liberação causada apenas pelo OCR.
+
+## 13. Simplificação da tela de análise do pré-cadastro
+
+### 13.1 Problema observado em 28/10/2026
+
+A página própria de análise reúne as informações necessárias, porém a composição atual dificulta a decisão rápida da portaria: a selfie ocupa uma área excessiva, alertas aparecem como blocos grandes, instruções técnicas competem com os dados da pessoa e as ações ficam distantes das evidências. A correção é de hierarquia visual e não autoriza retirar controles de segurança, auditoria ou permissões.
+
+### 13.2 Hierarquia operacional aprovada
+
+A tela deverá apresentar, nesta ordem:
+
+1. **Cabeçalho compacto da solicitação:** voltar à fila, foto/avatar pequeno, nome, tipo de acesso, destino, período, situação e protocolo;
+2. **Resumo de pendências:** um único painel compacto contendo somente os impedimentos e avisos que exigem ação do operador;
+3. **Área principal de conferência:** evidências visuais à esquerda e dados essenciais à direita em telas largas; uma coluna em telas menores;
+4. **Divergências do OCR:** mostrar primeiro apenas campos divergentes, alterados ou de baixa confiança, com opção de expandir a comparação completa;
+5. **Decisão:** ações permanentemente visíveis no final da área útil ou em barra fixa, sem obrigar o operador a percorrer toda a página;
+6. **Informações secundárias:** histórico, detalhes técnicos e comparação completa recolhidos por padrão.
+
+### 13.3 Evidências visuais
+
+- Nenhuma selfie ou documento deverá ocupar sozinho a largura total da página.
+- Depois de `Exibir imagens para conferência`, apresentar uma grade de miniaturas com rótulos claros: selfie, documento frente, documento verso e foto recortada do documento.
+- As miniaturas devem usar área limitada e proporção previsível, sem cortar o conteúdo; a ampliação continua disponível em visualizador protegido.
+- Imagens ausentes devem aparecer como cartão compacto, e não como uma grande área vazia.
+- O clique para revelar, o controle de permissão, a URL privada, a ausência de download e o registro de auditoria permanecem obrigatórios.
+
+### 13.4 Dados e decisão
+
+- O resumo inicial deve priorizar: nome, documento, nascimento, telefone, tipo de acesso, destino/imóvel, responsável e período.
+- Veículo, endereço, metadados, versão e histórico podem ficar em `Ver mais detalhes`.
+- Documento mascarado continua sendo o padrão; a revelação controlada permanece disponível apenas para o perfil autorizado e deve ser auditada.
+- Exibir inicialmente somente as ações principais: `Editar dados`, `Solicitar correção`, `Rejeitar` e `Aprovar pré-cadastro`.
+- Campos de motivo ou seleção aparecem somente após o operador escolher a respectiva ação. Não manter todos os formulários de decisão abertos simultaneamente.
+- `Aprovar pré-cadastro` permanece a ação primária. Aprovar não libera entrada e não substitui a Validação de Entrada.
+
+### 13.5 Critérios de aceite
+
+1. Em resolução desktop comum, o operador identifica a pessoa, vê as pendências, abre as evidências e alcança as ações sem enfrentar uma imagem em tamanho desproporcional.
+2. Selfie e documentos aparecem juntos como miniaturas após a revelação autorizada.
+3. A ampliação individual continua protegida e auditada.
+4. Alertas simultâneos são agrupados em um resumo, mantendo título e orientação de cada ocorrência.
+5. Divergências e baixa confiança do OCR têm prioridade sobre campos que conferem.
+6. Histórico e dados secundários permanecem acessíveis, porém recolhidos por padrão.
+7. Ações condicionais exibem seus campos somente quando acionadas.
+8. Layout responsivo, navegação por teclado, foco visível e títulos acessíveis são preservados.
+9. Nenhuma mudança reduz permissões, mascaramento, auditoria ou armazenamento privado.
+10. Testes existentes de segurança e decisão continuam passando; novos testes cobrem a presença da hierarquia e dos controles essenciais.
