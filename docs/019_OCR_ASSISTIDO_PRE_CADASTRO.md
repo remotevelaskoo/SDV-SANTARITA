@@ -194,3 +194,14 @@ A correção deverá manter o aprimoramento da selfie entregue no mesmo commit, 
 
 Até a correção e a homologação com amostras autorizadas, o OCR e a validação documental permanecem **não homologados para produção**.
 
+### 12.4 Correção aplicada em 28/10/2026
+
+A chave `SDV_PRE_CADASTRO_ETAPA_DOCUMENTO` foi removida; nenhuma configuração oculta ou torna opcional a etapa documental. A jornada volta a ter seis etapas fixas:
+
+- a frente é obrigatória para avançar e para enviar;
+- o verso é obrigatório no RG/CIN, cujo verso traz CPF e nascimento, e continua aceito na CNH;
+- a selfie continua obrigatória e é gravada como arquivo distinto;
+- OCR desligado, com falha ou com algum campo abaixo de `SDV_OCR_CONFIANCA_MINIMA` não bloqueia o envio, mas a ficha registra "conferência manual obrigatória" e a análise da portaria exibe o aviso correspondente;
+- o envio sempre fica em `aguardando`; o OCR não aprova, não cria autorização nem credencial.
+
+As melhorias de selfie do commit `a41bac6` (envio ao tirar a foto e Continuar desabilitado durante o envio) foram mantidas. Cobertura em `tests/Feature/PreCadastroDocumentoObrigatorioTest.php`, somente com dados e imagens sintéticos. A regra do verso por tipo de documento aguarda confirmação do Product Owner na homologação.

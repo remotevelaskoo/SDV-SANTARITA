@@ -475,7 +475,10 @@ class PreRegistrationReview extends Component
             $alerts[] = ['variant' => 'warning', 'title' => 'Sem selfie', 'message' => 'Confira a identidade presencialmente na portaria.'];
         }
         if (! $record->currentFileLink('documento')?->file) {
-            $alerts[] = ['variant' => 'info', 'title' => 'Documento não enviado', 'message' => 'O documento deverá ser conferido na portaria.'];
+            // Só ocorre em fichas enviadas antes da correção que tornou a frente obrigatória.
+            $alerts[] = ['variant' => 'warning', 'title' => 'Documento não enviado', 'message' => 'A frente do documento é obrigatória. Confira o documento original presencialmente antes de decidir.'];
+        } elseif ($record->documentExtractions->isEmpty()) {
+            $alerts[] = ['variant' => 'warning', 'title' => 'Conferência manual obrigatória', 'message' => 'A leitura automática não foi realizada. Compare nome, CPF e nascimento com a imagem do documento.'];
         }
         if ($divergencias > 0) {
             $alerts[] = ['variant' => 'warning', 'title' => $divergencias === 1 ? '1 campo para conferir' : "{$divergencias} campos para conferir", 'message' => 'A leitura automática e os dados confirmados não coincidem ou têm confiança baixa. Compare com a imagem do documento.'];

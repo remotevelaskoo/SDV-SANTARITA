@@ -135,54 +135,26 @@ class PublicPreRegistration extends Component
         $this->validateCurrentStep();
         $this->draftSaved = false;
         $this->step = min(6, $this->step + 1);
-        if ($this->step === 3 && ! $this->documentStepEnabled()) {
-            $this->step = 4;
-        }
     }
 
     public function previousStep(): void
     {
         $this->draftSaved = false;
         $this->step = max(1, $this->step - 1);
-        if ($this->step === 3 && ! $this->documentStepEnabled()) {
-            $this->step = 2;
-        }
-    }
-
-    /** Etapa 3 (documento e leitura assistida) desligada por configuração. */
-    public function documentStepEnabled(): bool
-    {
-        return (bool) config('documentos.pre_cadastro.etapa_documento');
     }
 
     /**
-     * Etapas exibidas ao visitante, numeradas na ordem em que aparecem.
-     *
-     * @return list<array{label: string, description: string, state: string, step: int}>
+     * O verso é exigido quando os dados necessários estão nele: no RG/CIN,
+     * CPF e nascimento ficam no verso. Na CNH os dados estão na frente e o
+     * verso continua aceito (SDV-UXP-006 §11.2).
      */
-    public function visibleSteps(): array
+    public function documentBackRequired(): bool
     {
-        $visible = [];
-        foreach ($this->steps as $index => $definition) {
-            $number = $index + 1;
-            if ($number === 3 && ! $this->documentStepEnabled()) {
-                continue;
-            }
-            $visible[] = $definition + [
-                'step' => $number,
-                'state' => $number < $this->step ? 'complete' : ($number === $this->step ? 'current' : 'future'),
-            ];
-        }
-
-        return $visible;
+        return $this->documentType === 'rg_cin';
     }
 
     public function editStep(int $step): void
     {
-        if ($step === 3 && ! $this->documentStepEnabled()) {
-            return;
-        }
-
         if ($step >= 1 && $step < $this->step) {
             $this->step = $step;
         }
@@ -423,7 +395,7 @@ class PublicPreRegistration extends Component
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
                     'document' => $this->cpf,
-                    'document_type' => $this->documentStepEnabled() ? $this->documentType : null,
+                    'document_type' => $this->documentType,
                     'birth_date' => $this->birthDate,
                     'phone' => $this->phone,
                     'email' => $this->email,
@@ -440,21 +412,18 @@ class PublicPreRegistration extends Component
                     'vehicle_plate' => $this->hasVehicle ? $this->plate : null,
                     'vehicle_model' => $this->hasVehicle ? $this->vehicleModel : null,
                     'vehicle_color' => $this->hasVehicle ? $this->vehicleColor : null,
-                    'document_status' => $this->documentStepEnabled()
-                        ? 'Arquivo protegido disponível para conferência'
-                        : 'Documento não solicitado no pré-cadastro; conferir na portaria',
+                    'document_status' => $this->documentStatus(),
                     'selfie_status' => 'Arquivo protegido disponível para conferência',
                     'status' => 'aguardando',
                     'submitted_at' => now(),
                 ]);
 
-                $uploads = ['selfie' => $this->selfieFile];
+                $uploads = [
+                    'documento' => $this->documentFile,
+                    'selfie' => $this->selfieFile,
+                ];
 
-                if ($this->documentStepEnabled() && $this->documentFile !== null) {
-                    $uploads['documento'] = $this->documentFile;
-                }
-
-                if ($this->documentStepEnabled() && $this->documentBackFile !== null) {
+                if ($this->documentBackFile !== null) {
                     $uploads['documento_verso'] = $this->documentBackFile;
                 }
 
@@ -500,6 +469,26 @@ class PublicPreRegistration extends Component
         $this->protocol = $preRegistration->protocol;
         $this->submitted = true;
         $this->draftSaved = false;
+    }
+
+    /**
+     * A leitura automática é só apoio: sem ela, ou com confiança baixa, a
+     * ficha registra que a portaria precisa conferir o documento à mão.
+     */
+    private function documentStatus(): string
+    {
+        if ($this->ocrStatus !== 'completed') {
+            return 'Arquivo protegido disponível; leitura automática não realizada — conferência manual obrigatória';
+        }
+
+        $minima = (float) config('documentos.ocr.confianca_minima');
+        foreach (array_keys($this->ocrFields) as $campo) {
+            if (($this->ocrConfidences[$campo] ?? 0.0) < $minima) {
+                return 'Arquivo protegido disponível; leitura automática com baixa confiança — conferência manual obrigatória';
+            }
+        }
+
+        return 'Arquivo protegido disponível para conferência';
     }
 
     private function generateProtocol(): string
@@ -572,7 +561,7 @@ class PublicPreRegistration extends Component
             3 => [
                 'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
                 'documentFile' => $this->protectedImageRules(),
-                'documentBackFile' => $this->optionalProtectedImageRules(),
+                'documentBackFile' => $this->documentBackRules(),
             ],
             4 => ['selfieFile' => $this->protectedImageRules()],
             5 => $this->hasVehicle ? [
@@ -608,9 +597,9 @@ class PublicPreRegistration extends Component
             'city' => ['required', 'string', 'max:80'],
             'state' => ['required', 'string', 'size:2'],
             'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
-            'documentType' => $this->documentStepEnabled() ? ['required', Rule::in(['rg_cin', 'cnh'])] : [],
-            'documentFile' => $this->documentStepEnabled() ? $this->protectedImageRules() : [],
-            'documentBackFile' => $this->documentStepEnabled() ? $this->optionalProtectedImageRules() : [],
+            'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
+            'documentFile' => $this->protectedImageRules(),
+            'documentBackFile' => $this->documentBackRules(),
             'selfieFile' => $this->protectedImageRules(),
             'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
             'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],
@@ -631,6 +620,12 @@ class PublicPreRegistration extends Component
         return ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
     }
 
+    /** @return array<int, string> */
+    private function documentBackRules(): array
+    {
+        return $this->documentBackRequired() ? $this->protectedImageRules() : $this->optionalProtectedImageRules();
+    }
+
     /** @return array<string, string> */
     private function validationMessages(): array
     {
@@ -648,6 +643,7 @@ class PublicPreRegistration extends Component
     {
         return [
             'documentFile.required' => 'Envie uma foto do documento para continuar.',
+            'documentBackFile.required' => 'Envie uma foto do verso do RG/CIN para continuar.',
             'documentType.required' => 'Escolha o tipo de documento.',
             'documentType.in' => 'Escolha RG/CIN ou CNH.',
             'selfieFile.required' => 'Envie uma selfie para continuar.',

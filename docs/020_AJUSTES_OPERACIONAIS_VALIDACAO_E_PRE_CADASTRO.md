@@ -162,3 +162,7 @@ Essa correção deve incluir testes que comprovem:
 4. selfie e documento armazenados como arquivos distintos;
 5. conferência protegida na análise da portaria;
 6. ausência de autorização, credencial ou liberação causada apenas pelo OCR.
+
+### 12.4 Situação da correção
+
+Correção aplicada em 28/10/2026 na branch `claude/project-thread-1rctvb`; detalhes em [SDV-UXP-019 §12.4](019_OCR_ASSISTIDO_PRE_CADASTRO.md). Os seis itens da seção 12.3 estão cobertos por `tests/Feature/PreCadastroDocumentoObrigatorioTest.php` e pelos testes existentes de arquivos protegidos e da análise do pré-cadastro. A homologação com amostras autorizadas continua pendente.
