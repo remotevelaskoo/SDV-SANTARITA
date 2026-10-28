@@ -2,7 +2,7 @@
 ## Fluxo público, análise pela portaria e acompanhamento
 
 **Documento:** SDV-UXP-006  
-**Versão:** 1.2.0
+**Versão:** 1.3.0
 **Status:** Aprovado  
 **Produto:** SDV Access — Implantação Santa Rita  
 **Marca proprietária:** Soluções do Vale Tecnologia  
@@ -19,6 +19,7 @@
 | 1.0.1 | 28/07/2026 | Product Owner | Aprovação formal da especificação UX/UI do Pré-Cadastro |
 | 1.1.0 | 12/08/2026 | Product Owner | Conferência visual de arquivos e revelação controlada de documento durante a análise pela portaria |
 | 1.2.0 | 15/10/2026 | Lucas Pastorelli + Codex | Início do AJ-005: captura estruturada de frente e verso de RG/CIN ou CNH para OCR assistido |
+| 1.3.0 | 28/10/2026 | Product Owner | Conciliação do AJ-005 com o AJ-006: preserva documento obrigatório, selfie separada, OCR assistivo e diagnóstico posterior cumulativo |
 
 ---
 
@@ -517,6 +518,10 @@ Não deverá ser confundido com o endereço desta etapa.
 
 ## 11.2 Captura
 
+Na jornada aprovada de pré-cadastro, a captura da **frente do documento é obrigatória**. O verso será solicitado quando o modelo do documento ou os dados necessários estiverem no verso. A indisponibilidade do OCR não torna o documento opcional: ela apenas transfere a leitura para conferência humana.
+
+Ocultar ou pular integralmente a etapa documental exige nova decisão formal de produto. Uma chave técnica de configuração não poderá alterar silenciosamente esta regra nem permanecer desligada por padrão na implantação Santa Rita.
+
 Orientações:
 
 - documento inteiro visível;
@@ -566,7 +571,7 @@ Análise da portaria
 
 ## 11.6 OCR indisponível
 
-O fluxo deverá continuar com análise manual. A ausência do OCR não impedirá o envio de documento legível.
+O fluxo deverá continuar com análise manual. A ausência do OCR não impedirá o envio de documento legível e não dispensará a captura da frente, do verso quando aplicável nem a conferência pela portaria.
 
 ## 11.7 Documento ilegível
 

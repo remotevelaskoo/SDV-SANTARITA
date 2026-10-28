@@ -1,9 +1,17 @@
 # OCR assistido no pré-cadastro
 
 **Documento:** SDV-UXP-019 (publicado na `main` como SDV-UXP-015; renumerado por colisão com SDV-INT-015)  
-**Situação:** Em desenvolvimento — entregas 1 a 4 implementadas para revisão
-**Responsáveis:** Lucas Pastorelli + Codex  
-**Data:** 15 de outubro de 2026
+**Versão:** 1.1.0
+**Situação:** Implementado para revisão técnica; homologação com amostras autorizadas pendente
+**Responsáveis:** João Lucas Pastorelli + Codex + Claude
+**Data:** 28 de outubro de 2026
+
+## Controle de versões
+
+| Versão | Data | Responsável | Alteração |
+|---|---|---|---|
+| 1.0.0 | 15/10/2026 | João Lucas Pastorelli + Codex | Captura estruturada, OCR assistido, conferência e recorte privado da fotografia do documento |
+| 1.1.0 | 28/10/2026 | Product Owner | Conciliação com o AJ-006, preservação do trabalho original e registro do desvio que tornou a etapa documental opcional |
 
 ## 1. Objetivo
 
@@ -47,7 +55,7 @@ O resultado será sempre uma sugestão. A pessoa deverá conferir e poderá corr
 
 | Entrega | Conteúdo | Situação |
 |---|---|---|
-| 1 — Captura estruturada | Tipo do documento, frente obrigatória, verso opcional e armazenamento privado separado | ✅ Implementada para revisão |
+| 1 — Captura estruturada | Tipo do documento, frente obrigatória, verso quando aplicável e armazenamento privado separado | ✅ Implementada para revisão; preservar sem regressão |
 | 2 — Leitura de texto | Serviço interno FastAPI/RapidOCR e extração de nome, CPF, número e nascimento | ✅ Implementada para revisão técnica |
 | 3 — Conferência | Sugestões, confiança, correção e confirmação explícita | ✅ Implementada para revisão funcional |
 | 4 — Foto do documento | Localização e recorte privado da fotografia para comparação visual | ✅ Implementada para revisão funcional |
@@ -134,4 +142,55 @@ Imagens, respostas esperadas privadas e relatórios foram bloqueados no Git para
 - `docs/ADR/ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md`;
 - `docs/ADR/ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md`;
 - AJ-001, AJ-003 e AJ-005 do documento 013.
+
+## 12. Conciliação com as alterações posteriores
+
+### 12.1 Trabalho do João Lucas preservado
+
+A branch `claude/project-thread-1rctvb` contém integralmente a `main` de `6bab304`, incluindo os commits do João Lucas que criaram:
+
+- captura estruturada de RG/CIN e CNH;
+- frente e verso como objetos privados distintos;
+- serviço interno FastAPI/RapidOCR;
+- extração de nome, CPF, número do documento e nascimento;
+- valor sugerido e valor confirmado separados;
+- confiança por campo e correção humana;
+- recorte privado da fotografia impressa no documento;
+- avaliador para homologação com amostras autorizadas;
+- melhorias de leitura de nome e nascimento na CNH.
+
+Nenhuma fatia posterior está autorizada a remover, substituir ou enfraquecer esses controles silenciosamente.
+
+### 12.2 Melhorias do Claude que permanecem
+
+O AJ-006 acrescentou, sem substituir o AJ-005:
+
+- orientação da imagem pelo EXIF;
+- repetição da leitura com rotação controlada;
+- avaliação de resolução, brilho, reflexo, foco, contraste e enquadramento;
+- diagnóstico separado para captura, qualidade, comunicação, serviço, OCR, interpretação e validação;
+- orientação objetiva para nova captura ou preenchimento manual;
+- testes com imagens sintéticas e logs sem texto bruto ou dados pessoais.
+
+Essas melhorias são cumulativas e deverão permanecer.
+
+### 12.3 Contradição identificada
+
+O commit `a41bac6` introduziu `SDV_PRE_CADASTRO_ETAPA_DOCUMENTO`, desligada por padrão, permitindo concluir o pré-cadastro sem anexar documento. Esse comportamento diverge de:
+
+- `SDV-UXP-006`, seção 11;
+- AJ-001, que protege e apresenta o documento efetivamente submetido;
+- AJ-005, cuja captura estruturada exige a frente;
+- critérios aprovados de análise da portaria.
+
+A correção deverá manter o aprimoramento da selfie entregue no mesmo commit, mas restaurar a jornada documental aprovada:
+
+1. frente obrigatória;
+2. verso quando aplicável;
+3. selfie separada e obrigatória;
+4. OCR opcional como tecnologia de assistência, nunca o documento;
+5. falha do OCR encaminhada para conferência manual do arquivo enviado;
+6. nenhuma autorização ou liberação automática.
+
+Até a correção e a homologação com amostras autorizadas, o OCR e a validação documental permanecem **não homologados para produção**.
 

@@ -2,7 +2,7 @@
 
 **Projeto:** SDV Access — Santa Rita
 **Branch:** `claude/project-thread-1rctvb` (sobre `claude/retomada-hikvision-8p360v`)
-**Situação:** implementado em 7 fatias; itens que dependem de equipamento real estão listados na seção 9.
+**Situação:** implementado em 7 fatias; conciliação documental de 28/10/2026 registrada na seção 12; itens dependentes de equipamento real permanecem na seção 9.
 
 Este documento registra o que o AJ-006 entregou, as regras que cada fatia segue e o que ainda depende de bancada. Ele não reescreve decisões aprovadas: ADR-013 (biometria adiada), ADR-016 (integração direta com o terminal) e ADR-017 (liberação manual) continuam valendo como estão.
 
@@ -132,3 +132,33 @@ Os testes ficam em `tests/Feature/Aj006/` e nos testes do serviço `services/doc
 
 - Usam só o simulador de terminal e de câmera, respostas HTTP simuladas e imagens sintéticas.
 - **Nenhuma pessoa real é enviada a um terminal em teste automatizado.** Um teste real só acontece por ação explícita na bancada.
+
+## 12. Conciliação com o AJ-005 e autoria anterior
+
+### 12.1 Linha de base preservada
+
+Esta branch foi construída sobre a `main` que contém o trabalho do João Lucas no AJ-005. A fatia 4 deste documento melhora diagnóstico, qualidade e orientação de recaptura; ela não substitui a captura estruturada, o armazenamento privado, a conferência por campo nem o recorte protegido da fotografia documental.
+
+### 12.2 Regra canônica da implantação Santa Rita
+
+Para o pré-cadastro da implantação Santa Rita:
+
+- a frente de RG/CIN ou CNH é obrigatória;
+- o verso é solicitado quando aplicável ao documento ou aos dados necessários;
+- a selfie permanece separada e obrigatória;
+- o OCR pode estar indisponível sem impedir o preenchimento manual, mas o arquivo do documento continua exigido;
+- OCR não autentica documento, não cria biometria, não aprova cadastro e não libera acesso;
+- a portaria precisa visualizar as evidências protegidas e comparar dados extraídos, confirmados e atuais.
+
+### 12.3 Correção necessária antes da homologação
+
+A configuração `SDV_PRE_CADASTRO_ETAPA_DOCUMENTO`, introduzida posteriormente com padrão desligado, conflita com a jornada aprovada. O Claude deverá conservar as melhorias de selfie desse trabalho, mas corrigir o fluxo para não pular a etapa documental por padrão. A chave não poderá mudar a regra de negócio silenciosamente.
+
+Essa correção deve incluir testes que comprovem:
+
+1. impossibilidade de enviar pré-cadastro sem a frente;
+2. verso solicitado quando aplicável;
+3. continuidade manual quando o OCR falhar;
+4. selfie e documento armazenados como arquivos distintos;
+5. conferência protegida na análise da portaria;
+6. ausência de autorização, credencial ou liberação causada apenas pelo OCR.

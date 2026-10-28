@@ -37,6 +37,8 @@ A P28 formaliza a operação híbrida local e nuvem ([ADR-018](docs/ADR/ADR-018_
 
 O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH e uma prova interna de OCR assistido no pré-cadastro. Nome, CPF, nascimento e número do documento são apresentados como sugestões com confiança e confirmação humana. A foto impressa pode ser localizada e recortada apenas para conferência visual; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
 
+Em 28 de outubro de 2026, a documentação foi reconciliada com a implementação original do João Lucas e com as sete fatias posteriores do AJ-006. Permanece aprovada a jornada de seis etapas: a frente do documento é obrigatória, o verso é solicitado quando aplicável, a selfie é uma evidência separada e o OCR é somente assistivo. As melhorias posteriores de orientação, qualidade e diagnóstico do OCR são cumulativas e não substituem a captura nem a conferência humana. O desvio de configuração que ocultou a etapa documental por padrão está registrado como correção necessária antes da homologação.
+
 ## Coordenação da equipe
 
 O desenvolvimento foi dividido em partes para que Lucas e Vinicius possam trabalhar em paralelo. O quadro com situação, responsável, dependências e orientação de trabalho está em:
