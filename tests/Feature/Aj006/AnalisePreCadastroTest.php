@@ -101,7 +101,7 @@ class AnalisePreCadastroTest extends TestCase
         $this->assertSame('aprovado', $registro->fresh()->status);
     }
 
-    public function test_mostra_so_a_selfie_apos_clique_e_com_contexto_auditado(): void
+    public function test_mostra_so_a_selfie_ao_abrir_e_com_contexto_auditado(): void
     {
         $registro = PreRegistration::factory()->create();
         [$selfie, $frente, $verso] = app(PrivateFileService::class)->storePreRegistrationFiles($registro, [
@@ -113,13 +113,13 @@ class AnalisePreCadastroTest extends TestCase
 
         $teste = Livewire::actingAs($operador)
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
-            ->assertSee('Exibir selfie para conferência')
+            ->assertDontSee('Exibir selfie para conferência')
             ->assertSee('Selfie')
             ->assertDontSee('Documento (frente)')
             ->assertDontSee('Documento (verso)')
             ->assertDontSee('Foto recortada do documento')
             ->assertSee($selfie->id, escape: false)
-            ->assertDontSee('src="'.route('protected-files.show', $selfie), escape: false);
+            ->assertSee('src="'.e(route('protected-files.show', ['arquivo' => $selfie, 'contexto' => 'analise_pre_cadastro'])), escape: false);
 
         // Frente e verso continuam guardados, mas não são expostos na análise.
         foreach ([$frente, $verso] as $arquivo) {

@@ -124,7 +124,7 @@ class AnaliseSimplificadaTest extends TestCase
 
         $html = Livewire::actingAs($this->operador('pre-registro.analisar', 'arquivos.sensiveis.visualizar'))
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
-            ->assertSee('Exibir selfie para conferência')
+            ->assertDontSee('Exibir selfie para conferência')
             ->assertSee('Ampliar Selfie', escape: false)
             ->assertSee('Download não é oferecido')
             ->html();
@@ -132,7 +132,7 @@ class AnaliseSimplificadaTest extends TestCase
         $galeria = $this->entre($html, 'aria-label="Selfie para conferência"', '</ul>');
         $this->assertSame(1, substr_count($galeria, 'pre-cadastro-analise__figura'));
         $this->assertStringContainsString($selfie->id, $galeria);
-        $this->assertStringNotContainsString('src="'.route('protected-files.show', $selfie), $html);
+        $this->assertStringContainsString('src="'.e(route('protected-files.show', ['arquivo' => $selfie, 'contexto' => 'analise_pre_cadastro'])), $galeria, 'selfie carrega ao abrir a análise');
         foreach ([$frente, $verso] as $arquivo) {
             $this->assertStringNotContainsString($arquivo->id, $html, 'documento não é exposto na análise');
         }

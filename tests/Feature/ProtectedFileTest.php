@@ -213,7 +213,7 @@ class ProtectedFileTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_analysis_only_loads_the_image_after_an_explicit_authorized_click(): void
+    public function test_analysis_loads_the_selfie_on_open_for_authorized_operators(): void
     {
         $preRegistration = PreRegistration::factory()->create();
         [$file] = app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
@@ -227,10 +227,9 @@ class ProtectedFileTest extends TestCase
         Livewire::actingAs($operator)
             ->test(PreRegistrationReview::class, ['preRegistration' => $preRegistration->id])
             ->assertSee('Conferência visual protegida')
-            ->assertSee('Exibir selfie para conferência')
+            ->assertDontSee('Exibir selfie para conferência')
             ->assertSee($file->id, escape: false)
-            ->assertSee('x-bind:src="exibir ?', escape: false)
-            ->assertDontSee('src="'.route('protected-files.show', $file), escape: false)
+            ->assertSee('src="'.route('protected-files.show', ['arquivo' => $file, 'contexto' => 'analise_pre_cadastro']), escape: false)
             ->assertDontSee($file->object_key, escape: false);
     }
 

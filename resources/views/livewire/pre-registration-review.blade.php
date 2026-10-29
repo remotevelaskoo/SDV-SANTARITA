@@ -60,24 +60,20 @@
     </section>
 
     <div class="pre-cadastro-analise__grade">
-        <section class="pre-cadastro-analise__imagens" aria-labelledby="analise-imagens-titulo" x-data="{ exibir: false, ampliada: null, titulo: '' }">
+        <section class="pre-cadastro-analise__imagens" aria-labelledby="analise-imagens-titulo" x-data="{ ampliada: null, titulo: '' }">
             <header>
                 <div>
                     <h3 id="analise-imagens-titulo">Conferência visual protegida</h3>
-                    <p>A selfie só carrega depois do clique, e cada abertura é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada.</p>
+                    <p>A selfie carrega ao abrir a análise, e cada exibição é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada.</p>
                 </div>
                 <x-ui.badge variant="warning">Dados sensíveis</x-ui.badge>
             </header>
 
-            @if ($podeVerImagens)
-                <div class="pre-cadastro-analise__exibir" x-show="!exibir">
-                    <x-ui.button variant="secondary" x-on:click="exibir = true">Exibir selfie para conferência</x-ui.button>
-                </div>
-            @else
+            @unless ($podeVerImagens)
                 <x-ui.alert variant="info" title="Selfie protegida pelo seu perfil">
                     Seu perfil não permite abrir a selfie. Analise os dados ou peça apoio a quem tem a permissão.
                 </x-ui.alert>
-            @endif
+            @endunless
 
             <ul class="pre-cadastro-analise__galeria" aria-label="Selfie para conferência">
                 @foreach ($imagens as $imagem)
@@ -85,13 +81,11 @@
                         <div class="pre-cadastro-analise__moldura">
                             @if ($imagem['url'] && $podeVerImagens)
                                 <img
-                                    x-show="exibir"
-                                    x-bind:src="exibir ? @js($imagem['url']) : null"
+                                    src="{{ $imagem['url'] }}"
                                     alt="{{ $imagem['rotulo'] }} de {{ $record->name }}"
                                     data-arquivo="{{ $imagem['arquivo']->id }}"
                                     referrerpolicy="no-referrer"
                                 >
-                                <span x-show="!exibir" class="pre-cadastro-analise__oculta"><x-icon :name="$imagem['categoria'] === 'selfie' || $imagem['categoria'] === 'documento_foto' ? 'users' : 'file'" /> Imagem oculta</span>
                             @elseif ($imagem['arquivo'])
                                 <span class="pre-cadastro-analise__oculta">{{ $podeVerImagens ? 'Arquivo '.str_replace('_', ' ', $imagem['arquivo']->status) : 'Imagem protegida' }}</span>
                             @else
@@ -101,7 +95,7 @@
                         <div class="pre-cadastro-analise__legenda">
                             <strong>{{ $imagem['rotulo'] }}</strong>
                             @if ($imagem['url'] && $podeVerImagens)
-                                <button type="button" class="sensitive-reveal" x-show="exibir" x-on:click="titulo = @js($imagem['rotulo']); ampliada = @js($imagem['url']); $nextTick(() => $refs.ampliar.showModal())" aria-label="Ampliar {{ $imagem['rotulo'] }}">Ampliar</button>
+                                <button type="button" class="sensitive-reveal" x-on:click="titulo = @js($imagem['rotulo']); ampliada = @js($imagem['url']); $nextTick(() => $refs.ampliar.showModal())" aria-label="Ampliar {{ $imagem['rotulo'] }}">Ampliar</button>
                             @endif
                         </div>
                     </li>

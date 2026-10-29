@@ -228,4 +228,6 @@ Cobertura em `tests/Feature/Aj006/AnaliseSimplificadaTest.php`, além dos testes
 
 ### 13.7 Somente a selfie na conferência visual
 
-Decisão do PO em 28/10/2026, que altera o item 2 dos critérios da seção 13.5: a área de dados sensíveis da análise exibe **somente a selfie**. Frente, verso e foto recortada do documento continuam obrigatórios no envio e guardados como arquivos privados, mas não são exibidos nem referenciados nesta tela. Os avisos de divergência passam a orientar a comparação com o documento original. A selfie mantém a revelação por clique, a permissão `arquivos.sensiveis.visualizar`, a ampliação protegida sem download e o registro de auditoria.
+Decisão do PO em 28/10/2026, que altera o item 2 dos critérios da seção 13.5: a área de dados sensíveis da análise exibe **somente a selfie**. Frente, verso e foto recortada do documento continuam obrigatórios no envio e guardados como arquivos privados, mas não são exibidos nem referenciados nesta tela. Os avisos de divergência passam a orientar a comparação com o documento original. A selfie mantém a permissão `arquivos.sensiveis.visualizar`, a ampliação protegida sem download e o registro de auditoria.
+
+Complemento do PO na mesma data: a selfie **carrega ao abrir a análise**, sem botão de revelação. Quem não tem `arquivos.sensiveis.visualizar` continua sem ver a imagem. Cada abertura da página por quem tem a permissão gera o registro `visualizou_arquivo_protegido` com contexto `analise_pre_cadastro`.
