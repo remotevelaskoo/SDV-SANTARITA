@@ -36,6 +36,18 @@ class CadastroEquipamentos
     /** Trocar o destino da conexão invalida o certificado confiado. */
     private const CAMPOS_DESTINO = ['endereco_rede', 'porta_rede', 'esquema'];
 
+    /** Campos da edição administrativa (SDV-OPE-020 §14.2); identidade e inventário ficam fora. */
+    public const CAMPOS_EDITAVEIS = [
+        'nome', 'endereco_rede', 'esquema', 'porta_rede', 'timeout_segundos', 'protocolo', 'adaptador',
+        'direcao', 'modulo_seguro_rs485',
+    ];
+
+    /** Mudam como o SDV conversa com o terminal: exigem confirmação e novo teste (§14.3). */
+    public const CAMPOS_CONEXAO = ['endereco_rede', 'esquema', 'porta_rede', 'protocolo', 'adaptador'];
+
+    /** Mudanças técnicas relevantes devolvem o terminal à homologação (§14.3, item 6). */
+    private const CAMPOS_HOMOLOGACAO = [...self::CAMPOS_CONEXAO, 'direcao', 'modulo_seguro_rs485', 'ponto_acesso_id'];
+
     public function __construct(
         private AuditService $audit,
         private RegistroAdaptadores $adaptadores,
@@ -240,6 +252,148 @@ class CadastroEquipamentos
 
             return $equipamento;
         });
+    }
+
+    /**
+     * Resumo "valor atual → novo valor" da edição administrativa, sem gravar
+     * nada. Valida com as mesmas regras do cadastro; a recusa é auditada.
+     *
+     * @param  array<string, mixed>  $dados
+     * @return array{mudancas: array<string, array{old: mixed, new: mixed}>, conexao: bool, destino: bool, homologacao: bool}
+     */
+    public function previaEdicao(Equipamento $equipamento, array $dados, ?string $pontoId, int $versaoEsperada, ?User $ator = null): array
+    {
+        return $this->registrandoRecusa($equipamento, function () use ($equipamento, $dados, $pontoId, $versaoEsperada): array {
+            $equipamento = Equipamento::query()->terminais()->findOrFail($equipamento->id);
+            $this->garantirVersao($equipamento->versao, $versaoEsperada);
+            $this->garantirEditavel($equipamento);
+
+            $dados = $this->normalizarEdicao($dados);
+            $pontoAtual = $equipamento->pontoVigente();
+            $pontoNovo = $this->pontoDaEdicao($pontoId, $pontoAtual);
+            $this->garantirDirecaoCompativel($dados['direcao'], $pontoNovo ?? $pontoAtual ?? throw new RegraIntegracaoViolada('sem_ponto', 'Escolha o ponto de acesso deste terminal.'));
+
+            $mudancas = $this->mudancasEdicao($equipamento->fill($dados));
+            if ($pontoNovo !== null) {
+                $mudancas['ponto_acesso_id'] = ['old' => $pontoAtual?->nome, 'new' => $pontoNovo->nome];
+            }
+
+            return $this->resumoEdicao($mudancas);
+        });
+    }
+
+    /**
+     * Edição administrativa do mesmo equipamento (AJ-007, SDV-OPE-020 §14):
+     * preserva UUID, vínculos anteriores, operações, eventos, credenciais e
+     * auditoria. Não testa conexão, não aciona relé e não sincroniza pessoas.
+     *
+     * @param  array<string, mixed>  $dados  campos de CAMPOS_EDITAVEIS
+     * @return array{equipamento: Equipamento, mudancas: array<string, array{old: mixed, new: mixed}>, conexao: bool, destino: bool, homologacao: bool}
+     */
+    public function editarConfiguracao(Equipamento $equipamento, array $dados, ?string $pontoId, int $versaoEsperada, ?User $ator = null): array
+    {
+        return $this->registrandoRecusa($equipamento, function () use ($equipamento, $dados, $pontoId, $versaoEsperada, $ator): array {
+            $dados = $this->normalizarEdicao($dados);
+
+            return DB::transaction(function () use ($equipamento, $dados, $pontoId, $versaoEsperada, $ator): array {
+                $equipamento = Equipamento::query()->terminais()->lockForUpdate()->findOrFail($equipamento->id);
+                $this->garantirVersao($equipamento->versao, $versaoEsperada);
+                $this->garantirEditavel($equipamento);
+
+                $pontoAtual = $equipamento->pontoVigente();
+                $pontoNovo = $this->pontoDaEdicao($pontoId, $pontoAtual, bloquear: true);
+                $this->garantirDirecaoCompativel($dados['direcao'], $pontoNovo ?? $pontoAtual ?? throw new RegraIntegracaoViolada('sem_ponto', 'Escolha o ponto de acesso deste terminal.'));
+
+                $mudancas = $this->mudancasEdicao($equipamento->fill($dados));
+                if ($pontoNovo !== null) {
+                    $mudancas['ponto_acesso_id'] = ['old' => $pontoAtual?->id, 'new' => $pontoNovo->id];
+                }
+                if ($mudancas === []) {
+                    return ['equipamento' => $equipamento, ...$this->resumoEdicao([])];
+                }
+
+                $resumo = $this->resumoEdicao($mudancas);
+                $efeitos = [];
+                $invalidadas = [];
+
+                if ($resumo['destino']) {
+                    // Outro endereço pode ser outro terminal: nada obtido no
+                    // endereço anterior continua valendo como validação atual.
+                    if ($equipamento->tls_pin_sha256 !== null) {
+                        $mudancas['tls_pin_sha256'] = ['old' => 'confiado', 'new' => null];
+                        $equipamento->tls_pin_sha256 = null;
+                    }
+                    if ($equipamento->rele_homologado_em !== null) {
+                        $mudancas['rele_homologado_em'] = ['old' => $equipamento->rele_homologado_em, 'new' => null];
+                        $equipamento->forceFill(['rele_homologado_em' => null, 'rele_homologado_por' => null]);
+                    }
+                    if ($equipamento->esquema === 'https') {
+                        $efeitos[] = 'certificado_reconfirmar';
+                    }
+                }
+                if ($resumo['conexao'] && $equipamento->estado_saude !== EstadoSaude::Desconhecido) {
+                    $mudancas['estado_saude'] = ['old' => $this->valor($equipamento->estado_saude), 'new' => EstadoSaude::Desconhecido->value];
+                    $equipamento->estado_saude = EstadoSaude::Desconhecido;
+                }
+                if ($resumo['conexao']) {
+                    $efeitos[] = 'teste_conexao_pendente';
+                }
+                if ($resumo['homologacao'] && in_array($equipamento->status, [StatusEquipamento::Ativo, StatusEquipamento::Manutencao], true)) {
+                    $mudancas['status'] = ['old' => $equipamento->status->value, 'new' => StatusEquipamento::EmHomologacao->value];
+                    $equipamento->status = StatusEquipamento::EmHomologacao;
+                    $efeitos[] = 'homologacao';
+                }
+
+                $equipamento->forceFill(['versao' => $equipamento->versao + 1, 'updated_by' => $ator?->id])->save();
+
+                if ($resumo['conexao']) {
+                    // Capacidades e homologações seguem guardadas na auditoria;
+                    // aqui deixam de valer até nova consulta ao terminal.
+                    $invalidadas = $equipamento->capacidades()->where('suportada', true)->pluck('capacidade')->all();
+                    $equipamento->capacidades()->update([
+                        'suportada' => false,
+                        'estado_homologacao' => null,
+                        'motivo_ausencia' => 'conexão alterada; consultar novamente',
+                    ]);
+                    if ($invalidadas !== []) {
+                        $efeitos[] = 'capacidades_reconsultar';
+                    }
+                }
+
+                $this->auditar('equipamento_configuracao_alterada', 'equipamentos', $equipamento->id, $mudancas, metadata: [
+                    'campos_alterados' => array_keys($mudancas),
+                    'efeitos' => $efeitos,
+                    ...($invalidadas !== [] ? ['capacidades_invalidadas' => $invalidadas] : []),
+                ]);
+
+                if ($pontoNovo !== null) {
+                    // O vínculo anterior é encerrado, nunca sobrescrito.
+                    $this->encerrarVinculoVigente(equipamento: $equipamento->refresh(), motivo: 'ponto alterado na edição do equipamento', ator: $ator);
+                    $this->vincularAoPonto($equipamento, $pontoNovo, $ator);
+                }
+
+                return ['equipamento' => $equipamento->refresh(), 'mudancas' => $mudancas, ...$resumo];
+            });
+        });
+    }
+
+    /**
+     * Registra a tentativa de edição recusada antes de chegar ao serviço
+     * (por exemplo, formato inválido no formulário), sem valores digitados.
+     *
+     * @param  list<string>  $campos
+     */
+    public function registrarEdicaoRecusada(Equipamento $equipamento, string $codigo, array $campos = []): void
+    {
+        $this->audit->record(
+            action: 'equipamento_edicao_recusada',
+            module: 'integracoes',
+            entityType: 'equipamentos',
+            entityId: $equipamento->id,
+            result: 'negado',
+            reasonCode: $codigo,
+            metadata: $campos === [] ? [] : ['campos' => $campos],
+        );
     }
 
     /** Vínculo exclusivo terminal ↔ ponto (ADR-016 §5, CA-ADR-016-001). */
@@ -546,6 +700,114 @@ class CadastroEquipamentos
         if ($serie !== null && Equipamento::query()->where('numero_serie', $serie)->exists()) {
             throw new RegraIntegracaoViolada('serie_duplicada', 'Já existe um equipamento com este número de série nesta implantação.');
         }
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $acao
+     * @return T
+     */
+    private function registrandoRecusa(Equipamento $equipamento, callable $acao): mixed
+    {
+        try {
+            return $acao();
+        } catch (RegraIntegracaoViolada $e) {
+            $this->registrarEdicaoRecusada($equipamento, $e->codigo);
+
+            throw $e;
+        }
+    }
+
+    private function garantirEditavel(Equipamento $equipamento): void
+    {
+        if ($equipamento->status === StatusEquipamento::Inativo) {
+            throw new RegraIntegracaoViolada('equipamento_inativo', 'Equipamento inativo não é editado; o histórico permanece consultável.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array<string, mixed>
+     */
+    private function normalizarEdicao(array $dados): array
+    {
+        $dados = array_intersect_key($dados, array_flip(self::CAMPOS_EDITAVEIS));
+        if (count($dados) !== count(self::CAMPOS_EDITAVEIS)) {
+            throw new RegraIntegracaoViolada('edicao_incompleta', 'Envie todos os campos da edição do equipamento.');
+        }
+
+        $dados['nome'] = trim((string) $dados['nome']);
+        if ($dados['nome'] === '' || mb_strlen($dados['nome']) > 120) {
+            throw new RegraIntegracaoViolada('nome_invalido', 'Informe o nome do equipamento (até 120 caracteres).');
+        }
+        $dados['protocolo'] = trim((string) $dados['protocolo']);
+        if ($dados['protocolo'] === '' || mb_strlen($dados['protocolo']) > 40) {
+            throw new RegraIntegracaoViolada('protocolo_invalido', 'Informe o protocolo de integração (até 40 caracteres).');
+        }
+        if (! $this->adaptadores->permitido((string) $dados['adaptador'])) {
+            throw new RegraIntegracaoViolada('adaptador_indisponivel', 'Adaptador inexistente ou não permitido neste ambiente.');
+        }
+
+        $dados['endereco_rede'] = trim((string) $dados['endereco_rede']);
+        $dados['porta_rede'] = $dados['porta_rede'] === null || $dados['porta_rede'] === '' ? null : (is_numeric($dados['porta_rede']) ? (int) $dados['porta_rede'] : $dados['porta_rede']);
+        $this->validarRede($dados['endereco_rede'], $dados['porta_rede']);
+        $dados['esquema'] = $this->validarEsquema((string) $dados['esquema']);
+        $dados['timeout_segundos'] = (int) $dados['timeout_segundos'];
+        $this->validarTimeout($dados['timeout_segundos']);
+        $dados['direcao'] = Direcao::tryFrom((string) $dados['direcao'])
+            ?? throw new RegraIntegracaoViolada('direcao_invalida', 'Direção deve ser entrada, saída ou bidirecional.');
+        $dados['modulo_seguro_rs485'] = (bool) $dados['modulo_seguro_rs485'];
+
+        return $dados;
+    }
+
+    /** Ponto escolhido na edição, resolvido no escopo da implantação; null quando não muda. */
+    private function pontoDaEdicao(?string $pontoId, ?PontoAcesso $pontoAtual, bool $bloquear = false): ?PontoAcesso
+    {
+        if ($pontoId === null || $pontoId === '' || $pontoId === $pontoAtual?->id) {
+            return null;
+        }
+
+        $consulta = PontoAcesso::query();
+        $ponto = ($bloquear ? $consulta->lockForUpdate() : $consulta)->find($pontoId)
+            ?? throw new RegraIntegracaoViolada('ponto_invalido', 'Ponto de acesso não encontrado nesta implantação.');
+
+        if ($ponto->status === StatusPontoAcesso::Inativo) {
+            throw new RegraIntegracaoViolada('ponto_inativo', 'Ponto de acesso inativo não pode receber equipamento.');
+        }
+        if ($ponto->vinculoVigente()->exists()) {
+            throw new RegraIntegracaoViolada('ponto_ja_atendido', 'Este ponto de acesso já é atendido por outro terminal.');
+        }
+
+        return $ponto;
+    }
+
+    /** @return array<string, array{old: mixed, new: mixed}> */
+    private function mudancasEdicao(Equipamento $equipamento): array
+    {
+        return collect($equipamento->getDirty())
+            ->only(self::CAMPOS_EDITAVEIS)
+            ->mapWithKeys(fn ($novo, string $campo) => [$campo => [
+                'old' => $this->valor($equipamento->getOriginal($campo)),
+                'new' => $this->valor($equipamento->getAttribute($campo)),
+            ]])->all();
+    }
+
+    /**
+     * @param  array<string, array{old: mixed, new: mixed}>  $mudancas
+     * @return array{mudancas: array<string, array{old: mixed, new: mixed}>, conexao: bool, destino: bool, homologacao: bool}
+     */
+    private function resumoEdicao(array $mudancas): array
+    {
+        $campos = array_keys($mudancas);
+
+        return [
+            'mudancas' => $mudancas,
+            'conexao' => array_intersect($campos, self::CAMPOS_CONEXAO) !== [],
+            'destino' => array_intersect($campos, self::CAMPOS_DESTINO) !== [],
+            'homologacao' => array_intersect($campos, self::CAMPOS_HOMOLOGACAO) !== [],
+        ];
     }
 
     private function garantirVersao(int $atual, int $esperada): void

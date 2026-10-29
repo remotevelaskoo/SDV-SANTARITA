@@ -30,6 +30,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 /**
@@ -54,6 +55,19 @@ class EquipamentoManagement extends Component
     public string $senhaTecnica = '';
 
     public bool $trocandoSenha = false;
+
+    public bool $editando = false;
+
+    /** @var array<string, mixed> Formulário de edição; nunca carrega a credencial técnica. */
+    public array $edicao = [];
+
+    /** Versão lida ao abrir a edição, para detectar alteração concorrente. */
+    public ?int $versaoEdicao = null;
+
+    /** @var list<array{campo: string, rotulo: string, atual: string, novo: string}>|null */
+    public ?array $previaEdicao = null;
+
+    public bool $previaAfetaConexao = false;
 
     /** @var array<string, mixed>|null */
     public ?array $certificadoLido = null;
@@ -215,6 +229,185 @@ class EquipamentoManagement extends Component
 
         $this->trocandoSenha = false;
         $this->sucesso('Credencial substituída', 'A nova senha foi gravada cifrada. A anterior foi desativada.');
+    }
+
+    // ---- Edição (AJ-007) -----------------------------------------------------
+
+    private const ROTULOS_EDICAO = [
+        'nome' => 'Nome',
+        'endereco_rede' => 'Endereço IP',
+        'esquema' => 'HTTP/HTTPS',
+        'porta_rede' => 'Porta',
+        'timeout_segundos' => 'Tempo limite',
+        'protocolo' => 'Protocolo de integração',
+        'adaptador' => 'Adaptador',
+        'direcao' => 'Direção',
+        'modulo_seguro_rs485' => 'Módulo seguro RS-485',
+        'ponto_acesso_id' => 'Ponto de acesso',
+    ];
+
+    /** Abre a edição com os valores do servidor; a senha técnica não é carregada. */
+    public function iniciarEdicao(): void
+    {
+        $this->autorizar();
+        $equipamento = $this->equipamento();
+
+        $this->edicao = [
+            'nome' => $equipamento->nome,
+            'endereco_rede' => $equipamento->endereco_rede,
+            'esquema' => $equipamento->esquema,
+            'porta_rede' => $equipamento->porta_rede === null ? '' : (string) $equipamento->porta_rede,
+            'timeout_segundos' => $equipamento->timeout_segundos,
+            'protocolo' => $equipamento->protocolo,
+            'adaptador' => $equipamento->adaptador,
+            'direcao' => $equipamento->direcao->value,
+            'modulo_seguro_rs485' => $equipamento->modulo_seguro_rs485,
+            'ponto_id' => (string) $equipamento->pontoVigente()?->id,
+        ];
+        $this->versaoEdicao = $equipamento->versao;
+        $this->previaEdicao = null;
+        $this->previaAfetaConexao = false;
+        $this->trocandoSenha = false;
+        $this->certificadoLido = null;
+        $this->feedback = null;
+        $this->resetErrorBag();
+        $this->editando = true;
+    }
+
+    public function cancelarEdicao(): void
+    {
+        $this->editando = false;
+        $this->edicao = [];
+        $this->versaoEdicao = null;
+        $this->previaEdicao = null;
+        $this->previaAfetaConexao = false;
+        $this->resetErrorBag();
+    }
+
+    /** Valida e mostra "valor atual → novo valor"; só o nome ou o tempo limite salvam direto. */
+    public function revisarEdicao(CadastroEquipamentos $cadastro): void
+    {
+        $ator = $this->autorizar();
+        $equipamento = $this->equipamento();
+        $this->validarEdicao($cadastro, $equipamento);
+
+        try {
+            $previa = $cadastro->previaEdicao($equipamento, $this->dadosEdicao(), $this->edicao['ponto_id'] ?: null, (int) $this->versaoEdicao, $ator);
+        } catch (RegraIntegracaoViolada $e) {
+            $this->recusaEdicao($e);
+
+            return;
+        }
+
+        if ($previa['mudancas'] === []) {
+            $this->feedback = ['variant' => 'info', 'title' => 'Nada a salvar', 'message' => 'Nenhum campo foi alterado.'];
+
+            return;
+        }
+        if (! $previa['homologacao']) {
+            $this->confirmarEdicao($cadastro);
+
+            return;
+        }
+
+        $this->previaEdicao = collect($previa['mudancas'])
+            ->map(fn (array $valores, string $campo) => [
+                'campo' => $campo,
+                'rotulo' => self::ROTULOS_EDICAO[$campo] ?? $campo,
+                'atual' => $this->valorEdicao($campo, $valores['old']),
+                'novo' => $this->valorEdicao($campo, $valores['new']),
+            ])->values()->all();
+        $this->previaAfetaConexao = $previa['conexao'];
+    }
+
+    public function voltarParaEdicao(): void
+    {
+        $this->previaEdicao = null;
+        $this->previaAfetaConexao = false;
+    }
+
+    public function confirmarEdicao(CadastroEquipamentos $cadastro): void
+    {
+        $ator = $this->autorizar();
+        $equipamento = $this->equipamento();
+        $this->validarEdicao($cadastro, $equipamento);
+
+        try {
+            $resultado = $cadastro->editarConfiguracao($equipamento, $this->dadosEdicao(), $this->edicao['ponto_id'] ?: null, (int) $this->versaoEdicao, $ator);
+        } catch (RegraIntegracaoViolada $e) {
+            $this->recusaEdicao($e);
+
+            return;
+        }
+
+        $this->cancelarEdicao();
+        $this->sucesso('Configurações atualizadas', match (true) {
+            $resultado['conexao'] => 'Configurações atualizadas. Teste novamente a conexão e, em HTTPS, confira o certificado apresentado.',
+            $resultado['homologacao'] => 'Configurações atualizadas. O terminal está em homologação; confira o funcionamento em bancada.',
+            default => 'Configurações atualizadas. Conexão e homologação não foram afetadas.',
+        });
+    }
+
+    private function validarEdicao(CadastroEquipamentos $cadastro, Equipamento $equipamento): void
+    {
+        try {
+            $this->validate([
+                'edicao.nome' => ['required', 'string', 'max:120'],
+                'edicao.endereco_rede' => ['required', 'ip'],
+                'edicao.porta_rede' => ['nullable', 'integer', 'between:1,65535'],
+                'edicao.esquema' => ['required', 'in:http,https'],
+                'edicao.timeout_segundos' => ['required', 'integer', 'between:1,30'],
+                'edicao.protocolo' => ['required', 'string', 'max:40'],
+                'edicao.adaptador' => ['required', 'string'],
+                'edicao.direcao' => ['required', 'in:entrada,saida,bidirecional'],
+                'edicao.ponto_id' => ['nullable', 'string'],
+            ], attributes: [
+                'edicao.nome' => 'nome',
+                'edicao.endereco_rede' => 'endereço IP',
+                'edicao.porta_rede' => 'porta',
+                'edicao.timeout_segundos' => 'tempo limite',
+                'edicao.protocolo' => 'protocolo de integração',
+            ]);
+        } catch (ValidationException $e) {
+            $cadastro->registrarEdicaoRecusada($equipamento, 'dados_invalidos', array_map(
+                fn (string $chave) => Str::after($chave, 'edicao.'),
+                array_keys($e->errors()),
+            ));
+
+            throw $e;
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function dadosEdicao(): array
+    {
+        return array_intersect_key($this->edicao, array_flip(CadastroEquipamentos::CAMPOS_EDITAVEIS));
+    }
+
+    private function recusaEdicao(RegraIntegracaoViolada $e): void
+    {
+        if ($e->codigo === 'versao_desatualizada') {
+            // Outro administrador salvou antes: recarrega os valores atuais.
+            $this->iniciarEdicao();
+            $this->erro('Equipamento alterado por outra pessoa', 'Os campos foram recarregados com os valores atuais. Revise e salve novamente.');
+
+            return;
+        }
+
+        $this->previaEdicao = null;
+        $this->erro('Equipamento não alterado', $e->getMessage());
+    }
+
+    private function valorEdicao(string $campo, mixed $valor): string
+    {
+        return match (true) {
+            $valor === null || $valor === '' => $campo === 'porta_rede' ? 'Padrão do protocolo' : 'Não definido',
+            $campo === 'esquema' => strtoupper((string) $valor),
+            $campo === 'modulo_seguro_rs485' => $valor ? 'Sim' : 'Não',
+            $campo === 'timeout_segundos' => $valor.' s',
+            $campo === 'direcao' => ['entrada' => 'Entrada', 'saida' => 'Saída', 'bidirecional' => 'Bidirecional'][$valor] ?? (string) $valor,
+            default => (string) $valor,
+        };
     }
 
     public function colocarEmHomologacao(CadastroEquipamentos $cadastro): void
@@ -414,7 +607,15 @@ class EquipamentoManagement extends Component
 
         return view('livewire.equipamento-management', [
             'equipamentos' => $this->mode === 'list' ? Equipamento::query()->terminais()->with('vinculoVigente.pontoAcesso')->orderBy('nome')->get() : collect(),
-            'pontos' => $this->mode === 'form' ? PontoAcesso::query()->where('status', '!=', StatusPontoAcesso::Inativo->value)->orderBy('nome')->get() : collect(),
+            'pontos' => match (true) {
+                $this->mode === 'form' => PontoAcesso::query()->where('status', '!=', StatusPontoAcesso::Inativo->value)->orderBy('nome')->get(),
+                // Na edição: o ponto atual ou pontos livres da implantação.
+                $this->editando && $equipamento !== null => PontoAcesso::query()
+                    ->where('status', '!=', StatusPontoAcesso::Inativo->value)
+                    ->where(fn ($q) => $q->whereDoesntHave('vinculoVigente')->orWhere('id', $equipamento->pontoVigente()?->id))
+                    ->orderBy('nome')->get(),
+                default => collect(),
+            },
             'adaptadoresDisponiveis' => array_values(array_filter($adaptadores->codigos(), fn (string $c) => $adaptadores->permitido($c))),
             'equipamento' => $equipamento,
             'detalhe' => $equipamento ? $this->detalhe($equipamento) : null,
@@ -572,6 +773,7 @@ class EquipamentoManagement extends Component
         $this->registrandoHomologacaoRele = false;
         $this->trocandoSenha = false;
         $this->senhaTecnica = '';
+        $this->cancelarEdicao();
         $this->feedback = null;
     }
 
