@@ -22,13 +22,21 @@
             >
                 <x-slot:actions>
                     <x-ui.modal id="close-register-modal" title="Fechar caixa" description="Confira o total antes de concluir o fechamento." trigger-label="Fechar caixa" trigger-variant="danger">
-                        <x-ui.alert variant="info" title="Saldo esperado">R$ {{ number_format($this->expectedBalance(), 2, ',', '.') }}, calculado a partir do saldo inicial e das movimentações registradas.</x-ui.alert>
+                        <dl class="cash-register-breakdown">
+                            <div><dt>Saldo inicial</dt><dd>R$ {{ number_format($openingBalance, 2, ',', '.') }}</dd></div>
+                            <div><dt>+ Contribuições pagas ({{ $resumo['quantidades']['pagantes'] }})</dt><dd>R$ {{ number_format($resumo['contribuicoes'], 2, ',', '.') }}</dd></div>
+                            <div><dt>+ Outras entradas</dt><dd>R$ {{ number_format($resumo['outras'], 2, ',', '.') }}</dd></div>
+                            <div><dt>− Saídas</dt><dd>R$ {{ number_format($resumo['saidas'], 2, ',', '.') }}</dd></div>
+                            <div><dt>− Estornos</dt><dd>R$ {{ number_format($resumo['estornos'], 2, ',', '.') }}</dd></div>
+                            <div class="cash-register-breakdown__total"><dt>= Total esperado</dt><dd>R$ {{ number_format($this->expectedBalance(), 2, ',', '.') }}</dd></div>
+                        </dl>
+                        <p class="cash-register-breakdown__nota">Isentos: {{ $resumo['quantidades']['isentos'] }} · Não contribuintes: {{ $resumo['quantidades']['nao_contribuintes'] }} — não entram no valor.</p>
                         <div class="cash-register-form-fields">
-                            <x-ui.field id="informed-amount" label="Total conferido" wire:model="informedAmount" placeholder="0,00" :error="$errors->first('informedAmount')" required />
+                            <x-ui.field id="informed-amount" label="Total contado" wire:model="informedAmount" placeholder="0,00" :error="$errors->first('informedAmount')" required />
                         </div>
                         <label class="cash-register-notes-field" for="closing-notes">
-                            <span>Observações da conferência</span>
-                            <textarea id="closing-notes" wire:model="closingNotes" maxlength="200" rows="3" placeholder="Registre justificativas de diferença, se houver…"></textarea>
+                            <span>Justificativa (obrigatória se houver diferença)</span>
+                            <textarea id="closing-notes" wire:model="closingNotes" maxlength="500" rows="3" placeholder="Explique a diferença entre o contado e o esperado…"></textarea>
                         </label>
                         <x-slot:confirm><form method="dialog"><x-ui.button type="submit" variant="danger" wire:click="closeRegister">Confirmar fechamento</x-ui.button></form></x-slot:confirm>
                     </x-ui.modal>
@@ -122,17 +130,18 @@
             empty-description="O histórico aparecerá aqui após o primeiro fechamento."
         >
             <x-slot:table>
-                <thead><tr><th>Período</th><th>Operador</th><th>Saldo inicial</th><th>Esperado</th><th>Informado</th><th>Diferença</th><th>Situação</th></tr></thead>
+                <thead><tr><th>Período</th><th>Operador</th><th>Saldo inicial</th><th>Esperado</th><th>Contado</th><th>Diferença</th><th>Situação</th><th><span class="sr-only">Ações</span></th></tr></thead>
                 <tbody>
                     @foreach (array_reverse($closedSessions) as $session)
                         <tr>
-                            <td>{{ $session['period'] }}</td>
+                            <td>{{ $session['period'] }}@if ($session['numero'])<small>{{ $session['numero'] }}</small>@endif</td>
                             <td>{{ $session['operator'] }}</td>
                             <td class="numeric">R$ {{ number_format($session['opening'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['expected'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['informed'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['difference'], 2, ',', '.') }}</td>
                             <td><x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença registrada' }}</x-ui.badge></td>
+                            <td><a href="{{ route('cash-register.closing', $session['id']) }}">Ver fechamento</a></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -148,6 +157,7 @@
                             </div>
                             <time>R$ {{ number_format($session['difference'], 2, ',', '.') }}</time>
                             <x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença' }}</x-ui.badge>
+                            <a href="{{ route('cash-register.closing', $session['id']) }}">Ver fechamento</a>
                         </li>
                     @endforeach
                 </ul>

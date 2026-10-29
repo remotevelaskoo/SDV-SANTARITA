@@ -20,6 +20,20 @@ class CaixaMovimentacao extends Model
 
     protected $table = 'caixa_movimentacoes';
 
+    /** Lançamento só entra em caixa aberto e não é editado nem excluído depois (RN-048, AJ-008). */
+    protected static function booted(): void
+    {
+        static::creating(function (self $movimentacao): void {
+            $turno = CaixaTurno::query()->find($movimentacao->caixa_turno_id);
+            if ($turno === null || $turno->status !== 'aberto') {
+                throw new \LogicException('Movimentação exige caixa aberto (RN-084).');
+            }
+        });
+
+        static::updating(fn () => throw new \LogicException('Movimentação de caixa não é editada; registre um estorno.'));
+        static::deleting(fn () => throw new \LogicException('Movimentação de caixa não é excluída; registre um estorno.'));
+    }
+
     protected function casts(): array
     {
         return [

@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Integracoes\Aplicacao\CamerasPlaca;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
-use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
 use App\Models\Catalogo;
 use App\Models\CatalogoItem;
@@ -17,10 +16,12 @@ use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationArquivo;
+use App\Models\User;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Services\AuditService;
 use App\Services\BuscaPessoasValidacao;
+use App\Services\CaixasOperador;
 use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
 use App\Support\NormalizadorBusca;
@@ -622,7 +623,7 @@ class AccessValidation extends Component
     #[Computed]
     public function caixaAberto(): bool
     {
-        return CaixaTurno::query()->where('operator_id', Auth::id())->where('status', 'aberto')->exists();
+        return Auth::user() instanceof User && app(CaixasOperador::class)->abertoDo(Auth::user()) !== null;
     }
 
     /** Atendimento e contribuição na mesma transação: ticket inválido não deixa atendimento órfão. */

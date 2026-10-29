@@ -69,7 +69,8 @@ class Portaria extends Component
     /** @return array{status: string, code: string, openedAt: string, openedBy: string, total: float} */
     public function cashRegister(): array
     {
-        $turno = CaixaTurno::query()->where('status', 'aberto')->latest('opened_at')->with('operator')->first();
+        // Só o caixa do operador autenticado (AJ-008), nunca o último aberto da implantação.
+        $turno = CaixaTurno::query()->abertoDo((int) auth()->id())->with('operator')->first();
 
         if (! $turno) {
             return [

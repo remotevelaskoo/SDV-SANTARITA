@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CaixaFechamentoImpressaoController;
 use App\Http\Controllers\EquipamentoImagemController;
 use App\Http\Controllers\ProtectedFileController;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
@@ -7,6 +8,8 @@ use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\AuditLog;
+use App\Livewire\CaixaFechamento;
+use App\Livewire\CaixaFechamentos;
 use App\Livewire\CameraPlacasManagement;
 use App\Livewire\CashRegister;
 use App\Livewire\CatalogoManagement;
@@ -79,6 +82,9 @@ Route::get('/veiculos', VehicleManagement::class)->middleware(['auth', 'permissa
 Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'permissao:pessoas.gerenciar'])->name('people.create');
 Route::get('/empresas', CompanyManagement::class)->middleware(['auth', 'permissao:empresas.consultar'])->name('companies');
 Route::get('/caixa', CashRegister::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar'])->name('cash-register');
+Route::get('/caixa/fechamentos', CaixaFechamentos::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar,caixa.consolidado.consultar'])->name('cash-register.closings');
+Route::get('/caixa/fechamentos/{turno}', CaixaFechamento::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar,caixa.consolidado.consultar'])->name('cash-register.closing');
+Route::get('/caixa/fechamentos/{turno}/imprimir', CaixaFechamentoImpressaoController::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar,caixa.consolidado.consultar'])->name('cash-register.closing.print');
 Route::get('/encomendas', PackageManagement::class)->middleware(['auth', 'permissao:encomendas.registrar'])->name('packages');
 Route::get('/relatorios', Reports::class)->middleware(['auth', 'permissao:relatorios.proprio.consultar,relatorios.consolidado.consultar'])->name('reports');
 Route::get('/usuarios', UserManagement::class)->middleware(['auth', 'permissao:usuarios.administrar'])->name('users');

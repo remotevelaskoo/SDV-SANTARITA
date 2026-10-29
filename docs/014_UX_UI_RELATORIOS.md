@@ -3,7 +3,7 @@
 
 **Documento:** SDV-UXR-014
 **Versão:** 1.1.0
-**Status:** Implementado parcialmente; fechamento detalhado por turno especificado para desenvolvimento
+**Status:** Implementado parcialmente; fechamento detalhado por turno implementado (AJ-008, §5.7), aguardando revisão
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
 **Data:** Agosto de 2026
@@ -151,6 +151,56 @@ Após confirmar o encerramento, o sistema deverá abrir o resumo do fechamento e
 O fechamento continuará válido mesmo que a impressão falhe. A gestão, auditoria e administração poderão consultar todos os fechamentos da implantação; Porteiro/Caixa poderá consultar apenas os próprios. A abertura, o fechamento, a visualização consolidada e cada exportação serão auditados.
 
 Correções posteriores de ticket ou outras informações não apagarão o valor original. O relatório consultado deverá sinalizar a correção e permitir alcançar o respectivo histórico de auditoria; qualquer reemissão deverá informar a data de emissão.
+
+## 5.7 Situação da implementação (AJ-008)
+
+Implementado em 29/10/2026 na branch `claude/aj-008-fechamento-caixa`, ainda sem merge na `main`.
+
+**Fórmula canônica.** `contribuicoes` é a única fonte das contribuições pagas; `caixa_movimentacoes` guarda somente lançamentos manuais. Contribuição paga não é projetada como movimentação.
+
+```
+esperado = saldo inicial
+         + contribuições pagas vinculadas ao turno     (contribuicoes, situação "pago")
+         + outras entradas manuais                     (caixa_movimentacoes "entrada")
+         − saídas                                      (caixa_movimentacoes "saida")
+         − estornos                                    (caixa_movimentacoes "estorno")
+diferença = contado − esperado
+```
+
+Uma entrada manual que repita o protocolo de uma contribuição paga do mesmo turno é desconsiderada em "outras entradas", e o atendimento continua aceitando uma única contribuição (`historico_acesso_id` único). Assim nenhum pagamento é somado duas vezes.
+
+**Caixa do operador.**
+- O caixa corrente é sempre o do operador autenticado na implantação ativa (`CaixasOperador::abertoDo`), e nunca o último aberto da implantação. Isso vale para Caixa, Portaria e Validação de Entrada.
+- A abertura registra o posto assumido no turno operacional (`posto_id`); sem posto, usa o terminal padrão.
+- Índices únicos parciais no banco garantem no máximo um caixa aberto por operador e um por posto. A tentativa concorrente vira mensagem na tela.
+- Por causa do índice por posto, na troca de operador o caixa do posto precisa ser fechado antes de o próximo abrir.
+
+**Contribuição paga.**
+- É gravada na mesma transação do atendimento, com bloqueio do caixa do operador.
+- Sem caixa aberto, o pagamento é recusado e o atendimento também não é gravado.
+- Não contribuinte e isento continuam sendo registrados sem caixa e entram no turno só como quantidade.
+
+**Fechamento.**
+- Exige o total contado; diferença exige justificativa de 10 a 500 caracteres.
+- Grava no próprio turno o retrato dos totais (contribuições, outras entradas, saídas, estornos, esperado, contado, diferença e quantidades de pagantes, isentos e não contribuintes) e um número `FCX-AAAAMMDD-XXXXX`.
+- Depois de fechado, o turno não é editado nem excluído. Movimentação só entra em caixa aberto e não é editada nem excluída. Valor, forma, situação e caixa da contribuição não são reescritos.
+
+**Entrega à gestão.**
+- Ao fechar, abre `/caixa/fechamentos/{id}` com o resumo e o detalhamento das pessoas pagantes: horário, pessoa, documento mascarado, protocolo, ticket, valor, forma, operador e ponto. Ticket repetido e ticket corrigido (com data e valor anterior) aparecem sinalizados.
+- O resumo oferece `Imprimir fechamento`, que abre `/caixa/fechamentos/{id}/imprimir` em versão limpa, sem menu lateral, com data de emissão e campos de assinatura, e `Exportar itens em CSV`.
+- `/caixa/fechamentos` lista os fechamentos: Porteiro/Caixa vê os próprios; quem tem `caixa.consolidado.consultar` (Gestor, Auditor e Administrador) vê todos da implantação.
+
+**Auditoria.**
+- Ações registradas: `caixa_aberto`, `caixa_fechado`, `caixa_diferenca_registrada` (com a justificativa), `consultou_fechamentos_consolidados`, `consultou_fechamento_caixa` (fechamento de outro operador), `imprimiu_fechamento_caixa` e `exportou_fechamento_caixa`.
+
+**Fechamentos antigos.** Fechamentos anteriores ao AJ-008 não têm os totais por categoria; o resumo avisa isso em vez de mostrar valores zerados.
+
+**Pendências.**
+- PDF homologado (PEN-UXR-002).
+- O relatório de caixa da P16 (§5.1) continua lendo só `caixa_movimentacoes`; incluir as contribuições pagas nele é uma decisão separada.
+- Confirmar com a operação a regra de um caixa por posto quando dois operadores dividirem o mesmo posto.
+
+Cobertura em `tests/Feature/Aj008/FechamentoCaixaTest.php`.
 
 # 6. Exportação
 

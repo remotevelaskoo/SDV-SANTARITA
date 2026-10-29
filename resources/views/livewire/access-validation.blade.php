@@ -331,6 +331,7 @@
             <x-ui.radio id="contribution-no" name="contribution" value="no" label="Não contribui" description="Entrada sem pagamento" :checked="$contribution === 'no'" wire:model.live="contribution" />
             <x-ui.radio id="contribution-exempt" name="contribution" value="exempt" label="Isento" description="Pessoa isenta de contribuição" :checked="$contribution === 'exempt'" wire:model.live="contribution" />
         </fieldset>
+        @error('contribution')<x-ui.alert variant="danger" title="Caixa fechado para você">{{ $message }} <a href="{{ route('cash-register') }}">Abrir caixa</a></x-ui.alert>@enderror
 
         @php($valorContribuicao = \App\Services\ContribuicoesAtendimento::valorPadrao())
         @php($valorFormatado = 'R$ '.number_format((float) $valorContribuicao, 2, ',', '.'))

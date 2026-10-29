@@ -2190,3 +2190,65 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .validation-plate { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 }
 .camera-placas-teste { display: block; width: 100%; max-width: 40rem; margin-top: 0.6rem; border-radius: var(--radius-md); background: #111827; }
+
+/* AJ-008 — fechamento de caixa por turno */
+.cash-register-breakdown { display: grid; gap: 0.3rem; margin: 0; }
+.cash-register-breakdown div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-bottom: 1px solid var(--neutral-200); font-size: 0.7rem; }
+.cash-register-breakdown dt { color: var(--neutral-600); }
+.cash-register-breakdown dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.cash-register-breakdown__total { border-bottom: 2px solid var(--neutral-800) !important; font-size: 0.78rem !important; }
+.cash-register-breakdown__total dt { color: var(--neutral-950); font-weight: 750; }
+.cash-register-breakdown__nota { margin: 0.4rem 0 0; color: var(--neutral-600); font-size: 0.64rem; }
+.cash-register-history-card td small { display: block; color: var(--neutral-600); font-size: 0.6rem; }
+.caixa-fechamento, .caixa-fechamentos { display: grid; gap: 1rem; }
+.caixa-fechamento__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.caixa-fechamento__espaco { flex: 1; }
+.caixa-fechamento__folha { padding: 1.25rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.caixa-fechamento__nota { margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
+.caixa-fechamentos .cash-register-history-card > header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem; }
+.fechamento-caixa { display: grid; gap: 1rem; color: var(--neutral-950); }
+.fechamento-caixa__cabecalho { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--neutral-800); }
+.fechamento-caixa__cabecalho h2 { margin: 0.1rem 0; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.fechamento-caixa__cabecalho p { margin: 0; color: var(--neutral-600); font-size: 0.7rem; }
+.fechamento-caixa__rotulo { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.6rem !important; font-weight: 750; }
+.fechamento-caixa__situacao { padding: 0.3rem 0.7rem; border: 1px solid var(--success); border-radius: 999px; background: var(--success-surface); color: var(--success); font-size: 0.68rem; font-weight: 750; }
+.fechamento-caixa__situacao.is-diferenca { border-color: var(--warning); background: var(--warning-surface); color: #8a5a00; }
+.fechamento-caixa__dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem 1rem; margin: 0; }
+.fechamento-caixa__dados dt { color: var(--neutral-600); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+.fechamento-caixa__dados dd { margin: 0.15rem 0 0; font-size: 0.75rem; }
+.fechamento-caixa__totais { width: 100%; max-width: 30rem; border-collapse: collapse; font-size: 0.75rem; }
+.fechamento-caixa__totais caption, .fechamento-caixa__subtitulo { margin: 0 0 0.4rem; color: var(--neutral-800); font-size: 0.7rem; font-weight: 750; text-align: left; text-transform: uppercase; }
+.fechamento-caixa__totais th, .fechamento-caixa__totais td { padding: 0.35rem 0; border-bottom: 1px solid var(--neutral-200); text-align: left; font-weight: 500; }
+.fechamento-caixa__totais td { text-align: right; font-variant-numeric: tabular-nums; }
+.fechamento-caixa__totais tr.is-total th, .fechamento-caixa__totais tr.is-total td { border-bottom: 2px solid var(--neutral-800); font-weight: 750; }
+.fechamento-caixa__totais tr.is-diferenca td { color: #8a5a00; }
+.fechamento-caixa__totais th.fechamento-caixa__legado { padding: 0.5rem 0; color: #8a5a00; font-size: 0.66rem; font-weight: 600; }
+.fechamento-caixa__justificativa { margin: 0; padding: 0.6rem 0.75rem; border-left: 3px solid var(--warning); background: var(--warning-surface); font-size: 0.7rem; }
+.fechamento-caixa__quantidades { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.25rem; padding: 0.6rem 0.75rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); }
+.fechamento-caixa__quantidades div { display: grid; }
+.fechamento-caixa__quantidades strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.fechamento-caixa__quantidades span, .fechamento-caixa__quantidades p { color: var(--neutral-600); font-size: 0.62rem; }
+.fechamento-caixa__quantidades p { flex-basis: 100%; margin: 0; }
+.fechamento-caixa__tabela { overflow-x: auto; }
+.fechamento-caixa__tabela table { width: 100%; border-collapse: collapse; font-size: 0.66rem; }
+.fechamento-caixa__tabela th, .fechamento-caixa__tabela td { padding: 0.4rem 0.45rem; border-bottom: 1px solid var(--neutral-200); text-align: left; vertical-align: top; }
+.fechamento-caixa__tabela thead th { color: var(--neutral-600); font-size: 0.58rem; text-transform: uppercase; }
+.fechamento-caixa__tabela .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fechamento-caixa__tabela tfoot th, .fechamento-caixa__tabela tfoot td { font-weight: 750; border-top: 2px solid var(--neutral-800); }
+.fechamento-caixa__tabela td.is-codigo { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fechamento-caixa__marca { display: block; margin-top: 0.15rem; color: #8a5a00; font-size: 0.58rem; font-weight: 700; }
+.fechamento-caixa__vazio, .fechamento-caixa__emissao { margin: 0; color: var(--neutral-600); font-size: 0.65rem; }
+.fechamento-impressao { margin: 0; background: var(--neutral-100); font-family: var(--font-sans); }
+.fechamento-impressao__barra { display: flex; justify-content: space-between; gap: 1rem; max-width: 60rem; margin: 0 auto; padding: 1rem; }
+.fechamento-impressao__barra button { padding: 0.5rem 1rem; border: 0; border-radius: var(--radius-md); background: var(--blue-600); color: var(--white); font: inherit; font-weight: 700; cursor: pointer; }
+.fechamento-impressao__folha { max-width: 60rem; margin: 0 auto 2rem; padding: 2rem; background: var(--white); }
+.fechamento-impressao__marca { margin: 0 0 0.75rem; color: var(--neutral-600); font-size: 0.65rem; font-weight: 700; }
+.fechamento-impressao__assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3rem; }
+.fechamento-impressao__assinaturas span { padding-top: 0.4rem; border-top: 1px solid var(--neutral-950); font-size: 0.65rem; text-align: center; }
+@media print {
+    .fechamento-impressao { background: #fff; }
+    .fechamento-impressao__barra { display: none; }
+    .fechamento-impressao__folha { max-width: none; margin: 0; padding: 0; }
+    .fechamento-caixa__tabela { overflow: visible; }
+    .fechamento-caixa__tabela tr { break-inside: avoid; }
+}
