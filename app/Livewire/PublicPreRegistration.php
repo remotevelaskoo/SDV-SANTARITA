@@ -125,16 +125,54 @@ class PublicPreRegistration extends Component
         $this->validateCurrentStep();
         $this->draftSaved = false;
         $this->step = min(6, $this->step + 1);
+        if ($this->step === 3 && ! $this->documentStepEnabled()) {
+            $this->step = 4;
+        }
     }
 
     public function previousStep(): void
     {
         $this->draftSaved = false;
         $this->step = max(1, $this->step - 1);
+        if ($this->step === 3 && ! $this->documentStepEnabled()) {
+            $this->step = 2;
+        }
+    }
+
+    /** Etapa 3 (documento e leitura assistida) desligada por configuração. */
+    public function documentStepEnabled(): bool
+    {
+        return (bool) config('documentos.pre_cadastro.etapa_documento');
+    }
+
+    /**
+     * Etapas exibidas ao visitante, numeradas na ordem em que aparecem.
+     *
+     * @return list<array{label: string, description: string, state: string, step: int}>
+     */
+    public function visibleSteps(): array
+    {
+        $visible = [];
+        foreach ($this->steps as $index => $definition) {
+            $number = $index + 1;
+            if ($number === 3 && ! $this->documentStepEnabled()) {
+                continue;
+            }
+            $visible[] = $definition + [
+                'step' => $number,
+                'state' => $number < $this->step ? 'complete' : ($number === $this->step ? 'current' : 'future'),
+            ];
+        }
+
+        return $visible;
     }
 
     public function editStep(int $step): void
     {
+        if ($step === 3 && ! $this->documentStepEnabled()) {
+            return;
+        }
+
         if ($step >= 1 && $step < $this->step) {
             $this->step = $step;
         }
@@ -352,7 +390,7 @@ class PublicPreRegistration extends Component
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
                     'document' => $this->cpf,
-                    'document_type' => $this->documentType,
+                    'document_type' => $this->documentStepEnabled() ? $this->documentType : null,
                     'birth_date' => $this->birthDate,
                     'phone' => $this->phone,
                     'email' => $this->email,
@@ -369,18 +407,21 @@ class PublicPreRegistration extends Component
                     'vehicle_plate' => $this->hasVehicle ? $this->plate : null,
                     'vehicle_model' => $this->hasVehicle ? $this->vehicleModel : null,
                     'vehicle_color' => $this->hasVehicle ? $this->vehicleColor : null,
-                    'document_status' => 'Arquivo protegido disponível para conferência',
+                    'document_status' => $this->documentStepEnabled()
+                        ? 'Arquivo protegido disponível para conferência'
+                        : 'Documento não solicitado no pré-cadastro; conferir na portaria',
                     'selfie_status' => 'Arquivo protegido disponível para conferência',
                     'status' => 'aguardando',
                     'submitted_at' => now(),
                 ]);
 
-                $uploads = [
-                    'documento' => $this->documentFile,
-                    'selfie' => $this->selfieFile,
-                ];
+                $uploads = ['selfie' => $this->selfieFile];
 
-                if ($this->documentBackFile !== null) {
+                if ($this->documentStepEnabled() && $this->documentFile !== null) {
+                    $uploads['documento'] = $this->documentFile;
+                }
+
+                if ($this->documentStepEnabled() && $this->documentBackFile !== null) {
                     $uploads['documento_verso'] = $this->documentBackFile;
                 }
 
@@ -533,9 +574,9 @@ class PublicPreRegistration extends Component
             'city' => ['required', 'string', 'max:80'],
             'state' => ['required', 'string', 'size:2'],
             'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
-            'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
-            'documentFile' => $this->protectedImageRules(),
-            'documentBackFile' => $this->optionalProtectedImageRules(),
+            'documentType' => $this->documentStepEnabled() ? ['required', Rule::in(['rg_cin', 'cnh'])] : [],
+            'documentFile' => $this->documentStepEnabled() ? $this->protectedImageRules() : [],
+            'documentBackFile' => $this->documentStepEnabled() ? $this->optionalProtectedImageRules() : [],
             'selfieFile' => $this->protectedImageRules(),
             'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
             'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],

@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
         $this->call(UsuarioDemoSeeder::class);
         $this->call(ConfiguracaoSeeder::class);
         $this->call(CatalogoSeeder::class);
+        $this->call(PostoSeeder::class);
         $this->call(MultiImplantacaoDemoSeeder::class);
     }
 }

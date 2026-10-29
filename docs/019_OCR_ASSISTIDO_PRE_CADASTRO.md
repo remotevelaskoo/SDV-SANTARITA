@@ -1,6 +1,6 @@
 # OCR assistido no pré-cadastro
 
-**Documento:** SDV-UXP-015  
+**Documento:** SDV-UXP-019 (publicado na `main` como SDV-UXP-015; renumerado por colisão com SDV-INT-015)  
 **Situação:** Em desenvolvimento — entregas 1 a 4 implementadas para revisão
 **Responsáveis:** Lucas Pastorelli + Codex  
 **Data:** 15 de outubro de 2026

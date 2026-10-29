@@ -1,7 +1,7 @@
-# ADR-016 — OPERAÇÃO HÍBRIDA LOCAL E NUVEM
+# ADR-018 — OPERAÇÃO HÍBRIDA LOCAL E NUVEM
 
-**Identificador:** ADR-016  
-**Versão:** 1.0.0  
+**Identificador:** ADR-018  
+**Versão:** 1.0.1  
 **Status:** Aprovado  
 **Prioridade:** P0 — Obrigatório antes da publicação  
 **Produto:** SDV Access — Implantação Santa Rita  
@@ -15,6 +15,7 @@
 | Versão | Data | Responsável | Alteração |
 |---|---|---|---|
 | 1.0.0 | 16/10/2026 | Lucas Pastorelli + Codex | Aprovação da topologia híbrida, com operação local, sincronização posterior e backup externo |
+| 1.0.1 | 20/10/2026 | Product Owner | Renumeração de ADR-016 para ADR-018 por colisão com o ADR-016 dos terminais faciais; conteúdo aprovado inalterado |
 
 # 1. Contexto
 
@@ -179,16 +180,16 @@ A ADR-008 continua controlando cache operacional, validade de autorização, rev
 
 # 13. Critérios de aceite
 
-**CA-ADR-016-001:** a portaria acessa os fluxos essenciais pela rede local sem internet.  
-**CA-ADR-016-002:** toda operação offline recebe identificador único e permanece em fila persistente.  
-**CA-ADR-016-003:** reenviar uma operação não duplica o registro.  
-**CA-ADR-016-004:** a interface informa modo local, última sincronização e pendências.  
-**CA-ADR-016-005:** conflitos nunca são resolvidos por sobrescrita silenciosa.  
-**CA-ADR-016-006:** sincronização e backup são mecanismos independentes.  
-**CA-ADR-016-007:** existe teste de restauração em equipamento substituto.  
-**CA-ADR-016-008:** recursos externos indisponíveis falham de forma clara e segura.  
-**CA-ADR-016-009:** decisões offline de equipamentos continuam condicionadas à ADR-008.  
-**CA-ADR-016-010:** queda e retorno da internet fazem parte da homologação antes do go-live.
+**CA-ADR-018-001:** a portaria acessa os fluxos essenciais pela rede local sem internet.  
+**CA-ADR-018-002:** toda operação offline recebe identificador único e permanece em fila persistente.  
+**CA-ADR-018-003:** reenviar uma operação não duplica o registro.  
+**CA-ADR-018-004:** a interface informa modo local, última sincronização e pendências.  
+**CA-ADR-018-005:** conflitos nunca são resolvidos por sobrescrita silenciosa.  
+**CA-ADR-018-006:** sincronização e backup são mecanismos independentes.  
+**CA-ADR-018-007:** existe teste de restauração em equipamento substituto.  
+**CA-ADR-018-008:** recursos externos indisponíveis falham de forma clara e segura.  
+**CA-ADR-018-009:** decisões offline de equipamentos continuam condicionadas à ADR-008.  
+**CA-ADR-018-010:** queda e retorno da internet fazem parte da homologação antes do go-live.
 
 # 14. Métricas a definir antes da produção
 
@@ -216,12 +217,12 @@ A ADR-008 continua controlando cache operacional, validade de autorização, rev
 
 | ID | Pendência |
 |---|---|
-| PEN-ADR-016-001 | Escolher e dimensionar o equipamento dedicado local |
-| PEN-ADR-016-002 | Escolher provedor e região da nuvem |
-| PEN-ADR-016-003 | Definir RPO, RTO e retenção dos backups |
-| PEN-ADR-016-004 | Definir endereço local, certificado e descoberta pelos postos |
-| PEN-ADR-016-005 | Classificar, operação por operação, o que será permitido offline |
-| PEN-ADR-016-006 | Realizar inventário dos equipamentos e retomar a ADR-008 |
+| PEN-ADR-018-001 | Escolher e dimensionar o equipamento dedicado local |
+| PEN-ADR-018-002 | Escolher provedor e região da nuvem |
+| PEN-ADR-018-003 | Definir RPO, RTO e retenção dos backups |
+| PEN-ADR-018-004 | Definir endereço local, certificado e descoberta pelos postos |
+| PEN-ADR-018-005 | Classificar, operação por operação, o que será permitido offline |
+| PEN-ADR-018-006 | Realizar inventário dos equipamentos e retomar a ADR-008 |
 
 # 17. Aprovação
 

@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Documentos\Dominio\PortaOcrDocumento;
+use App\Documentos\Infra\OcrSimulador;
+use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -15,7 +18,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // O simulador guarda em memória o estado do "terminal" durante o processo.
+        $this->app->singleton(SimuladorEquipamento::class);
+
+        // OCR desacoplado (SDV-OPE-018 §8): só o simulador nesta entrega.
+        $this->app->singleton(OcrSimulador::class);
+        $this->app->bind(PortaOcrDocumento::class, fn ($app) => $app->make(config('documentos.ocr.adaptador')));
     }
 
     /**

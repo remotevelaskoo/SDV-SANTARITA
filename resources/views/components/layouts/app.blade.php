@@ -80,6 +80,14 @@
                         </div>
 
                         <div class="operational-header__actions">
+                            @php
+                                $turnoAtivo = auth()->check()
+                                    ? rescue(fn () => app(\App\Integracoes\Aplicacao\TurnosOperacionais::class)->turnoAtivo(auth()->user()), null, false)
+                                    : null;
+                            @endphp
+                            @if ($turnoAtivo)
+                                <a class="cash-status posto-ativo" href="{{ route('posto.selecionar') }}" title="Trocar posto"><x-icon name="door" /> Posto: {{ $turnoAtivo->posto->nome }}</a>
+                            @endif
                             <span class="cash-status"><x-icon name="wallet" /> Caixa 01 aberto às 13:00</span>
                             <time class="session-time" datetime="{{ now()->toIso8601String() }}">
                                 <x-icon name="clock" /> {{ now()->format('d/m/Y H:i') }}
