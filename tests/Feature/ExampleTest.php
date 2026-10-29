@@ -375,11 +375,13 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $operator = $this->operatorWithPermissions('validacao.registrar');
         $operator->update(['name' => 'Beatriz Cardoso']);
-        $turno = CaixaTurno::factory()->create([
+        $turno = CaixaTurno::factory()->doOperador($operator)->create([
             'status' => 'aberto',
             'terminal' => 'Caixa 01 — Guarita',
             'opening_balance' => 200,
         ]);
+        // Caixa de outro operador não aparece para quem está na portaria (AJ-008).
+        CaixaTurno::factory()->doOperador(User::factory()->create())->create(['terminal' => 'Caixa de outra pessoa']);
 
         $response = $this->actingAs($operator)->get('/portaria');
 
@@ -388,9 +390,10 @@ class ExampleTest extends TestCase
             ->assertSee('Olá, Beatriz Cardoso')
             ->assertSee('Caixa 01 — Guarita')
             ->assertSee('Aberto')
-            ->assertSee('R$ 200,00');
+            ->assertSee('R$ 200,00')
+            ->assertDontSee('Caixa de outra pessoa');
 
-        $this->assertSame($turno->id, CaixaTurno::query()->where('status', 'aberto')->first()->id);
+        $this->assertSame($turno->id, CaixaTurno::query()->abertoDo($operator)->sole()->id);
     }
 
     public function test_the_portaria_shows_no_open_cash_register_when_none_is_open(): void
@@ -528,8 +531,10 @@ class ExampleTest extends TestCase
         $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
         $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
         Vinculo::factory()->for($pessoa, 'pessoa')->for($imovel, 'imovel')->create();
+        $operador = $this->operatorWithPermissions('validacao.registrar');
+        CaixaTurno::factory()->doOperador($operador)->create();
 
-        $test = Livewire::actingAs($this->operatorWithPermissions('validacao.registrar'))
+        $test = Livewire::actingAs($operador)
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
             ->assertSet('contribution', 'yes')
@@ -640,8 +645,10 @@ class ExampleTest extends TestCase
     public function test_a_quick_registration_does_not_release_an_entry(): void
     {
         Imovel::factory()->create(['codigo' => 'SRA-A-102']);
+        $operador = $this->operatorWithPermissions('validacao.registrar');
+        CaixaTurno::factory()->doOperador($operador)->create();
 
-        $test = Livewire::test(AccessValidation::class)
+        $test = Livewire::actingAs($operador)->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickName', 'Ana Paula Ribeiro')
             ->set('quickDocument', '456.789.123-00')
@@ -1802,9 +1809,10 @@ class ExampleTest extends TestCase
     public function test_the_cash_register_renders_the_p14_open_state(): void
     {
         $this->withoutVite();
-        $this->actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'));
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $this->actingAs($operador);
 
-        $turno = CaixaTurno::factory()->create(['status' => 'aberto']);
+        $turno = CaixaTurno::factory()->doOperador($operador)->create(['status' => 'aberto']);
         CaixaMovimentacao::factory()->for($turno, 'caixaTurno')->create([
             'description' => 'Contribuição — visitante Camila Andrade',
         ]);
@@ -1822,9 +1830,10 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_records_a_manual_movement(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto']);
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        CaixaTurno::factory()->doOperador($operador)->create(['status' => 'aberto']);
 
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($operador)->test(CashRegister::class)
             ->set('movementType', 'saida')
             ->set('movementAmount', '25,00')
             ->set('movementMethod', 'dinheiro')
@@ -1843,11 +1852,16 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_blocks_movement_when_closed_and_reopens(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        CaixaTurno::factory()->doOperador($operador)->create(['status' => 'aberto', 'opening_balance' => 200.00]);
 
-        Livewire::test(CashRegister::class)
-            ->set('informedAmount', '50,00')
+        Livewire::actingAs($operador)->test(CashRegister::class)
+            ->set('informedAmount', '200,00')
             ->call('closeRegister')
+            ->assertHasNoErrors()
+            ->assertRedirect();
+
+        Livewire::actingAs($operador)->test(CashRegister::class)
             ->assertSet('status', 'fechado')
             ->assertSee('Caixa fechado')
             ->call('registerMovement')
@@ -1863,24 +1877,26 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_closing_computes_the_difference(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $turno = CaixaTurno::factory()->doOperador($operador)->create(['status' => 'aberto', 'opening_balance' => 200.00]);
 
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($operador)->test(CashRegister::class)
             ->assertSet('status', 'aberto')
             ->set('informedAmount', '240,00')
+            ->set('closingNotes', 'Troco recebido a mais de um morador.')
             ->call('closeRegister')
             ->assertHasNoErrors()
-            ->assertSet('status', 'fechado')
-            ->assertSee('diferença de R$');
+            ->assertRedirect(route('cash-register.closing', $turno->id));
 
         $this->assertDatabaseHas('caixa_turnos', ['status' => 'fechado', 'difference' => 40.00, 'closing_status' => 'diferenca']);
     }
 
     public function test_the_cash_register_rejects_a_zero_value_movement(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto']);
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        CaixaTurno::factory()->doOperador($operador)->create(['status' => 'aberto']);
 
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($operador)->test(CashRegister::class)
             ->set('movementType', 'entrada')
             ->set('movementAmount', '0,00')
             ->set('movementMethod', 'dinheiro')
@@ -2886,13 +2902,13 @@ class ExampleTest extends TestCase
 
         ImplantacaoConfiguracao::query()->create(['configuracao_id' => $configuracao->id, 'valor' => '350.00']);
 
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'))->test(CashRegister::class)
             ->assertSet('openingBalanceInput', '350,00');
     }
 
     public function test_the_cash_register_falls_back_to_the_literal_default_without_configuration(): void
     {
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'))->test(CashRegister::class)
             ->assertSet('openingBalanceInput', '200,00');
     }
 

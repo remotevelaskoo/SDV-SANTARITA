@@ -8,6 +8,7 @@ use App\Livewire\AccessValidation;
 use App\Livewire\CameraPlacasManagement;
 use App\Livewire\EquipamentoManagement;
 use App\Models\AuditoriaEvento;
+use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
 use App\Models\Equipamento;
 use App\Models\HistoricoAcesso;
@@ -58,6 +59,7 @@ class CameraPlacasTest extends TestCase
     {
         $camera = $this->cameraSimulada();
         $operador = $this->usuarioCom('validacao.registrar', 'arquivos.sensiveis.visualizar');
+        CaixaTurno::factory()->doOperador($operador)->create();
         $pessoa = Pessoa::factory()->create();
 
         $tela = Livewire::actingAs($operador)->test(AccessValidation::class)

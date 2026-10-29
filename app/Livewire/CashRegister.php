@@ -5,16 +5,23 @@ namespace App\Livewire;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Configuracao;
+use App\Models\User;
+use App\Services\CaixasOperador;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
+/**
+ * Caixa do operador autenticado (P14, AJ-008). Cada operador abre, movimenta
+ * e fecha o próprio caixa; o fechamento abre o resumo do turno.
+ */
 class CashRegister extends Component
 {
     public string $status = 'fechado';
 
-    public string $terminal = 'Caixa 01 — Guarita';
+    public string $terminal = CaixasOperador::TERMINAL_PADRAO;
 
     public ?string $operator = null;
 
@@ -55,7 +62,7 @@ class CashRegister extends Component
         $this->syncCurrentTurno();
     }
 
-    public function openRegister(): void
+    public function openRegister(CaixasOperador $caixas): void
     {
         $this->validate([
             'openingBalanceInput' => ['required', 'regex:'.self::MONEY_REGEX],
@@ -64,21 +71,19 @@ class CashRegister extends Component
             'regex' => 'Informe um valor numérico válido, ex.: 200,00.',
         ]);
 
-        $openingBalance = (float) str_replace(',', '.', $this->openingBalanceInput);
+        try {
+            $turno = $caixas->abrir($this->usuario(), $this->money($this->openingBalanceInput));
+        } catch (ValidationException $e) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Caixa não aberto', 'message' => collect($e->errors())->flatten()->first()];
 
-        CaixaTurno::query()->create([
-            'terminal' => $this->terminal,
-            'operator_id' => Auth::id(),
-            'opened_at' => now(),
-            'opening_balance' => $openingBalance,
-            'status' => 'aberto',
-        ]);
+            throw $e;
+        }
 
         $this->syncCurrentTurno();
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Caixa aberto',
-            'message' => "Saldo inicial de R$ {$this->formatMoney($openingBalance)} registrado. Movimentações liberadas.",
+            'message' => "Saldo inicial de R$ {$this->formatMoney((float) $turno->opening_balance)} registrado em {$turno->terminal}. Movimentações liberadas.",
         ];
     }
 
@@ -106,7 +111,7 @@ class CashRegister extends Component
             'regex' => 'Informe um valor numérico válido, ex.: 25,00.',
         ]);
 
-        if ((float) str_replace(',', '.', $this->movementAmount) <= 0) {
+        if ($this->money($this->movementAmount) <= 0) {
             $this->addError('movementAmount', 'O valor deve ser maior que zero.');
 
             return;
@@ -115,7 +120,7 @@ class CashRegister extends Component
         CaixaMovimentacao::query()->create([
             'caixa_turno_id' => $turno->id,
             'type' => $this->movementType,
-            'amount' => (float) str_replace(',', '.', $this->movementAmount),
+            'amount' => $this->money($this->movementAmount),
             'method' => $this->movementMethod,
             'description' => $this->movementDescription,
             'operator_id' => Auth::id(),
@@ -132,44 +137,30 @@ class CashRegister extends Component
         ];
     }
 
-    public function closeRegister(): void
+    public function closeRegister(CaixasOperador $caixas): void
     {
-        $turno = $this->currentTurno();
-
-        if (! $turno) {
+        if (! $this->currentTurno()) {
             return;
         }
 
         $this->validate([
             'informedAmount' => ['required', 'regex:'.self::MONEY_REGEX],
         ], [
-            'required' => 'Informe o total conferido para fechar o caixa.',
+            'required' => 'Informe o total contado para fechar o caixa.',
             'regex' => 'Informe um valor numérico válido, ex.: 235,00.',
         ]);
 
-        $informed = (float) str_replace(',', '.', $this->informedAmount);
-        $expected = $turno->expectedBalance();
-        $difference = round($informed - $expected, 2);
+        try {
+            $turno = $caixas->fechar($this->usuario(), $this->money($this->informedAmount), $this->closingNotes);
+        } catch (ValidationException $e) {
+            // O diálogo fecha ao confirmar: o motivo da recusa aparece também no aviso da página.
+            $this->feedback = ['variant' => 'danger', 'title' => 'Caixa não fechado', 'message' => collect($e->errors())->flatten()->first()];
 
-        $turno->update([
-            'closed_at' => now(),
-            'informed_amount' => $informed,
-            'expected_amount' => $expected,
-            'difference' => $difference,
-            'closing_notes' => $this->closingNotes !== '' ? $this->closingNotes : null,
-            'status' => 'fechado',
-            'closing_status' => abs($difference) < 0.01 ? 'conferido' : 'diferenca',
-        ]);
+            throw $e;
+        }
 
-        $this->syncCurrentTurno();
         $this->reset(['informedAmount', 'closingNotes']);
-        $this->feedback = [
-            'variant' => abs($difference) < 0.01 ? 'success' : 'warning',
-            'title' => 'Caixa fechado',
-            'message' => abs($difference) < 0.01
-                ? 'Conferência sem diferença. Saldo esperado confirmado.'
-                : 'Conferência registrada com diferença de R$ '.$this->formatMoney(abs($difference)).'. Histórico preservado para análise.',
-        ];
+        $this->redirectRoute('cash-register.closing', ['turno' => $turno->id], navigate: false);
     }
 
     public function incomeTotal(): float
@@ -194,12 +185,12 @@ class CashRegister extends Component
 
     private function currentTurno(): ?CaixaTurno
     {
-        return $this->currentTurnoId ? CaixaTurno::query()->find($this->currentTurnoId) : null;
+        return $this->currentTurnoId ? CaixaTurno::query()->abertoDo($this->usuario())->find($this->currentTurnoId) : null;
     }
 
     private function syncCurrentTurno(): void
     {
-        $turno = CaixaTurno::query()->where('status', 'aberto')->latest('opened_at')->first();
+        $turno = app(CaixasOperador::class)->abertoDo($this->usuario());
 
         if ($turno) {
             $this->currentTurnoId = $turno->id;
@@ -214,6 +205,19 @@ class CashRegister extends Component
         }
     }
 
+    private function usuario(): User
+    {
+        $usuario = Auth::user();
+        abort_unless($usuario instanceof User, 403);
+
+        return $usuario;
+    }
+
+    private function money(string $valor): float
+    {
+        return round((float) str_replace(',', '.', $valor), 2);
+    }
+
     private function formatMoney(float $value): string
     {
         return number_format($value, 2, ',', '.');
@@ -222,6 +226,7 @@ class CashRegister extends Component
     public function render(): View
     {
         $turno = $this->currentTurno();
+        $usuario = $this->usuario();
 
         $movements = $turno
             ? $turno->movimentacoes()->with('operator')->orderBy('occurred_at')->get()
@@ -237,9 +242,13 @@ class CashRegister extends Component
                 ])->values()->all()
             : [];
 
-        $closedSessions = CaixaTurno::query()->where('status', 'fechado')->with('operator')->orderBy('closed_at')->get()
+        // Porteiro/Caixa vê só os próprios fechamentos; a visão consolidada vê todos da implantação.
+        $closedSessions = CaixaTurno::query()->where('status', 'fechado')
+            ->when(! $usuario->hasPermission(CaixasOperador::PERMISSAO_CONSOLIDADO), fn ($q) => $q->where('operator_id', $usuario->id))
+            ->with('operator')->orderBy('closed_at')->get()
             ->map(fn (CaixaTurno $sessao) => [
                 'id' => $sessao->id,
+                'numero' => $sessao->numero_fechamento,
                 'terminal' => $sessao->terminal,
                 'operator' => $sessao->operator?->name ?? 'Sistema',
                 'period' => $sessao->opened_at->format('d/m/Y').' '.$sessao->opened_at->format('H:i').' às '.$sessao->closed_at?->format('H:i'),
@@ -253,10 +262,17 @@ class CashRegister extends Component
         return view('livewire.cash-register', [
             'movements' => $movements,
             'closedSessions' => $closedSessions,
+            'resumo' => $turno ? [
+                'contribuicoes' => $turno->contribuicoesTotal(),
+                'outras' => $turno->outrasEntradasTotal(),
+                'saidas' => $turno->saidasTotal(),
+                'estornos' => $turno->estornosTotal(),
+                'quantidades' => $turno->quantidades(),
+            ] : null,
         ])->layout('components.layouts.app', [
             'title' => 'Caixa',
             'heading' => 'Caixa',
-            'headingDescription' => 'Abertura, movimentações, conferência e fechamento',
+            'headingDescription' => 'Abertura, movimentações, conferência e fechamento do seu turno',
         ]);
     }
 }

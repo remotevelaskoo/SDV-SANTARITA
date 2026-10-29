@@ -27,6 +27,7 @@
             ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],
             ['label' => 'Manutenção', 'icon' => 'wrench'],
             ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
+            ['label' => 'Fechamentos de caixa', 'icon' => 'file', 'route' => 'cash-register.closings'],
         ],
     ];
 @endphp

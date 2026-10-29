@@ -26,6 +26,20 @@ class Contribuicao extends Model
 
     protected $table = 'contribuicoes';
 
+    /** Campos que entram no fechamento do caixa: gravados uma vez, nunca reescritos (AJ-008). */
+    public const CAMPOS_FINANCEIROS = ['classificacao', 'situacao_pagamento', 'valor', 'forma_pagamento', 'caixa_turno_id', 'historico_acesso_id'];
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $contribuicao): void {
+            if (array_intersect(array_keys($contribuicao->getDirty()), self::CAMPOS_FINANCEIROS) !== []) {
+                throw new \LogicException('Dados financeiros da contribuição não são alterados depois do registro.');
+            }
+        });
+
+        static::deleting(fn () => throw new \LogicException('Contribuição não é excluída; o histórico é preservado.'));
+    }
+
     protected function casts(): array
     {
         return [
@@ -40,6 +54,24 @@ class Contribuicao extends Model
     public function historicoAcesso(): BelongsTo
     {
         return $this->belongsTo(HistoricoAcesso::class);
+    }
+
+    /** @return BelongsTo<CaixaTurno, $this> */
+    public function caixaTurno(): BelongsTo
+    {
+        return $this->belongsTo(CaixaTurno::class);
+    }
+
+    /** @return BelongsTo<Pessoa, $this> */
+    public function pessoa(): BelongsTo
+    {
+        return $this->belongsTo(Pessoa::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function operator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'operator_id');
     }
 
     /** @return HasMany<ContribuicaoTicketCorrecao, $this> */

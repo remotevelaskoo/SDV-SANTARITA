@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CaixaTurno;
 use App\Models\Configuracao;
 use App\Models\Contribuicao;
 use App\Models\ContribuicaoTicketCorrecao;
@@ -58,6 +57,14 @@ class ContribuicoesAtendimento
 
         $pago = $classificacao === 'contribui';
 
+        // Pagamento entra no caixa aberto do próprio operador, na mesma
+        // transação do atendimento; o bloqueio impede fechar o caixa no meio
+        // (AJ-008, SDV-UXR-014 §5.5). Sem caixa aberto, não há pagamento.
+        $caixa = $operador ? app(CaixasOperador::class)->abertoDo($operador, bloquear: $pago) : null;
+        if ($pago && $caixa === null) {
+            throw ValidationException::withMessages(['contribution' => 'Abra o seu caixa antes de registrar uma contribuição paga.']);
+        }
+
         return Contribuicao::query()->create([
             'historico_acesso_id' => $historico->id,
             'pessoa_id' => $historico->pessoa_id,
@@ -71,7 +78,7 @@ class ContribuicoesAtendimento
             'forma_pagamento' => $pago ? $forma : null,
             'ticket_numero' => $ticket,
             'ticket_duplicado' => $duplicado,
-            'caixa_turno_id' => $operador ? CaixaTurno::query()->where('operator_id', $operador->id)->where('status', 'aberto')->value('id') : null,
+            'caixa_turno_id' => $caixa?->id,
             'operator_id' => $operador?->id,
             'registrada_em' => now(),
             'versao' => 1,

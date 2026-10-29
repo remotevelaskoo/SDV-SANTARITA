@@ -5,6 +5,7 @@ namespace Tests\Feature\Aj006;
 use App\Livewire\AccessValidation;
 use App\Livewire\Reports;
 use App\Models\AuditoriaEvento;
+use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
 use App\Models\ContribuicaoTicketCorrecao;
 use App\Models\HistoricoAcesso;
@@ -39,8 +40,10 @@ class TicketContribuicaoTest extends TestCase
     public function test_contribuicao_paga_exige_ticket_e_preserva_zeros_a_esquerda(): void
     {
         $pessoa = $this->pessoa();
+        $operador = $this->operador('validacao.registrar');
+        $caixa = CaixaTurno::factory()->doOperador($operador)->create();
 
-        $teste = Livewire::actingAs($this->operador('validacao.registrar'))
+        $teste = Livewire::actingAs($operador)
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
             ->set('contribution', 'yes')
@@ -57,6 +60,7 @@ class TicketContribuicaoTest extends TestCase
         $this->assertSame('15.00', $contribuicao->valor);
         $this->assertSame('dinheiro', $contribuicao->forma_pagamento);
         $this->assertSame($teste->get('protocol'), $contribuicao->historicoAcesso->protocol);
+        $this->assertSame($caixa->id, $contribuicao->caixa_turno_id, 'pagamento entra no caixa do próprio operador');
     }
 
     public function test_ticket_e_opcional_para_nao_contribuinte_e_isento(): void
@@ -84,6 +88,7 @@ class TicketContribuicaoTest extends TestCase
     {
         $pessoa = $this->pessoa();
         $operador = $this->operador('validacao.registrar');
+        CaixaTurno::factory()->doOperador($operador)->create();
 
         Livewire::actingAs($operador)->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)->set('ticketNumero', '0042')->call('release')->assertHasNoErrors();
