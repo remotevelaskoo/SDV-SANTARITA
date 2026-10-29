@@ -209,3 +209,59 @@ A tela deverá apresentar, nesta ordem:
 8. Layout responsivo, navegação por teclado, foco visível e títulos acessíveis são preservados.
 9. Nenhuma mudança reduz permissões, mascaramento, auditoria ou armazenamento privado.
 10. Testes existentes de segurança e decisão continuam passando; novos testes cobrem a presença da hierarquia e dos controles essenciais.
+
+## 14. Edição administrativa de equipamentos
+
+### 14.1 Necessidade operacional
+
+O detalhe de `/equipamentos` permite diagnóstico e troca da credencial técnica, mas não oferece edição do cadastro. Mudanças normais de rede, como troca de IP, porta ou protocolo HTTP, não podem exigir exclusão e novo cadastro, pois isso quebraria vínculos e rastreabilidade. O administrador autorizado deverá editar o mesmo equipamento e preservar todo o histórico.
+
+### 14.2 Ação e campos editáveis
+
+- Incluir `Editar equipamento` no detalhe, visível somente para quem possui `integracoes.gerenciar`.
+- A edição deverá ocorrer no mesmo componente, carregando do servidor o equipamento da implantação ativa; nenhum dado vindo do navegador define o escopo.
+- Permitir editar: nome operacional, endereço IP, HTTP/HTTPS, porta de rede, timeout, protocolo de integração, adaptador, direção, ponto de acesso e indicação do módulo seguro RS-485.
+- Fabricante, modelo, número de série e firmware são dados de identidade/inventário. Poderão ser corrigidos apenas em uma área identificada como avançada, com confirmação e justificativa, ou atualizados pelo inventário após teste de conexão.
+- A credencial técnica não será preenchida no formulário nem reapresentada. `Trocar credencial` continua sendo uma ação separada.
+- Não oferecer exclusão destrutiva. A desativação, quando implementada, deverá preservar vínculos, operações, eventos e auditoria.
+
+### 14.3 Confirmação e efeitos da alteração
+
+Antes de salvar uma mudança de IP, esquema, porta, protocolo ou adaptador, mostrar um resumo `valor atual → novo valor` e avisar:
+
+> A comunicação com este equipamento poderá ficar indisponível até um novo teste de conexão. Nenhum histórico será apagado.
+
+Ao confirmar:
+
+1. salvar a alteração no mesmo equipamento;
+2. registrar auditoria com campos alterados e valores anterior/novo, sem senha ou outro segredo;
+3. quando o ponto mudar, encerrar o vínculo vigente e criar um novo vínculo, sem sobrescrever o anterior;
+4. quando endereço, esquema ou porta mudar, marcar a saúde como não testada e exigir novo teste de conexão;
+5. quando a conexão HTTPS puder apontar para outro terminal, não continuar confiando silenciosamente no certificado anterior: exigir nova leitura e confirmação do certificado;
+6. colocar o equipamento em homologação quando a mudança afetar comunicação, adaptador, ponto, direção, módulo seguro ou identidade técnica;
+7. preservar credenciais, capacidades e homologações como histórico, mas impedir que evidência obtida no endereço anterior seja apresentada como validação atual;
+8. exibir uma mensagem clara: `Configurações atualizadas. Teste novamente a conexão e, em HTTPS, confira o certificado apresentado.`
+
+Uma mudança apenas no nome operacional não precisa invalidar conexão, certificado ou homologação.
+
+### 14.4 Segurança e concorrência
+
+- Validar IP, porta, protocolo, adaptador e ponto no backend com as mesmas regras do cadastro.
+- Impedir associação a ponto de outra implantação.
+- Usar versão ou data de atualização para detectar edição concorrente; se outro administrador tiver alterado o registro, recarregar antes de salvar.
+- Não testar a conexão automaticamente durante o salvamento. O operador deverá executar conscientemente `Testar conexão` depois da alteração.
+- Não acionar relé, sincronizar pessoa ou executar operação física como efeito da edição.
+- Toda tentativa aceita ou recusada deverá ser auditável, sem registrar segredo técnico.
+
+### 14.5 Critérios de aceite
+
+1. Administrador autorizado consegue alterar o IP e continua no mesmo identificador de equipamento.
+2. Histórico, operações, eventos e vínculos anteriores permanecem consultáveis.
+3. Alteração de endpoint deixa o equipamento como não testado e orienta novo teste.
+4. Em HTTPS, certificado anterior não é aceito silenciosamente para o novo endpoint.
+5. Troca de ponto encerra o vínculo anterior e cria outro.
+6. Credencial técnica nunca aparece no HTML nem é exigida novamente quando não foi alterada.
+7. Alteração somente do nome não invalida uma conexão homologada.
+8. Usuário sem `integracoes.gerenciar` não visualiza nem executa a edição.
+9. Auditoria informa quem alterou, quando, justificativa quando exigida e quais campos mudaram.
+10. Testes cobrem isolamento por implantação, validações, concorrência, invalidação do certificado, preservação do histórico e ausência de comandos físicos.
