@@ -213,7 +213,16 @@
                     <div><dt>Cadastro</dt><dd>{{ $equipamento->created_at?->format('d/m/Y H:i') }} · atualizado {{ $equipamento->updated_at?->format('d/m/Y H:i') }}</dd></div>
                 </dl>
 
+                @if ($equipamento->estado_saude->value === 'desconhecido' && $equipamento->status->value !== 'inativo')
+                    <x-ui.alert variant="warning" title="Conexão não testada">
+                        Execute "Testar conexão" antes de usar este terminal.{{ $equipamento->esquema === 'https' && ! $equipamento->tls_pin_sha256 ? ' Em HTTPS, leia e confirme o certificado apresentado pelo terminal.' : '' }}
+                    </x-ui.alert>
+                @endif
+
                 <div class="equipamento-management-acoes">
+                    @if ($equipamento->status->value !== 'inativo' && ! $editando)
+                        <x-ui.button variant="secondary" wire:click="iniciarEdicao">Editar equipamento</x-ui.button>
+                    @endif
                     <x-ui.button variant="primary" wire:click="testarConexao" wire:loading.attr="disabled" wire:target="testarConexao">Testar conexão</x-ui.button>
                     <x-ui.button variant="secondary" wire:click="consultarCapacidades" wire:loading.attr="disabled" wire:target="consultarCapacidades">Consultar capacidades</x-ui.button>
                     @if ($equipamento->esquema === 'https')
@@ -235,6 +244,84 @@
                     </p>
                 @endif
             </x-ui.card>
+
+            @if ($editando)
+                <x-ui.card title="Editar equipamento" description="Altera este mesmo terminal, preservando identificador, vínculos anteriores, operações, eventos e histórico. A credencial técnica não é alterada aqui.">
+                    @if ($previaEdicao)
+                        <div class="equipamento-management-previa">
+                            @if ($previaAfetaConexao)
+                                <x-ui.alert variant="warning" title="Confira antes de salvar">
+                                    A comunicação com este equipamento poderá ficar indisponível até um novo teste de conexão. Nenhum histórico será apagado.
+                                </x-ui.alert>
+                            @else
+                                <x-ui.alert variant="info" title="Confira antes de salvar">
+                                    O terminal volta para homologação. Nenhum histórico será apagado.
+                                </x-ui.alert>
+                            @endif
+
+                            <table class="equipamento-management-comparacao">
+                                <caption>Alterações deste equipamento</caption>
+                                <thead>
+                                    <tr><th scope="col">Campo</th><th scope="col">Valor atual</th><th scope="col">Novo valor</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($previaEdicao as $linha)
+                                        <tr>
+                                            <th scope="row">{{ $linha['rotulo'] }}</th>
+                                            <td>{{ $linha['atual'] }}</td>
+                                            <td><strong>{{ $linha['novo'] }}</strong></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+
+                            <footer class="equipamento-management-acoes">
+                                <x-ui.button variant="secondary" wire:click="voltarParaEdicao">Voltar à edição</x-ui.button>
+                                <x-ui.button variant="primary" wire:click="confirmarEdicao" wire:loading.attr="disabled" wire:target="confirmarEdicao">Confirmar alterações</x-ui.button>
+                            </footer>
+                        </div>
+                    @else
+                        <form wire:submit="revisarEdicao" class="equipamento-management-form" autocomplete="off">
+                            <div class="equipamento-management-grid">
+                                <x-ui.field id="ed-nome" label="Nome" wire:model="edicao.nome" :error="$errors->first('edicao.nome')" required />
+                                <x-ui.field id="ed-ip" label="Endereço IP" wire:model="edicao.endereco_rede" help="IP fixo ou reservado na rede local." :error="$errors->first('edicao.endereco_rede')" required />
+                                <x-ui.select id="ed-esquema" label="Protocolo HTTP" wire:model="edicao.esquema" :error="$errors->first('edicao.esquema')">
+                                    <option value="https">HTTPS</option>
+                                    <option value="http">HTTP</option>
+                                </x-ui.select>
+                                <x-ui.field id="ed-porta" label="Porta" type="number" wire:model="edicao.porta_rede" help="Vazio usa 443 (HTTPS) ou 80 (HTTP)." :error="$errors->first('edicao.porta_rede')" />
+                                <x-ui.field id="ed-timeout" label="Tempo limite (s)" type="number" wire:model="edicao.timeout_segundos" :error="$errors->first('edicao.timeout_segundos')" required />
+                                <x-ui.field id="ed-protocolo" label="Protocolo de integração" wire:model="edicao.protocolo" :error="$errors->first('edicao.protocolo')" required />
+                                <x-ui.select id="ed-adaptador" label="Adaptador" wire:model="edicao.adaptador" :error="$errors->first('edicao.adaptador')">
+                                    @foreach (array_unique([$equipamento->adaptador, ...$adaptadoresDisponiveis]) as $codigo)
+                                        <option value="{{ $codigo }}">{{ $codigo }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                <x-ui.select id="ed-direcao" label="Direção" wire:model="edicao.direcao" :error="$errors->first('edicao.direcao')">
+                                    <option value="entrada">Entrada</option>
+                                    <option value="saida">Saída</option>
+                                    <option value="bidirecional">Bidirecional</option>
+                                </x-ui.select>
+                                <x-ui.select id="ed-ponto" label="Ponto de acesso" wire:model="edicao.ponto_id" help="Trocar o ponto encerra o vínculo atual e cria outro; o anterior fica no histórico.">
+                                    @unless ($detalhe['ponto'])<option value="">Escolha o ponto</option>@endunless
+                                    @foreach ($pontos as $ponto)
+                                        <option value="{{ $ponto->id }}">{{ $ponto->nome }} ({{ $ponto->tipo->value }})</option>
+                                    @endforeach
+                                </x-ui.select>
+                            </div>
+
+                            <x-ui.checkbox id="ed-rs485" label="Usa módulo seguro RS-485" description="O relé fica no módulo seguro, fora do terminal." wire:model="edicao.modulo_seguro_rs485" />
+
+                            <p class="equipamento-management-aviso">A senha técnica não é exibida nem pedida aqui. Para alterá-la, use "Trocar credencial". Salvar não testa a conexão, não aciona o relé e não sincroniza pessoas.</p>
+
+                            <footer>
+                                <x-ui.button type="button" variant="secondary" wire:click="cancelarEdicao">Cancelar</x-ui.button>
+                                <x-ui.button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="revisarEdicao">Revisar e salvar</x-ui.button>
+                            </footer>
+                        </form>
+                    @endif
+                </x-ui.card>
+            @endif
 
             @if ($certificadoLido)
                 <x-ui.card title="Certificado apresentado pelo terminal" description="Confira antes de confiar. Depois disso, só este certificado será aceito para este terminal.">

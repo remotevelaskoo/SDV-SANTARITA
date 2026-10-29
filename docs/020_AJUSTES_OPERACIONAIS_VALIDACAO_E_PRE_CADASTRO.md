@@ -287,3 +287,16 @@ Uma mudança apenas no nome operacional não precisa invalidar conexão, certifi
 8. Usuário sem `integracoes.gerenciar` não visualiza nem executa a edição.
 9. Auditoria informa quem alterou, quando, justificativa quando exigida e quais campos mudaram.
 10. Testes cobrem isolamento por implantação, validações, concorrência, invalidação do certificado, preservação do histórico e ausência de comandos físicos.
+
+### 14.6 Situação da implementação
+
+Implementado em 28/10/2026 na branch `claude/aj-007-edicao-equipamentos`, ainda sem merge na `main`.
+
+- `Editar equipamento` aparece no detalhe de `/equipamentos` para quem tem `integracoes.gerenciar`, exceto em equipamento inativo. O formulário carrega do servidor nome, IP, HTTP/HTTPS, porta, tempo limite, protocolo, adaptador, direção, ponto e módulo seguro RS-485; a credencial técnica não é carregada nem pedida, e `Trocar credencial` continua separado.
+- `CadastroEquipamentos::previaEdicao` valida com as regras do cadastro e devolve o resumo `valor atual → novo valor`; `editarConfiguracao` grava no mesmo registro, sob bloqueio e conferência de `versao`. Mudança só de nome ou tempo limite salva direto; as demais pedem confirmação, com o aviso da seção 14.3 quando a conexão muda.
+- Mudança de IP, esquema ou porta remove a chave do certificado confiado, zera a homologação do relé e deixa a saúde como não testada. Mudança de protocolo ou adaptador também deixa a saúde como não testada. Em qualquer mudança de conexão as capacidades ficam guardadas, mas marcadas para nova consulta.
+- Mudança de conexão, direção, ponto ou módulo seguro devolve um terminal ativo ou em manutenção para homologação. A troca de ponto encerra o vínculo vigente e cria outro; o ponto deve ser da implantação ativa, estar livre e aceitar a direção.
+- Auditoria `equipamento_configuracao_alterada` com operador, data, campos e valores anterior/novo, mais os efeitos aplicados; recusas viram `equipamento_edicao_recusada` (resultado `negado`), sem valores digitados nem segredos. Salvar não testa conexão, não aciona relé e não sincroniza pessoas.
+- Fabricante, modelo, número de série e firmware não entram nesta edição; a área avançada do §14.2 fica para depois.
+
+Cobertura em `tests/Feature/Integracoes/EdicaoEquipamentoTest.php`.
