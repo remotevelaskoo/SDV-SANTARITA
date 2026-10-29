@@ -38,6 +38,14 @@ class ConfiguracaoSeeder extends Seeder
             'descricao' => 'Preenchido automaticamente no formulário de abertura de turno; o operador pode ajustar.',
             'valor_padrao' => '200.00',
         ],
+        [
+            'chave' => 'contribuicao.valor_padrao',
+            'categoria' => 'contribuição e caixa',
+            'tipo' => 'numero',
+            'rotulo' => 'Valor da contribuição por acesso',
+            'descricao' => 'Valor apresentado na Validação de Entrada quando a pessoa contribui (AJ-006).',
+            'valor_padrao' => '15.00',
+        ],
     ];
 
     public function run(): void

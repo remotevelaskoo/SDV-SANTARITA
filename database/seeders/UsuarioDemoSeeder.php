@@ -34,6 +34,7 @@ class UsuarioDemoSeeder extends Seeder
         'empresas.consultar' => ['modulo' => 'empresas', 'descricao' => 'Consultar empresas e prestadores'],
         'encomendas.registrar' => ['modulo' => 'encomendas', 'descricao' => 'Registrar recebimento de encomendas'],
         'contribuicao.registrar' => ['modulo' => 'contribuicao', 'descricao' => 'Registrar contribuições/taxas na portaria'],
+        'contribuicao.corrigir-ticket' => ['modulo' => 'contribuicao', 'descricao' => 'Corrigir o número do ticket de acesso com justificativa (AJ-006)'],
         'caixa.proprio.gerenciar' => ['modulo' => 'caixa', 'descricao' => 'Abrir, movimentar e fechar o caixa próprio'],
         'relatorios.proprio.consultar' => ['modulo' => 'relatorios', 'descricao' => 'Consultar relatórios do próprio turno'],
         'integracao.encaminhar' => ['modulo' => 'integracao', 'descricao' => 'Encaminhar itens para a fila de integração'],
@@ -56,12 +57,14 @@ class UsuarioDemoSeeder extends Seeder
         'documentos.capturar' => ['modulo' => 'cadastro', 'descricao' => 'Capturar documento pela câmera do posto no cadastro rápido (sugestão por OCR)'],
         'arquivos.sensiveis.visualizar' => ['modulo' => 'arquivos', 'descricao' => 'Visualizar documentos, fotos e selfies protegidos'],
         'dados-sensiveis.revelar' => ['modulo' => 'dados-sensiveis', 'descricao' => 'Revelar temporariamente documentos pessoais para conferência operacional'],
+        'facial.enviar' => ['modulo' => 'pessoas', 'descricao' => 'Enviar o cadastro de uma pessoa salva para o terminal facial (AJ-006)'],
     ];
 
     /** @var list<string> */
     private const PORTEIRO_CAIXA = [
         'dashboard.visualizar',
         'pessoas.gerenciar',
+        'facial.enviar',
         'pre-registro.analisar',
         'pre-registro.editar',
         'pre-registro.aprovar',
@@ -109,7 +112,7 @@ class UsuarioDemoSeeder extends Seeder
 
         $grants = [
             'Porteiro/Caixa' => self::PORTEIRO_CAIXA,
-            'Gestor' => [...self::PORTEIRO_CAIXA, 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar'],
+            'Gestor' => [...self::PORTEIRO_CAIXA, 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket'],
             'Auditor' => self::AUDITOR,
             'Administrador' => array_keys(self::PERMISSOES),
         ];

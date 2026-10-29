@@ -37,12 +37,15 @@ A P28 formaliza a operação híbrida local e nuvem ([ADR-018](docs/ADR/ADR-018_
 
 O ajuste AJ-005, iniciado em outubro de 2026, adiciona captura estruturada de RG/CIN e CNH e uma prova interna de OCR assistido no pré-cadastro. Nome, CPF, nascimento e número do documento são apresentados como sugestões com confiança e confirmação humana. A foto impressa pode ser localizada e recortada apenas para conferência visual; selfie, reconhecimento facial e integração com equipamentos permanecem capacidades separadas.
 
+Em 28 de outubro de 2026, a documentação foi reconciliada com a implementação original do João Lucas e com as sete fatias posteriores do AJ-006. Permanece aprovada a jornada de seis etapas: a frente do documento é obrigatória, o verso é solicitado quando aplicável, a selfie é uma evidência separada e o OCR é somente assistivo. As melhorias posteriores de orientação, qualidade e diagnóstico do OCR são cumulativas e não substituem a captura nem a conferência humana. O desvio de configuração que ocultou a etapa documental por padrão está registrado como correção necessária antes da homologação.
+
 ## Coordenação da equipe
 
 O desenvolvimento foi dividido em partes para que Lucas e Vinicius possam trabalhar em paralelo. O quadro com situação, responsável, dependências e orientação de trabalho está em:
 
 - [Plano de divisão e acompanhamento do desenvolvimento](docs/013_PLANO_DE_DIVISAO_DO_DESENVOLVIMENTO.md)
 - [UX/UI de Relatórios — P16](docs/014_UX_UI_RELATORIOS.md)
+- [AJ-006 — Ajustes operacionais da validação, do pré-cadastro e do envio aos terminais](docs/020_AJUSTES_OPERACIONAIS_VALIDACAO_E_PRE_CADASTRO.md)
 
 ## Base técnica do desenvolvimento
 
@@ -108,5 +111,10 @@ Variáveis do `.env` (nunca coloque a senha do terminal no `.env` nem no Git):
 | `SDV_INTEGRACAO_TESTE_RELE` | `false` | libera "Liberar acesso" somente na bancada, durante o teste do relé |
 | `SDV_INTEGRACAO_ABERTURA_REMOTA` | `false` | abertura automática decidida pelo SDV; permanece desligada até validar o contato seco |
 | `SDV_INTEGRACAO_LIBERACAO_OPERACIONAL` | `false` | liberação manual no Modo Portaria ([SDV-OPE-017](docs/017_LIBERACAO_MANUAL_OPERACIONAL.md), ADR-017); desligada até homologação e aprovação formal |
+| `SDV_FUSO_OPERACIONAL` | `America/Sao_Paulo` | fuso da portaria; precisa ser igual a `APP_TIMEZONE` para enviar visitas de turista ([AJ-006](docs/020_AJUSTES_OPERACIONAIS_VALIDACAO_E_PRE_CADASTRO.md)) |
+| `SDV_TURISTA_VALIDADE_HORAS` | `24` | validade da credencial do turista, com teto fixo de 24 horas |
+| `SDV_REVOGACAO_REPETIR_MINUTOS` | `15` | intervalo para pedir de novo a revogação que ficou sem comunicação com o terminal |
+
+O vencimento das visitas de turista roda pelo agendador (`php artisan schedule:run` no cron, a cada minuto), com o comando `acessos:processar-vencimentos`.
 
 Depois de alterar o `.env`, rode `php artisan config:clear`. Firmwares e capacidades homologados ficam em `config/integracoes.php` (`hikvision.perfis_homologados`).

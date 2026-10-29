@@ -286,7 +286,7 @@ class CadastroAssistidoDocumentoTest extends TestCase
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::boa()))
             ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'nao_reconhecido')
-            ->assertSee('A leitura automática não está disponível agora. Faça nova captura ou digite os dados.')
+            ->assertSee('O leitor automático não respondeu a tempo. Tente de novo em instantes ou preencha manualmente.')
             ->assertSet('quickName', '');
     }
 

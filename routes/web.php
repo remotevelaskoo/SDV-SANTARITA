@@ -7,6 +7,7 @@ use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
 use App\Livewire\AuditLog;
+use App\Livewire\CameraPlacasManagement;
 use App\Livewire\CashRegister;
 use App\Livewire\CatalogoManagement;
 use App\Livewire\CompanyManagement;
@@ -23,6 +24,7 @@ use App\Livewire\PontoAcessoManagement;
 use App\Livewire\Portaria;
 use App\Livewire\PostoManagement;
 use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PreRegistrationReview;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
 use App\Livewire\Reports;
@@ -71,6 +73,7 @@ Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validac
 Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
 Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');
 Route::get('/pre-cadastros', PreRegistrationQueue::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations');
+Route::get('/pre-cadastros/{preRegistration}/analise', PreRegistrationReview::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations.review');
 Route::get('/imoveis', PropertyManagement::class)->middleware(['auth', 'permissao:imoveis.consultar'])->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->middleware(['auth', 'permissao:veiculos.consultar'])->name('vehicles');
 Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'permissao:pessoas.gerenciar'])->name('people.create');
@@ -84,6 +87,7 @@ Route::get('/configuracoes', ConfiguracaoManagement::class)->middleware(['auth',
 Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permissao:catalogos.gerenciar'])->name('catalogs');
 Route::get('/equipamentos', EquipamentoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('equipment');
 Route::get('/pontos-acesso', PontoAcessoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('access-points');
+Route::get('/cameras-placas', CameraPlacasManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('plate-cameras');
 Route::get('/postos', PostoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('posts');
 Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::class)
     ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])

@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Documentos\Dominio\DiagnosticoLeitura;
+use App\Documentos\Dominio\FalhaLeituraDocumento;
 use App\Models\PreRegistration;
 use App\Services\DocumentOcrClient;
 use App\Services\PrivateFileService;
@@ -9,6 +11,7 @@ use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -69,6 +72,13 @@ class PublicPreRegistration extends Component
 
     public string $ocrMessage = '';
 
+    /**
+     * Motivo objetivo da falha ou da leitura parcial (AJ-006), sem dado lido.
+     *
+     * @var array{categoria: string, titulo: string, motivos: list<string>, recapturar: bool}|null
+     */
+    public ?array $ocrDiagnostico = null;
+
     /** @var array<string, string> */
     public array $ocrFields = [];
 
@@ -125,54 +135,26 @@ class PublicPreRegistration extends Component
         $this->validateCurrentStep();
         $this->draftSaved = false;
         $this->step = min(6, $this->step + 1);
-        if ($this->step === 3 && ! $this->documentStepEnabled()) {
-            $this->step = 4;
-        }
     }
 
     public function previousStep(): void
     {
         $this->draftSaved = false;
         $this->step = max(1, $this->step - 1);
-        if ($this->step === 3 && ! $this->documentStepEnabled()) {
-            $this->step = 2;
-        }
-    }
-
-    /** Etapa 3 (documento e leitura assistida) desligada por configuração. */
-    public function documentStepEnabled(): bool
-    {
-        return (bool) config('documentos.pre_cadastro.etapa_documento');
     }
 
     /**
-     * Etapas exibidas ao visitante, numeradas na ordem em que aparecem.
-     *
-     * @return list<array{label: string, description: string, state: string, step: int}>
+     * O verso é exigido quando os dados necessários estão nele: no RG/CIN,
+     * CPF e nascimento ficam no verso. Na CNH os dados estão na frente e o
+     * verso continua aceito (SDV-UXP-006 §11.2).
      */
-    public function visibleSteps(): array
+    public function documentBackRequired(): bool
     {
-        $visible = [];
-        foreach ($this->steps as $index => $definition) {
-            $number = $index + 1;
-            if ($number === 3 && ! $this->documentStepEnabled()) {
-                continue;
-            }
-            $visible[] = $definition + [
-                'step' => $number,
-                'state' => $number < $this->step ? 'complete' : ($number === $this->step ? 'current' : 'future'),
-            ];
-        }
-
-        return $visible;
+        return $this->documentType === 'rg_cin';
     }
 
     public function editStep(int $step): void
     {
-        if ($step === 3 && ! $this->documentStepEnabled()) {
-            return;
-        }
-
         if ($step >= 1 && $step < $this->step) {
             $this->step = $step;
         }
@@ -299,6 +281,7 @@ class PublicPreRegistration extends Component
         if (! $ocr->enabled()) {
             $this->ocrStatus = 'unavailable';
             $this->ocrMessage = 'A leitura automática não está ativa neste ambiente. Você pode continuar preenchendo os dados manualmente.';
+            $this->ocrDiagnostico = DiagnosticoLeitura::servico('desligado')->paraTela();
 
             return;
         }
@@ -307,6 +290,7 @@ class PublicPreRegistration extends Component
         if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
             $this->ocrStatus = 'failed';
             $this->ocrMessage = 'Foram feitas muitas tentativas de leitura. Aguarde um minuto e continue manualmente ou tente novamente.';
+            $this->ocrDiagnostico = DiagnosticoLeitura::servico('tentativas_excedidas')->paraTela();
 
             return;
         }
@@ -316,46 +300,67 @@ class PublicPreRegistration extends Component
         $this->ocrMessage = 'Lendo o documento em ambiente interno…';
         $this->ocrFields = [];
         $this->ocrConfidences = [];
+        $this->ocrDiagnostico = null;
         $this->portraitDetected = false;
         $this->portraitSource = '';
 
         try {
             $result = $ocr->extract($this->documentType, $this->documentFile, $this->documentBackFile);
+        } catch (FalhaLeituraDocumento $falha) {
+            $this->registrarFalhaOcr(DiagnosticoLeitura::daFalha($falha));
 
-            foreach ($result['fields'] as $field => $suggestion) {
-                if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
-                    continue;
-                }
-
-                $this->ocrFields[$field] = $suggestion['value'];
-                if (is_numeric($suggestion['confidence'] ?? null)) {
-                    $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
-                }
-            }
-
-            $this->name = $this->ocrFields['name'] ?? $this->name;
-            $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
-            $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
-            $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
-            $this->ocrEngine = (string) ($result['engine'] ?? '');
-            $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
-            $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
-            $this->portraitDetected = ($portrait['detected'] ?? false) === true;
-            $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
-
-            if ($this->ocrFields === []) {
-                $this->ocrStatus = 'failed';
-                $this->ocrMessage = 'Não conseguimos identificar dados com segurança. Confira a imagem e continue manualmente.';
-
-                return;
-            }
-
-            $this->ocrStatus = 'completed';
-            $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+            return;
         } catch (\Throwable) {
-            $this->ocrStatus = 'failed';
-            $this->ocrMessage = 'A leitura automática não ficou disponível agora. Seus dados e sua imagem foram mantidos; continue manualmente ou tente novamente.';
+            $this->registrarFalhaOcr(DiagnosticoLeitura::servico('erro_interno'));
+
+            return;
         }
+
+        foreach ($result['fields'] as $field => $suggestion) {
+            if (! is_array($suggestion) || ! is_string($suggestion['value'] ?? null) || $suggestion['value'] === '') {
+                continue;
+            }
+
+            $this->ocrFields[$field] = $suggestion['value'];
+            if (is_numeric($suggestion['confidence'] ?? null)) {
+                $this->ocrConfidences[$field] = (float) $suggestion['confidence'];
+            }
+        }
+
+        $diagnostico = DiagnosticoLeitura::daResposta($result);
+        Log::info('leitura_documento', ['origem' => 'pre_cadastro', ...$diagnostico->paraLog()]);
+
+        if ($this->ocrFields === []) {
+            $this->ocrStatus = 'failed';
+            $this->ocrMessage = 'Não conseguimos identificar os dados com segurança. Veja abaixo o que ajustar, envie outra foto ou continue manualmente.';
+            $this->ocrDiagnostico = $diagnostico->paraTela();
+
+            return;
+        }
+
+        // Sugestões só preenchem; o solicitante confere e corrige antes do envio.
+        $this->name = $this->ocrFields['name'] ?? $this->name;
+        $this->cpf = $this->ocrFields['cpf'] ?? $this->cpf;
+        $this->birthDate = $this->ocrFields['birth_date'] ?? $this->birthDate;
+        $this->extractedDocumentNumber = $this->ocrFields['document_number'] ?? '';
+        $this->ocrEngine = (string) ($result['engine'] ?? '');
+        $this->ocrModelVersion = (string) ($result['model_version'] ?? '');
+        $portrait = is_array($result['portrait'] ?? null) ? $result['portrait'] : [];
+        $this->portraitDetected = ($portrait['detected'] ?? false) === true;
+        $this->portraitSource = is_string($portrait['source'] ?? null) ? $portrait['source'] : '';
+
+        $this->ocrStatus = 'completed';
+        $this->ocrMessage = 'Encontramos sugestões. Volte aos dados pessoais para conferir e corrigir antes do envio.';
+        $this->ocrDiagnostico = $diagnostico->motivos() !== [] ? $diagnostico->paraTela() : null;
+    }
+
+    private function registrarFalhaOcr(DiagnosticoLeitura $diagnostico): void
+    {
+        Log::info('leitura_documento', ['origem' => 'pre_cadastro', ...$diagnostico->paraLog()]);
+
+        $this->ocrStatus = 'failed';
+        $this->ocrMessage = 'A leitura automática não foi concluída. Seus dados e sua imagem foram mantidos.';
+        $this->ocrDiagnostico = $diagnostico->paraTela();
     }
 
     public function removeSelfieFile(): void
@@ -373,14 +378,7 @@ class PublicPreRegistration extends Component
             $this->fileValidationMessages(),
         ));
 
-        $addressLine = "{$this->address}, {$this->addressNumber}";
-
-        if ($this->addressComplement !== '') {
-            $addressLine .= " · {$this->addressComplement}";
-        }
-
-        $addressLine .= " · {$this->district} · {$this->city}/{$this->state}";
-
+        $addressLine = $this->addressLine();
         $isTourist = $this->accessType === 'turista';
         $portraitBytes = $this->preparePortraitCrop();
 
@@ -390,10 +388,10 @@ class PublicPreRegistration extends Component
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
                     'document' => $this->cpf,
-                    'document_type' => $this->documentStepEnabled() ? $this->documentType : null,
-                    'birth_date' => $this->birthDate,
-                    'phone' => $this->phone,
-                    'email' => $this->email,
+                    'document_type' => $this->documentType,
+                    'birth_date' => $this->birthDate ?: null,
+                    'phone' => $this->phone ?: null,
+                    'email' => $this->email ?: null,
                     'access_type' => $this->accessType,
                     'address_informed' => $addressLine,
                     'destination_property' => $isTourist ? null : $this->destinationProperty,
@@ -407,21 +405,18 @@ class PublicPreRegistration extends Component
                     'vehicle_plate' => $this->hasVehicle ? $this->plate : null,
                     'vehicle_model' => $this->hasVehicle ? $this->vehicleModel : null,
                     'vehicle_color' => $this->hasVehicle ? $this->vehicleColor : null,
-                    'document_status' => $this->documentStepEnabled()
-                        ? 'Arquivo protegido disponível para conferência'
-                        : 'Documento não solicitado no pré-cadastro; conferir na portaria',
+                    'document_status' => $this->documentStatus(),
                     'selfie_status' => 'Arquivo protegido disponível para conferência',
                     'status' => 'aguardando',
                     'submitted_at' => now(),
                 ]);
 
-                $uploads = ['selfie' => $this->selfieFile];
+                $uploads = [
+                    'documento' => $this->documentFile,
+                    'selfie' => $this->selfieFile,
+                ];
 
-                if ($this->documentStepEnabled() && $this->documentFile !== null) {
-                    $uploads['documento'] = $this->documentFile;
-                }
-
-                if ($this->documentStepEnabled() && $this->documentBackFile !== null) {
+                if ($this->documentBackFile !== null) {
                     $uploads['documento_verso'] = $this->documentBackFile;
                 }
 
@@ -469,6 +464,36 @@ class PublicPreRegistration extends Component
         $this->draftSaved = false;
     }
 
+    /**
+     * A leitura automática é só apoio: sem ela, ou com confiança baixa, a
+     * ficha registra que a portaria precisa conferir o documento à mão.
+     */
+    private function documentStatus(): string
+    {
+        if ($this->ocrStatus !== 'completed') {
+            return 'Arquivo protegido disponível; leitura automática não realizada — conferência manual obrigatória';
+        }
+
+        $minima = (float) config('documentos.ocr.confianca_minima');
+        foreach (array_keys($this->ocrFields) as $campo) {
+            if (($this->ocrConfidences[$campo] ?? 0.0) < $minima) {
+                return 'Arquivo protegido disponível; leitura automática com baixa confiança — conferência manual obrigatória';
+            }
+        }
+
+        return 'Arquivo protegido disponível para conferência';
+    }
+
+    /** Junta só as partes do endereço que foram informadas; nenhuma é obrigatória. */
+    private function addressLine(): ?string
+    {
+        $street = implode(', ', array_filter([trim($this->address), trim($this->addressNumber)]));
+        $city = implode('/', array_filter([trim($this->city), trim($this->state)]));
+        $line = implode(' · ', array_filter([$street, trim($this->addressComplement), trim($this->district), $city]));
+
+        return $line !== '' ? $line : null;
+    }
+
     private function generateProtocol(): string
     {
         return 'PRE-SRA-'.strtoupper(Str::random(6));
@@ -478,6 +503,7 @@ class PublicPreRegistration extends Component
     {
         $this->ocrStatus = 'idle';
         $this->ocrMessage = '';
+        $this->ocrDiagnostico = null;
         $this->ocrFields = [];
         $this->ocrConfidences = [];
         $this->ocrEngine = '';
@@ -516,36 +542,15 @@ class PublicPreRegistration extends Component
     private function validateCurrentStep(): void
     {
         $rules = match ($this->step) {
-            1 => [
-                'name' => ['required', 'string', 'min:3', 'max:120'],
-                'cpf' => ['required', 'string', 'min:11', 'max:14'],
-                'birthDate' => ['required', 'date', 'before:today'],
-                'phone' => ['required', 'string', 'min:10', 'max:20'],
-                'email' => ['required', 'email', 'max:120'],
-                'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
-            ],
-            2 => [
-                'zipCode' => ['required', 'string', 'min:8', 'max:9'],
-                'address' => ['required', 'string', 'max:160'],
-                'addressNumber' => ['required', 'string', 'max:20'],
-                'district' => ['required', 'string', 'max:80'],
-                'city' => ['required', 'string', 'max:80'],
-                'state' => ['required', 'string', 'size:2'],
-                'destinationProperty' => $this->accessType === 'turista'
-                    ? []
-                    : ['required', Rule::in($this->destinationOptions())],
-            ],
+            1 => $this->personalRules(),
+            2 => $this->addressRules(),
             3 => [
                 'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
                 'documentFile' => $this->protectedImageRules(),
-                'documentBackFile' => $this->optionalProtectedImageRules(),
+                'documentBackFile' => $this->documentBackRules(),
             ],
             4 => ['selfieFile' => $this->protectedImageRules()],
-            5 => $this->hasVehicle ? [
-                'plate' => ['required', 'string', 'min:7', 'max:8'],
-                'vehicleModel' => ['required', 'string', 'max:100'],
-                'vehicleColor' => ['required', 'string', 'max:40'],
-            ] : [],
+            5 => $this->vehicleRules(),
             6 => ['privacyAccepted' => ['accepted']],
             default => [],
         };
@@ -561,28 +566,57 @@ class PublicPreRegistration extends Component
     private function submissionRules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:120'],
-            'cpf' => ['required', 'string', 'min:11', 'max:14'],
-            'birthDate' => ['required', 'date', 'before:today'],
-            'phone' => ['required', 'string', 'min:10', 'max:20'],
-            'email' => ['required', 'email', 'max:120'],
-            'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
-            'zipCode' => ['required', 'string', 'min:8', 'max:9'],
-            'address' => ['required', 'string', 'max:160'],
-            'addressNumber' => ['required', 'string', 'max:20'],
-            'district' => ['required', 'string', 'max:80'],
-            'city' => ['required', 'string', 'max:80'],
-            'state' => ['required', 'string', 'size:2'],
-            'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
-            'documentType' => $this->documentStepEnabled() ? ['required', Rule::in(['rg_cin', 'cnh'])] : [],
-            'documentFile' => $this->documentStepEnabled() ? $this->protectedImageRules() : [],
-            'documentBackFile' => $this->documentStepEnabled() ? $this->optionalProtectedImageRules() : [],
+            ...$this->personalRules(),
+            ...$this->addressRules(),
+            'documentType' => ['required', Rule::in(['rg_cin', 'cnh'])],
+            'documentFile' => $this->protectedImageRules(),
+            'documentBackFile' => $this->documentBackRules(),
             'selfieFile' => $this->protectedImageRules(),
-            'plate' => $this->hasVehicle ? ['required', 'string', 'min:7', 'max:8'] : [],
-            'vehicleModel' => $this->hasVehicle ? ['required', 'string', 'max:100'] : [],
-            'vehicleColor' => $this->hasVehicle ? ['required', 'string', 'max:40'] : [],
+            ...$this->vehicleRules(),
             'privacyAccepted' => ['accepted'],
         ];
+    }
+
+    /**
+     * Só nome e CPF são obrigatórios (decisão do PO, 28/10/2026); os demais
+     * dados, quando informados, ainda precisam ser válidos.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function personalRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'min:3', 'max:120'],
+            'cpf' => ['required', 'string', 'min:11', 'max:14'],
+            'birthDate' => ['nullable', 'date', 'before:today'],
+            'phone' => ['nullable', 'string', 'min:10', 'max:20'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    private function addressRules(): array
+    {
+        return [
+            'zipCode' => ['nullable', 'string', 'min:8', 'max:9'],
+            'address' => ['nullable', 'string', 'max:160'],
+            'addressNumber' => ['nullable', 'string', 'max:20'],
+            'district' => ['nullable', 'string', 'max:80'],
+            'city' => ['nullable', 'string', 'max:80'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'destinationProperty' => $this->accessType === 'turista' ? [] : ['required', Rule::in($this->destinationOptions())],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    private function vehicleRules(): array
+    {
+        return $this->hasVehicle ? [
+            'plate' => ['required', 'string', 'min:7', 'max:8'],
+            'vehicleModel' => ['nullable', 'string', 'max:100'],
+            'vehicleColor' => ['nullable', 'string', 'max:40'],
+        ] : [];
     }
 
     /** @return array<int, string> */
@@ -595,6 +629,12 @@ class PublicPreRegistration extends Component
     private function optionalProtectedImageRules(): array
     {
         return ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'];
+    }
+
+    /** @return array<int, string> */
+    private function documentBackRules(): array
+    {
+        return $this->documentBackRequired() ? $this->protectedImageRules() : $this->optionalProtectedImageRules();
     }
 
     /** @return array<string, string> */
@@ -614,6 +654,7 @@ class PublicPreRegistration extends Component
     {
         return [
             'documentFile.required' => 'Envie uma foto do documento para continuar.',
+            'documentBackFile.required' => 'Envie uma foto do verso do RG/CIN para continuar.',
             'documentType.required' => 'Escolha o tipo de documento.',
             'documentType.in' => 'Escolha RG/CIN ou CNH.',
             'selfieFile.required' => 'Envie uma selfie para continuar.',

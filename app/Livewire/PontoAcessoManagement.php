@@ -67,7 +67,7 @@ class PontoAcessoManagement extends Component
     public function vincularTerminal(string $pontoId, CadastroEquipamentos $cadastro): void
     {
         $ator = $this->autorizar();
-        $terminal = Equipamento::query()->find($this->terminalEscolhido[$pontoId] ?? '');
+        $terminal = Equipamento::query()->terminais()->find($this->terminalEscolhido[$pontoId] ?? '');
         $ponto = PontoAcesso::query()->find($pontoId);
 
         if ($terminal === null || $ponto === null) {
@@ -132,6 +132,7 @@ class PontoAcessoManagement extends Component
             'pontos' => PontoAcesso::query()->with('vinculoVigente.equipamento')->orderBy('nome')->get(),
             // Livres ou ainda na bancada (mover para o ponto real).
             'terminaisLivres' => Equipamento::query()
+                ->terminais()
                 ->where('status', '!=', StatusEquipamento::Inativo->value)
                 ->where(fn ($q) => $q->whereDoesntHave('vinculoVigente')
                     ->orWhereHas('vinculoVigente.pontoAcesso', fn ($p) => $p->where('tipo', TipoPontoAcesso::Bancada->value)))

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToImplantacao;
+use App\Support\NormalizadorBusca;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,16 @@ class PessoaContato extends Model
     use BelongsToImplantacao, HasFactory, HasUuids;
 
     protected $table = 'pessoa_contatos';
+
+    protected static function booted(): void
+    {
+        // Coluna derivada para a busca por telefone na Validação de Entrada (AJ-006).
+        static::saving(function (self $contato): void {
+            $contato->valor_busca = $contato->tipo === 'email'
+                ? mb_strtolower(trim((string) $contato->valor))
+                : NormalizadorBusca::digitos($contato->valor);
+        });
+    }
 
     protected function casts(): array
     {

@@ -33,7 +33,7 @@ class ArquiteturaIntegracaoTest extends TestCase
 
     public function test_nucleo_e_aplicacao_nao_dependem_de_adaptadores_concretos(): void
     {
-        foreach (['app/Integracoes/Dominio', 'app/Integracoes/Aplicacao', 'app/Models', 'app/Livewire', 'app/Services', 'app/Jobs'] as $diretorio) {
+        foreach (['app/Acesso', 'app/Integracoes/Dominio', 'app/Integracoes/Aplicacao', 'app/Models', 'app/Livewire', 'app/Services', 'app/Jobs'] as $diretorio) {
             foreach ($this->arquivosPhp($diretorio) as $caminho => $conteudo) {
                 $this->assertStringNotContainsString('App\\Integracoes\\Adaptadores', $conteudo, "{$caminho} depende de um adaptador concreto.");
             }

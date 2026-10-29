@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\AccessValidation;
-use App\Livewire\PreRegistrationQueue;
+use App\Livewire\PreRegistrationReview;
 use App\Livewire\PublicPreRegistration;
 use App\Models\Arquivo;
 use App\Models\AuditoriaEvento;
@@ -213,21 +213,23 @@ class ProtectedFileTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_queue_only_loads_the_image_after_an_explicit_authorized_click(): void
+    public function test_analysis_loads_the_selfie_on_open_for_authorized_operators(): void
     {
-        [$file] = $this->storedDocument();
+        $preRegistration = PreRegistration::factory()->create();
+        [$file] = app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
+            'selfie' => UploadedFile::fake()->image('selfie.jpg', 480, 640),
+        ]);
         $operator = $this->userWithPermission(
             'pre-registro.analisar',
             'arquivos.sensiveis.visualizar',
         );
 
         Livewire::actingAs($operator)
-            ->test(PreRegistrationQueue::class)
+            ->test(PreRegistrationReview::class, ['preRegistration' => $preRegistration->id])
             ->assertSee('Conferência visual protegida')
-            ->assertSee('Abrir documento')
+            ->assertDontSee('Exibir selfie para conferência')
             ->assertSee($file->id, escape: false)
-            ->assertSee('previewUrl =', escape: false)
-            ->assertDontSee('src="'.route('protected-files.show', $file), escape: false)
+            ->assertSee('src="'.route('protected-files.show', ['arquivo' => $file, 'contexto' => 'analise_pre_cadastro']), escape: false)
             ->assertDontSee($file->object_key, escape: false);
     }
 
@@ -247,11 +249,11 @@ class ProtectedFileTest extends TestCase
         [$file] = app(PrivateFileService::class)->storePreRegistrationFiles($preRegistration, [
             'documento' => UploadedFile::fake()->image('documento-validacao.jpg'),
         ]);
-        $operator = $this->userWithPermission('arquivos.sensiveis.visualizar');
+        $operator = $this->userWithPermission('arquivos.sensiveis.visualizar', 'validacao.registrar');
 
         Livewire::actingAs($operator)
             ->test(AccessValidation::class)
-            ->set('currentPessoaId', $person->id)
+            ->call('selecionarPessoa', $person->id)
             ->assertSee('Conferência visual protegida')
             ->assertSee('Abrir documento')
             ->assertSee($file->id, escape: false)

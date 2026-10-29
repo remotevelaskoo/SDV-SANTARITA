@@ -1,6 +1,8 @@
 <?php
 
+use App\Integracoes\Adaptadores\CameraHttp\SnapshotHttpAdaptador;
 use App\Integracoes\Adaptadores\Hikvision\HikvisionIsapiAdaptador;
+use App\Integracoes\Adaptadores\Simulador\SimuladorCameraPlacas;
 use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 
 /*
@@ -61,6 +63,22 @@ return [
         'retencao_segundos' => 300,
     ],
 
+    // Câmeras de placas (AJ-006): imagem estática sob demanda, sem vídeo
+    // contínuo. Código do adaptador => classe de PortaCameraSnapshot.
+    // "gateway-video" é o caminho para câmeras RTSP/ONVIF: um gateway na rede
+    // interna converte o fluxo em snapshot HTTP e o SDV fala só com ele.
+    // O simulador segue a mesma regra do simulador de terminais.
+    'cameras_placa' => [
+        'adaptadores' => [
+            'snapshot-http' => SnapshotHttpAdaptador::class,
+            'gateway-video' => SnapshotHttpAdaptador::class,
+            'simulador-camera' => SimuladorCameraPlacas::class,
+        ],
+        'tamanho_maximo_bytes' => 3 * 1024 * 1024,
+        // Intervalo mínimo entre capturas da mesma câmera, contra cliques repetidos.
+        'intervalo_minimo_segundos' => 2,
+    ],
+
     // Valores sugeridos no formulário de cadastro da bancada de homologação.
     'homologacao_padrao' => [
         'nome' => 'Facial Homologação 01',
@@ -103,6 +121,14 @@ return [
                 // Relé acionado em bancada em 27/09/2026 (docs/016 §5). A abertura
                 // operacional continua desligada (SDV_INTEGRACAO_ABERTURA_REMOTA).
                 'abertura_remota' => 'homologada',
+                // Usuário com período de validade, sem foto: gravar/alterar, consultar
+                // e remover validados em bancada em 25/10/2026 (AJ-006, docs/020).
+                'sincronizar_credencial' => 'homologada',
+                'consultar_sincronizacao' => 'homologada',
+                'revogar_credencial' => 'homologada',
+                // Período gravado e devolvido igual; a recusa de acesso depois do fim
+                // ainda não foi observada (exige credencial de teste no terminal).
+                'validade_nativa' => 'em_homologacao',
                 // Biometria depende do ADR-013.
                 'credencial_facial' => 'bloqueada',
             ],

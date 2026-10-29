@@ -27,10 +27,32 @@ O token precisa ser igual nos dois processos. Em produção, ele deverá vir do 
 ```bash
 pip install -r requirements-dev.txt
 PYTHONPATH=. python -m unittest discover -s tests -v
+# leitura real com o motor sobre documento SINTÉTICO desenhado em memória
+OCR_ENGINE_TESTS=1 PYTHONPATH=. python -m unittest tests.test_engine_synthetic -v
 ```
+
+Todos os testes usam imagens geradas em memória. Não coloque documento real em `tests/`.
+
+## Diagnóstico da leitura (AJ-006)
+
+Antes do OCR, cada imagem é orientada pelo EXIF e medida (resolução, brilho, reflexo, foco, contraste e enquadramento). Se a leitura vier pobre ou com o texto na vertical, ela é repetida com a imagem girada. A resposta traz `diagnostics`, sem texto lido nem valores:
+
+| Campo | Conteúdo |
+| --- | --- |
+| `stage` | `ok`, `partial`, `capture` (arquivo inválido), `quality` (imagem ruim e nada lido), `ocr` (nenhum texto), `interpretation` (texto sem campos) |
+| `issues` | `sem_texto`, `campos_nao_localizados`, `tipo_divergente`, `verso_recomendado`, `cpf_digito_invalido`, `confianca_baixa` |
+| `quality_issues` | `imagem_invalida`, `resolucao_baixa`, `escura`, `clara_demais`, `reflexo`, `desfocada`, `baixo_contraste`, `possivelmente_cortado` |
+| `detected_type` | `cnh`, `rg_cin` ou `null`, pelas palavras-chave do documento |
+| `rotation_applied`, `exif_rotated` | lados que precisaram ser girados |
+| `recapture_recommended` | se vale pedir nova foto |
+
+Cada campo traz `value`, `confidence`, `source` e `validated` (CPF com dígito verificador correto ou data válida). O SDV converte os códigos em orientações em português e decide entre nova captura e preenchimento manual. Os limiares de qualidade em `app/quality.py` são provisórios: eles explicam um resultado ruim, mas não impedem a leitura.
+
+Na subida, o serviço faz uma leitura de aquecimento para carregar os modelos e evitar que o primeiro documento passe do tempo limite do SDV. Desligue com `DOCUMENT_OCR_WARMUP=0`.
 
 ## Limites
 
+- **o leitor não está homologado**: a taxa de acerto com documentos reais ainda precisa ser medida com amostras autorizadas (ver abaixo);
 - o resultado é sugestão, não validação do documento;
 - o serviço localiza a região de uma foto no documento, mas não reconhece nem compara rostos;
 - o recorte somente é devolvido quando `include_portrait=true` e deve ser armazenado em área privada;

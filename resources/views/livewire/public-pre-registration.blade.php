@@ -32,7 +32,7 @@
                 </dl>
 
                 <x-ui.alert variant="info" title="Antes de começar">
-                    Solicitaremos identificação, {{ $this->documentStepEnabled() ? 'documento e selfie' : 'selfie' }} para análise. O envio não garante entrada e não abre nenhum acesso físico.
+                    Solicitaremos identificação, documento e selfie para análise. O envio não garante entrada e não abre nenhum acesso físico.
                 </x-ui.alert>
 
                 <x-ui.button variant="primary" wire:click="start">Iniciar pré-cadastro</x-ui.button>
@@ -63,24 +63,20 @@
                 <header class="pre-registration-flow__header">
                     <div>
                         <a class="pre-registration-mobile-brand" href="{{ route('login') }}"><span aria-hidden="true">SDV</span> SDV Access</a>
-                        @php
-                            $visibleSteps = $this->visibleSteps();
-                            $visibleIndex = collect($visibleSteps)->search(fn ($s) => $s['step'] === $step) + 1;
-                        @endphp
-                        <small>Etapa {{ $visibleIndex }} de {{ count($visibleSteps) }}</small>
+                        <small>Etapa {{ $step }} de 6</small>
                         <h2 id="pre-registration-step-title">{{ $steps[$step - 1]['label'] }}</h2>
                         <p>{{ $steps[$step - 1]['description'] }}</p>
                     </div>
                     <x-ui.badge variant="success">Convite válido</x-ui.badge>
                 </header>
 
-                <div class="pre-registration-progress" role="progressbar" aria-label="Progresso do pré-cadastro" aria-valuemin="1" aria-valuemax="{{ count($visibleSteps) }}" aria-valuenow="{{ $visibleIndex }}">
-                    <span style="width: {{ ($visibleIndex / count($visibleSteps)) * 100 }}%"></span>
+                <div class="pre-registration-progress" role="progressbar" aria-label="Progresso do pré-cadastro" aria-valuemin="1" aria-valuemax="6" aria-valuenow="{{ $step }}">
+                    <span style="width: {{ ($step / 6) * 100 }}%"></span>
                 </div>
 
                 <div class="pre-registration-flow__content">
                     <aside class="pre-registration-steps-desktop">
-                        <x-ui.stepper :steps="$visibleSteps" :current="$visibleIndex" />
+                        <x-ui.stepper :steps="$steps" :current="$step" />
                     </aside>
 
                     <div class="pre-registration-step-content">
@@ -105,6 +101,7 @@
                                     <x-ui.alert :variant="$ocrStatus === 'completed' ? 'success' : 'info'" :title="$ocrStatus === 'completed' ? 'Dados sugeridos' : 'Documento recebido'">
                                         {{ $ocrMessage ?: 'A imagem foi recebida. Confira os dados pessoais abaixo.' }}
                                     </x-ui.alert>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" :variant="$ocrStatus === 'completed' ? 'info' : 'warning'" />
                                     <div>
                                         <x-ui.button variant="secondary" wire:click="analyzeDocument" wire:loading.attr="disabled" wire:target="analyzeDocument">Ler novamente</x-ui.button>
                                         <x-ui.button variant="ghost" wire:click="removeDocumentFile">Substituir documento</x-ui.button>
@@ -121,9 +118,9 @@
                             <div class="pre-registration-fields">
                                 <x-ui.field id="pre-name" label="Nome completo" wire:model="name" :error="$errors->first('name')" required />
                                 <x-ui.field id="pre-cpf" label="CPF" wire:model="cpf" placeholder="000.000.000-00" :error="$errors->first('cpf')" required />
-                                <x-ui.field id="pre-birth-date" type="date" label="Data de nascimento" wire:model="birthDate" :error="$errors->first('birthDate')" required />
-                                <x-ui.field id="pre-phone" type="tel" label="Telefone com DDD" wire:model="phone" placeholder="(12) 99999-9999" :error="$errors->first('phone')" required />
-                                <x-ui.field id="pre-email" type="email" label="E-mail" wire:model="email" :error="$errors->first('email')" required />
+                                <x-ui.field id="pre-birth-date" type="date" label="Data de nascimento" wire:model="birthDate" :error="$errors->first('birthDate')" />
+                                <x-ui.field id="pre-phone" type="tel" label="Telefone com DDD" wire:model="phone" placeholder="(12) 99999-9999" :error="$errors->first('phone')" />
+                                <x-ui.field id="pre-email" type="email" label="E-mail" wire:model="email" :error="$errors->first('email')" />
                                 <x-ui.select id="pre-access-type" label="Tipo de acesso" wire:model="accessType" :error="$errors->first('accessType')" required>
                                     <option value="visitante">Visitante</option>
                                     <option value="turista">Turista</option>
@@ -142,13 +139,13 @@
                                 <x-ui.alert variant="warning" title="CEP não encontrado">Não localizamos este CEP automaticamente. Preencha o endereço manualmente.</x-ui.alert>
                             @endif
                             <div class="pre-registration-fields pre-registration-fields--address">
-                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" required />
-                                <x-ui.field id="pre-address" label="Endereço" wire:model="address" :error="$errors->first('address')" required />
-                                <x-ui.field id="pre-address-number" label="Número" wire:model="addressNumber" :error="$errors->first('addressNumber')" required />
+                                <x-ui.field id="pre-zip-code" label="CEP" wire:model="zipCode" wire:blur="lookupZipCode" placeholder="00000-000" :error="$errors->first('zipCode')" />
+                                <x-ui.field id="pre-address" label="Endereço" wire:model="address" :error="$errors->first('address')" />
+                                <x-ui.field id="pre-address-number" label="Número" wire:model="addressNumber" :error="$errors->first('addressNumber')" />
                                 <x-ui.field id="pre-address-complement" label="Complemento" wire:model="addressComplement" />
-                                <x-ui.field id="pre-district" label="Bairro" wire:model="district" :error="$errors->first('district')" required />
-                                <x-ui.field id="pre-city" label="Cidade" wire:model="city" :error="$errors->first('city')" required />
-                                <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" required />
+                                <x-ui.field id="pre-district" label="Bairro" wire:model="district" :error="$errors->first('district')" />
+                                <x-ui.field id="pre-city" label="Cidade" wire:model="city" :error="$errors->first('city')" />
+                                <x-ui.field id="pre-state" label="Estado" wire:model="state" placeholder="SP" :error="$errors->first('state')" />
                             </div>
                             @if ($accessType === 'turista')
                                 <article class="pre-registration-destination"><span>Destino da estadia</span><strong>Praia do Santa Rita</strong><small>Área comum — sem vínculo com um imóvel específico</small></article>
@@ -167,7 +164,7 @@
                             <div class="pre-registration-capture">
                                 <span class="pre-registration-capture__icon"><x-icon name="file" /></span>
                                 <h3>Fotografe ou envie seu documento</h3>
-                                <p>Mantenha o documento inteiro visível, sem reflexos e com o texto legível. A frente é obrigatória e o verso pode ser enviado quando possuir informações.</p>
+                                <p>Mantenha o documento inteiro visível, sem reflexos e com o texto legível. A frente é obrigatória. No RG/CIN o verso também é obrigatório; na CNH, envie o verso quando ele tiver informações.</p>
 
                                 <x-ui.select id="pre-document-type" label="Tipo de documento" wire:model="documentType" :error="$errors->first('documentType')" required>
                                     <option value="cnh">CNH</option>
@@ -193,7 +190,7 @@
                                     @error('documentFile') <small class="pre-registration-error" role="alert">{{ $message }}</small> @enderror
                                 @endif
 
-                                <h4>Verso do documento <small>(quando houver)</small></h4>
+                                <h4>Verso do documento <small>{{ $this->documentBackRequired() ? '(obrigatório no RG/CIN)' : '(quando houver)' }}</small></h4>
                                 @if ($documentBackReady)
                                     <x-ui.alert variant="success" title="Verso pronto para análise">
                                         A segunda imagem também será armazenada de forma privada.
@@ -226,8 +223,10 @@
                                         </ul>
                                     </x-ui.alert>
                                     <x-ui.button variant="primary" wire:click="editStep(1)">Conferir dados pessoais</x-ui.button>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" variant="info" />
                                 @elseif ($ocrStatus === 'failed')
                                     <x-ui.alert variant="warning" title="Leitura automática não concluída">{{ $ocrMessage }}</x-ui.alert>
+                                    <x-leitura-diagnostico :diagnostico="$ocrDiagnostico" />
                                 @elseif ($ocrStatus === 'unavailable')
                                     <x-ui.alert variant="info" title="Preenchimento manual disponível">{{ $ocrMessage }}</x-ui.alert>
                                 @endif
@@ -288,8 +287,8 @@
                             @if ($hasVehicle)
                                 <div class="pre-registration-fields pre-registration-vehicle-fields">
                                     <x-ui.field id="pre-plate" label="Placa" wire:model="plate" placeholder="ABC1D23" :error="$errors->first('plate')" required />
-                                    <x-ui.field id="pre-vehicle-model" label="Marca e modelo" wire:model="vehicleModel" :error="$errors->first('vehicleModel')" required />
-                                    <x-ui.field id="pre-vehicle-color" label="Cor" wire:model="vehicleColor" :error="$errors->first('vehicleColor')" required />
+                                    <x-ui.field id="pre-vehicle-model" label="Marca e modelo" wire:model="vehicleModel" :error="$errors->first('vehicleModel')" />
+                                    <x-ui.field id="pre-vehicle-color" label="Cor" wire:model="vehicleColor" :error="$errors->first('vehicleColor')" />
                                 </div>
                                 <x-ui.alert variant="warning" title="O veículo será conferido na chegada">
                                     Uma placa informada no pré-cadastro não libera o acesso automaticamente.
@@ -301,11 +300,7 @@
                             <div class="pre-registration-review">
                                 <article><span>Dados pessoais</span><strong>{{ $name ?: 'Não informado' }}</strong><small>{{ ucfirst($accessType) }} · {{ $cpf ?: 'CPF não informado' }}</small><button type="button" wire:click="editStep(1)">Editar</button></article>
                                 <article><span>Endereço informado</span><strong>{{ $address ?: 'Não informado' }}, {{ $addressNumber ?: 's/n' }}</strong><small>{{ $city ?: 'Cidade' }}/{{ strtoupper($state ?: 'UF') }}</small><button type="button" wire:click="editStep(2)">Editar</button></article>
-                                @if (! $this->documentStepEnabled())
-                                <article><span>Selfie</span><strong>{{ $selfieReady ? 'Pronta para análise' : 'Pendente' }}</strong><small>O documento será conferido na portaria · identidade exige conferência humana</small><button type="button" wire:click="editStep(4)">Editar</button></article>
-                                @else
                                 <article><span>Documento e selfie</span><strong>{{ $documentReady && $selfieReady ? 'Prontos para análise' : 'Pendentes' }}</strong><small>{{ $documentType === 'cnh' ? 'CNH' : 'RG/CIN' }}{{ $documentBackReady ? ' · frente e verso' : ' · frente' }}{{ $portraitDetected ? ' · foto do documento localizada' : '' }} · identidade exige conferência humana</small><button type="button" wire:click="editStep(3)">Editar</button></article>
-                                @endif
                                 <article><span>Veículo</span><strong>{{ $hasVehicle ? ($plate ?: 'Placa pendente') : 'Sem veículo' }}</strong><small>{{ $hasVehicle ? ($vehicleModel ?: 'Modelo pendente') : 'Etapa opcional' }}</small><button type="button" wire:click="editStep(5)">Editar</button></article>
                             </div>
 

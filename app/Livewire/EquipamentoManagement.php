@@ -413,7 +413,7 @@ class EquipamentoManagement extends Component
             : null;
 
         return view('livewire.equipamento-management', [
-            'equipamentos' => $this->mode === 'list' ? Equipamento::query()->with('vinculoVigente.pontoAcesso')->orderBy('nome')->get() : collect(),
+            'equipamentos' => $this->mode === 'list' ? Equipamento::query()->terminais()->with('vinculoVigente.pontoAcesso')->orderBy('nome')->get() : collect(),
             'pontos' => $this->mode === 'form' ? PontoAcesso::query()->where('status', '!=', StatusPontoAcesso::Inativo->value)->orderBy('nome')->get() : collect(),
             'adaptadoresDisponiveis' => array_values(array_filter($adaptadores->codigos(), fn (string $c) => $adaptadores->permitido($c))),
             'equipamento' => $equipamento,
@@ -559,7 +559,7 @@ class EquipamentoManagement extends Component
 
     private function equipamento(?string $id = null): Equipamento
     {
-        return Equipamento::query()->findOrFail($id ?? $this->selecionadoId);
+        return Equipamento::query()->terminais()->findOrFail($id ?? $this->selecionadoId);
     }
 
     private function reiniciarPainel(): void

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use LogicException;
 
 #[Fillable([
@@ -49,6 +50,18 @@ class Arquivo extends Model
     public function preRegistrationLinks(): HasMany
     {
         return $this->hasMany(PreRegistrationArquivo::class, 'arquivo_id');
+    }
+
+    /** @return HasMany<PessoaArquivo, $this> */
+    public function pessoaLinks(): HasMany
+    {
+        return $this->hasMany(PessoaArquivo::class, 'arquivo_id');
+    }
+
+    /** @return HasOne<CapturaPlaca, $this> */
+    public function capturaPlaca(): HasOne
+    {
+        return $this->hasOne(CapturaPlaca::class, 'arquivo_id');
     }
 
     public function isAvailable(): bool
