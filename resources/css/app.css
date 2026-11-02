@@ -443,8 +443,11 @@ button:disabled, input:disabled { cursor: not-allowed; }
     scrollbar-color: rgb(255 255 255 / 0.18) transparent;
 }
 
-.navigation__group { margin: 0 0 1rem; }
-.navigation__group h2 {
+.navigation__group { margin: 0 0 0.5rem; }
+.navigation__group summary { cursor: pointer; list-style-position: inside; border-radius: var(--radius-md); }
+.navigation__group summary:focus-visible { outline: 2px solid var(--white); outline-offset: -2px; }
+.navigation__group[open] summary { margin-bottom: 0.25rem; }
+.navigation__group summary {
     margin: 0;
     padding: 0 0.75rem 0.45rem;
     color: rgb(255 255 255 / 0.52);

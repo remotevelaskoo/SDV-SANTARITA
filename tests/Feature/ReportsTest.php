@@ -42,7 +42,7 @@ class ReportsTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $this->get('/relatorios')->assertRedirect(route('dashboard'));
+        $this->get('/relatorios')->assertRedirect(route('home'));
     }
 
     public function test_own_report_only_shows_records_created_by_authenticated_operator(): void

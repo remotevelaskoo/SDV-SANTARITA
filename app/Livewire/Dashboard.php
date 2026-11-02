@@ -102,6 +102,8 @@ class Dashboard extends Component
 
     public function render(): View
     {
+        abort_unless(auth()->user()?->hasPermission('dashboard.visualizar'), 403);
+
         return view('livewire.dashboard', [
             'metrics' => $this->metrics(),
             'alerts' => $this->alerts(),

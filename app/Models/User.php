@@ -60,7 +60,7 @@ class User extends Authenticatable
     {
         return $this->usuarioPerfis()
             ->whereNull('ended_at')
-            ->whereHas('perfil', fn ($query) => $query->whereHas('permissoes', fn ($query) => $query->where('chave', $chave)))
+            ->whereHas('perfil', fn ($query) => $query->where('status', 'ativo')->whereHas('permissoes', fn ($query) => $query->where('chave', $chave)))
             ->exists();
     }
 

@@ -481,7 +481,7 @@ class LiberacaoManualTest extends TestCase
 
     public function test_tela_de_postos_exige_permissao_e_designacao_e_auditada(): void
     {
-        $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/postos')->assertRedirect(route('dashboard'));
+        $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/postos')->assertRedirect(route('home'));
         $this->actingAs($this->usuarioCom('integracoes.gerenciar'))->get('/postos')->assertOk()->assertSee('Postos e operadores');
 
         $operador = $this->operador();

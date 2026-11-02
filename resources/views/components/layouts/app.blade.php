@@ -16,7 +16,7 @@
         <div class="app-shell">
             <aside class="sidebar" aria-label="Navegação principal">
                 <div class="sidebar__brand-row">
-                    <a class="brand" href="{{ route('dashboard') }}" aria-label="SDV Access Santa Rita — Dashboard">
+                    <a class="brand" href="{{ route('home') }}" aria-label="SDV Access Santa Rita — Início">
                         <span class="brand__mark" aria-hidden="true">SDV</span>
                         <span>
                             <strong>SDV Access</strong>
