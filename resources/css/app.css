@@ -548,7 +548,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .operational-header__title h1 { margin: 0; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .operational-header__title p { margin: 0.05rem 0 0; overflow: hidden; color: var(--neutral-600); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
 
-.header-icon, .mobile-navigation summary {
+.header-icon, .mobile-navigation > summary {
     position: relative;
     display: grid;
     width: 2.25rem;
@@ -563,12 +563,13 @@ button:disabled, input:disabled { cursor: not-allowed; }
 }
 
 .header-icon--desktop { display: none; }
-.mobile-navigation summary::-webkit-details-marker, .header-popover summary::-webkit-details-marker { display: none; }
+.mobile-navigation > summary::-webkit-details-marker, .header-popover summary::-webkit-details-marker { display: none; }
 
 .mobile-navigation { position: relative; }
 .mobile-navigation__panel {
     position: absolute;
     top: calc(100% + 0.7rem);
+    z-index: 40;
     left: -0.5rem;
     width: min(18rem, calc(100vw - 1.5rem));
     max-height: calc(100vh - 5rem);
@@ -579,7 +580,7 @@ button:disabled, input:disabled { cursor: not-allowed; }
     box-shadow: 0 18px 45px rgb(9 22 45 / 0.28);
 }
 
-.mobile-brand { padding: 0.25rem 0.75rem 1rem; border-bottom: 1px solid rgb(255 255 255 / 0.12); }
+.mobile-brand { padding: 0.25rem 0.75rem 1rem; border-bottom: 1px solid rgb(255 255 255 / 0.12); color: var(--white); }
 .mobile-navigation__panel .navigation { height: auto; padding: 0.8rem 0 0; overflow: visible; }
 
 .operational-header__actions { display: flex; align-items: center; gap: 0.25rem; }

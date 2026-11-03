@@ -33,6 +33,7 @@ use App\Livewire\SelecaoPosto;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Services\AuditService;
+use App\Support\Navigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -66,8 +67,12 @@ Route::get('/pre-cadastro/convite-demonstracao', PublicPreRegistration::class)->
 Route::get('/esqueci-minha-senha', ForgotPassword::class)->name('password.request');
 Route::get('/redefinir-senha/{token}', ResetPassword::class)->name('password.reset');
 
-Route::get('/inicio', fn (Request $request) => redirect()->route(\App\Support\Navigation::homeRoute($request->user())))
-    ->middleware('auth')->name('home');
+Route::get('/inicio', function (Request $request) {
+    // Mantém o aviso de acesso negado até a área inicial que será exibida.
+    $request->session()->reflash();
+
+    return redirect()->route(Navigation::homeRoute($request->user()));
+})->middleware('auth')->name('home');
 Route::get('/dashboard', Dashboard::class)->middleware(['auth', 'permissao:dashboard.visualizar'])->name('dashboard');
 Route::get('/selecionar-implantacao', ImplantacaoSelection::class)->middleware('auth')->name('implantacao.selecionar');
 Route::get('/selecionar-posto', SelecaoPosto::class)->middleware('auth')->name('posto.selecionar');
