@@ -112,7 +112,7 @@ class AuditLogTest extends TestCase
         $this->get('/auditoria')->assertRedirect(route('login'));
 
         $withoutPermission = User::factory()->create();
-        $this->actingAs($withoutPermission)->get('/auditoria')->assertRedirect(route('dashboard'));
+        $this->actingAs($withoutPermission)->get('/auditoria')->assertRedirect(route('home'));
 
         $auditor = $this->userWithPermissions('auditoria.consultar');
         $this->actingAs($auditor)->get('/auditoria')->assertOk()->assertSee('Logs e auditoria');

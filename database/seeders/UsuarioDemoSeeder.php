@@ -12,8 +12,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Semeia o catálogo real de permissões e os 4 perfis definidos pelo PO para o
- * P20 (PORTEIRO_CAIXA, GESTOR, AUDITOR, ADMINISTRADOR), e associa os
+ * Semeia o catálogo real de permissões e os perfis definidos pelo PO para o
+ * P20 e AJ-009 (Porteiro/Caixa, Gestor, Direção, Auditor e Administrador), e associa os
  * usuários demo (PortariaDemoSeeder) à implantação Santa Rita com o perfil
  * correspondente.
  */
@@ -62,7 +62,6 @@ class UsuarioDemoSeeder extends Seeder
 
     /** @var list<string> */
     private const PORTEIRO_CAIXA = [
-        'dashboard.visualizar',
         'pessoas.gerenciar',
         'facial.enviar',
         'pre-registro.analisar',
@@ -88,7 +87,6 @@ class UsuarioDemoSeeder extends Seeder
 
     /** @var list<string> */
     private const AUDITOR = [
-        'dashboard.visualizar',
         'pre-registro.analisar',
         'imoveis.consultar',
         'veiculos.consultar',
@@ -112,9 +110,10 @@ class UsuarioDemoSeeder extends Seeder
 
         $grants = [
             'Porteiro/Caixa' => self::PORTEIRO_CAIXA,
-            'Gestor' => [...self::PORTEIRO_CAIXA, 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket'],
+            'Direção' => ['dashboard.visualizar'],
+            'Gestor' => [...self::PORTEIRO_CAIXA, 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket'],
             'Auditor' => self::AUDITOR,
-            'Administrador' => array_keys(self::PERMISSOES),
+            'Administrador' => array_values(array_diff(array_keys(self::PERMISSOES), ['dashboard.visualizar'])),
         ];
 
         $perfis = [];

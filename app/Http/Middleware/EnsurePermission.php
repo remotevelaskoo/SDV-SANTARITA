@@ -15,7 +15,7 @@ class EnsurePermission
         );
 
         if (! $autorizado) {
-            return redirect()->route('dashboard')->with('erro', 'Sem permissão para acessar esta área.');
+            return redirect()->route('home')->with('erro', 'Sem permissão para acessar esta área.');
         }
 
         return $next($request);

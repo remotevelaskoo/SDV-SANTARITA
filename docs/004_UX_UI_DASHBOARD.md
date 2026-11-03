@@ -1141,3 +1141,19 @@ A futura especificação deverá detalhar a jornada completa de Validação de E
 ## Situação do documento
 
 Esta especificação consolida o comportamento funcional, visual e responsivo do Dashboard do SDV Access e encontra-se **aprovada**. As pendências de cálculo, atualização, permissões e prototipação permanecem rastreadas e deverão ser resolvidas antes da implementação definitiva dos elementos afetados, sem invalidar esta aprovação documental.
+
+
+## Atualização operacional — AJ-009 (02/11/2026)
+
+Decisão do Product Owner: o Dashboard é exclusivo de direção e gestão. Substitui a política anterior de painel universal para qualquer usuário autenticado.
+
+- `dashboard.visualizar` protege a rota e cada renderização Livewire.
+- Perfis padrão Gestor e Direção recebem a permissão. Porteiro/Caixa, Auditor e Administrador técnico não a recebem por padrão; usuários com múltiplos perfis acumulam suas concessões vigentes.
+- O novo perfil Direção nasce somente com essa permissão, sem privilégios administrativos adicionais e sem atribuição automática a usuários. Demais acessos são configurados em Perfis e permissões.
+- `/inicio` resolve a área inicial autorizada: Dashboard, Modo Portaria, Relatórios ou primeiro módulo permitido; sem módulos, usa Minhas sessões.
+- Login, seleção de implantação e marca da aplicação apontam para `/inicio`. Acesso negado também retorna a esse resolvedor, evitando ciclos de redirecionamento.
+- O menu usa as permissões das próprias rotas, oculta itens e grupos vazios e não apresenta módulos indisponíveis. Grupos recolhíveis funcionam por teclado e no celular; o grupo da página atual inicia aberto.
+- Caixa e Encomendas ficam em Operação; Gestão reúne Relatórios e Auditoria; Administração e Equipamentos têm grupos próprios.
+- Migração ajusta os perfis padrão de instalações existentes sem rodar seeders demo. Perfis personalizados preservam a matriz configurada. Rollback não restaura automaticamente permissões retiradas.
+
+Implementação na branch `codex/menu-por-perfil`, aguardando validação e revisão. Cobertura em `tests/Feature/ProfileNavigationTest.php`.

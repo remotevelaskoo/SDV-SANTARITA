@@ -1,64 +1,30 @@
 @php
-    $groups = [
-        'Operação' => [
-            ['label' => 'Modo Portaria', 'icon' => 'door', 'route' => 'portaria'],
-            ['label' => 'Dashboard', 'icon' => 'grid', 'route' => 'dashboard'],
-            ['label' => 'Validação de entrada', 'icon' => 'shield', 'route' => 'validation'],
-            ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3, 'route' => 'pre-registrations'],
-            ['label' => 'Entradas e saídas', 'icon' => 'door', 'route' => 'access-history'],
-        ],
-        'Cadastros' => [
-            ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
-            ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people.create'],
-            ['label' => 'Empresas e prestadores', 'icon' => 'users-round', 'route' => 'companies'],
-            ['label' => 'Veículos', 'icon' => 'car', 'route' => 'vehicles'],
-        ],
-        'Gestão' => [
-            ['label' => 'Administração', 'icon' => 'settings', 'route' => 'users'],
-            ['label' => 'Perfis e permissões', 'icon' => 'key', 'route' => 'profiles'],
-            ['label' => 'Configurações', 'icon' => 'settings', 'route' => 'settings'],
-            ['label' => 'Motivos de negativa', 'icon' => 'file', 'route' => 'catalogs'],
-            ['label' => 'Equipamentos', 'icon' => 'shield', 'route' => 'equipment'],
-            ['label' => 'Pontos de acesso', 'icon' => 'door', 'route' => 'access-points'],
-            ['label' => 'Câmeras de placas', 'icon' => 'car', 'route' => 'plate-cameras'],
-            ['label' => 'Postos e operadores', 'icon' => 'users', 'route' => 'posts'],
-            ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
-            ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
-            ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],
-            ['label' => 'Manutenção', 'icon' => 'wrench'],
-            ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
-        ],
-    ];
+    $groups = \App\Support\Navigation::groups(auth()->user());
+    // Inclui subpáginas, como a análise de um pré-cadastro (pre-registrations.review).
+    $isCurrent = fn (array $item): bool => request()->routeIs($item['route'], $item['route'].'.*');
+    // Páginas fora do menu (Minhas sessões, posto, implantação) abrem o primeiro grupo.
+    $hasCurrent = collect($groups)->flatten(1)->contains($isCurrent);
 @endphp
 
 <nav class="navigation" aria-label="Módulos do sistema">
     @foreach ($groups as $group => $items)
-        <section class="navigation__group" aria-labelledby="nav-{{ Str::slug($group) }}">
-            <h2 id="nav-{{ Str::slug($group) }}">{{ $group }}</h2>
+        <details class="navigation__group" @if (collect($items)->contains($isCurrent) || $group === 'Visão geral' || (! $hasCurrent && $loop->first)) open @endif>
+            <summary>{{ $group }}</summary>
             <ul>
                 @foreach ($items as $item)
+                    @php($current = $isCurrent($item))
                     <li>
-                        @if (isset($item['route']))
-                            <a
-                                @class(['navigation__item', 'navigation__item--active' => request()->routeIs($item['route'])])
-                                href="{{ route($item['route']) }}"
-                                @if (request()->routeIs($item['route'])) aria-current="page" @endif
-                            >
-                                <x-icon :name="$item['icon']" />
-                                <span>{{ $item['label'] }}</span>
-                            </a>
-                        @else
-                            <span class="navigation__item navigation__item--disabled" aria-disabled="true" title="Módulo será portado em uma próxima etapa">
-                                <x-icon :name="$item['icon']" />
-                                <span>{{ $item['label'] }}</span>
-                                @if (isset($item['counter']))
-                                    <small class="navigation__counter">{{ $item['counter'] }}</small>
-                                @endif
-                            </span>
-                        @endif
+                        <a
+                            @class(['navigation__item', 'navigation__item--active' => $current])
+                            href="{{ route($item['route']) }}"
+                            @if ($current) aria-current="page" @endif
+                        >
+                            <x-icon :name="$item['icon']" />
+                            <span>{{ $item['label'] }}</span>
+                        </a>
                     </li>
                 @endforeach
             </ul>
-        </section>
+        </details>
     @endforeach
 </nav>
