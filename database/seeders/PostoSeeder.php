@@ -20,7 +20,7 @@ class PostoSeeder extends Seeder
             return;
         }
 
-        ImplantacaoContext::executarNo($implantacao, function (): void {
+        ImplantacaoContext::executarNo($implantacao, function () use ($implantacao): void {
             foreach (Posto::INICIAIS as $dados) {
                 $posto = Posto::query()
                     ->where('codigo', $dados['codigo'])
@@ -28,7 +28,7 @@ class PostoSeeder extends Seeder
                     ->first();
 
                 $posto === null
-                    ? Posto::query()->create([...$dados, 'status' => 'ativo'])
+                    ? Posto::query()->create([...$dados, 'implantacao_id' => $implantacao->id, 'status' => 'ativo'])
                     : $posto->forceFill(['tipo' => $dados['tipo']])->save();
             }
         });
