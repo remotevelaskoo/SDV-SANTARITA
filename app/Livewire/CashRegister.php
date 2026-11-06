@@ -54,6 +54,15 @@ class CashRegister extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
+    /**
+     * Livewire recebe atualizações por uma rota própria: o middleware da página
+     * não protege cada requisição. Reavaliar a permissão inclusive após revogação.
+     */
+    public function boot(): void
+    {
+        abort_unless(Auth::user()?->hasPermission(CaixasOperador::PERMISSAO_PROPRIO), 403);
+    }
+
     public function mount(): void
     {
         $sugerido = Configuracao::obter('caixa.saldo_sugerido_abertura');
