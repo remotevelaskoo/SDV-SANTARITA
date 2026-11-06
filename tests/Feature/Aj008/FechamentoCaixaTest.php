@@ -434,6 +434,48 @@ class FechamentoCaixaTest extends TestCase
         Livewire::actingAs($gestor)->test(CaixaFechamento::class, ['turno' => $alheio->id]);
     }
 
+    public function test_abertura_do_caixa_e_bloqueada_se_a_permissao_cair_durante_o_livewire(): void
+    {
+        $this->withoutVite();
+        $operador = $this->porteiro();
+        $component = Livewire::actingAs($operador)->test(CashRegister::class);
+
+        $operador->usuarioPerfis()->firstOrFail()->perfil->permissoes()->detach();
+
+        $component->call('openRegister')->assertForbidden();
+        $this->assertDatabaseMissing('caixa_turnos', ['operator_id' => $operador->id, 'status' => 'aberto']);
+    }
+
+    public function test_lista_de_fechamentos_exige_permissao_em_cada_atualizacao_livewire(): void
+    {
+        $this->withoutVite();
+        $operador = $this->porteiro();
+        $this->caixas()->abrir($operador, 0);
+        $this->caixas()->fechar($operador, 0, '');
+        $component = Livewire::actingAs($operador)->test(CaixaFechamentos::class);
+
+        $operador->usuarioPerfis()->firstOrFail()->perfil->permissoes()->detach();
+
+        $component->set('operador', '1')->assertForbidden();
+    }
+
+    public function test_exportacao_de_fechamento_e_bloqueada_apos_revogar_permissao_livewire(): void
+    {
+        $this->withoutVite();
+        $operador = $this->porteiro();
+        $this->caixas()->abrir($operador, 0);
+        $fechado = $this->caixas()->fechar($operador, 0, '');
+        $component = Livewire::actingAs($operador)->test(CaixaFechamento::class, ['turno' => $fechado->id]);
+
+        $operador->usuarioPerfis()->firstOrFail()->perfil->permissoes()->detach();
+
+        $component->call('exportarCsv')->assertForbidden();
+        $this->assertDatabaseMissing('auditoria_eventos', [
+            'action' => 'exportou_fechamento_caixa',
+            'entity_id' => $fechado->id,
+        ]);
+    }
+
     // ---- Auxiliares -------------------------------------------------------------------
 
     private function caixas(): CaixasOperador
