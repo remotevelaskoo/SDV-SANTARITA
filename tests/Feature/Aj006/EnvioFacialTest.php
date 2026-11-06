@@ -58,7 +58,7 @@ class EnvioFacialTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('feedback.variant', 'success')
             ->assertSet('resultadoEnvio.variant', 'success')
-            ->assertSet('resultadoEnvio.title', 'Pessoa cadastrada na facial')
+            ->assertSet('resultadoEnvio.title', 'Cadastro confirmado pelo terminal')
             ->assertSee('Pessoa e vínculo salvos')
             ->assertSee('Confirmado pelo terminal.');
 

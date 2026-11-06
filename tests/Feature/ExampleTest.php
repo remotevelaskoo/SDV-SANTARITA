@@ -91,6 +91,20 @@ class ExampleTest extends TestCase
         parent::tearDown();
     }
 
+    /** AJ-010: o cadastro rápido confere permissão em cada ação. */
+    private function quickRegistrationOperator(): User
+    {
+        $user = User::factory()->create();
+        $perfil = Perfil::factory()->create();
+        foreach (['validacao.registrar', 'pessoas.gerenciar'] as $chave) {
+            $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'teste', 'descricao' => $chave]);
+            $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => ImplantacaoContext::current()->id]);
+        }
+        UsuarioPerfil::factory()->for($user)->for($perfil)->create();
+
+        return $user;
+    }
+
     private function portariaOperator(bool $canEdit = true): User
     {
         $user = User::factory()->create([
@@ -571,7 +585,7 @@ class ExampleTest extends TestCase
     {
         Imovel::factory()->create(['codigo' => 'SRA-A-102']);
 
-        Livewire::test(AccessValidation::class)
+        Livewire::actingAs($this->quickRegistrationOperator())->test(AccessValidation::class)
             ->set('contribution', 'no')
             ->set('notes', 'Atendimento iniciado antes do cadastro rápido.')
             ->call('openQuickRegistration')
@@ -608,7 +622,7 @@ class ExampleTest extends TestCase
             'valor_normalizado' => '11111111111',
         ]);
 
-        Livewire::test(AccessValidation::class)
+        Livewire::actingAs($this->quickRegistrationOperator())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickName', 'Pessoa já cadastrada')
             ->set('quickDocument', '111.111.111-11')
@@ -625,7 +639,7 @@ class ExampleTest extends TestCase
 
     public function test_the_quick_registration_can_be_cancelled_without_losing_the_validation(): void
     {
-        Livewire::test(AccessValidation::class)
+        Livewire::actingAs($this->quickRegistrationOperator())->test(AccessValidation::class)
             ->set('paymentMethod', 'pix')
             ->set('notes', 'Observação que deve continuar no atendimento.')
             ->call('openQuickRegistration')
@@ -641,7 +655,7 @@ class ExampleTest extends TestCase
     {
         Imovel::factory()->create(['codigo' => 'SRA-A-102']);
 
-        $test = Livewire::test(AccessValidation::class)
+        $test = Livewire::actingAs($this->quickRegistrationOperator())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickName', 'Ana Paula Ribeiro')
             ->set('quickDocument', '456.789.123-00')

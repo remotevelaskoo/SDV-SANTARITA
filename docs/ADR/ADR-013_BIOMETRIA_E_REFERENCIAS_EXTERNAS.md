@@ -1,8 +1,8 @@
 # ADR-013 — BIOMETRIA E REFERÊNCIAS EXTERNAS
 
 **Identificador:** ADR-013
-**Versão:** 1.0.1
-**Status:** Adiado
+**Versão:** 1.1.0
+**Status:** Proposto (revisão AJ-010) — ativação operacional ainda não autorizada
 **Prioridade:** P2 — Condicional
 **Produto:** SDV Access — Implantação Santa Rita
 **Responsável pelo produto:** Vinicius Velasco de Azevedo
@@ -16,6 +16,7 @@
 |---|---|---|---|
 | 1.0.0 | 30/07/2026 | Product Owner | Registro e aprovação do adiamento da biometria |
 | 1.0.1 | 12/08/2026 | Product Owner | Esclarecimento entre conferência humana da selfie e sincronização com controladora |
+| 1.1.0 | 06/11/2026 | Soluções do Vale | Revisão proposta para o AJ-010: foto da pessoa capturada no cadastro rápido e envio ao terminal facial implementado atrás de bandeira, capacidade e homologação; condições de ativação registradas (§21) |
 
 # 1. Contexto
 
@@ -226,6 +227,50 @@ Voltará a **Proposto** após política de privacidade, inventário e prova téc
 
 Biometria permanece desativada; selfies não se tornam credenciais.
 
+# 21. Revisão AJ-010 — foto da pessoa e envio ao terminal facial
+
+A solicitação do Product Owner no AJ-010 (`docs/021`) retoma este ADR para um caso de uso específico: o porteiro fotografa a pessoa no cadastro rápido e envia essa foto ao terminal facial da implantação. Esta revisão é **proposta**; as seções 3 a 20 continuam valendo para tudo o que não estiver dito aqui.
+
+## 21.1 O que passa a ser permitido
+
+- capturar uma foto atual da pessoa no cadastro rápido, validada no servidor (formato, tamanho, dimensões, brilho) e guardada no armazenamento privado já usado para a foto da pessoa, com versão (checksum), autoria e instante;
+- manter a foto da pessoa separada da frente, do verso e do recorte do retrato do documento; as imagens do documento continuam temporárias e não são guardadas;
+- registrar na outbox o pedido de envio dessa foto ao terminal escolhido, com idempotência por credencial, terminal e versão da foto;
+- o worker reler a foto pela referência privada, conferir pessoa, implantação, versão e checksum, reduzir a imagem em memória (JPEG, lado máximo 640 px) e enviá-la pelo adaptador.
+
+## 21.2 O que continua proibido
+
+- o SDV gerar, receber ou guardar template biométrico; o template, se existir, é gerado e mantido pelo terminal (§6);
+- a foto ou o envio concederem acesso: autorização, validade, expiração e revogação seguem os fluxos próprios, e enviar foto nunca aciona relé;
+- imagem, base64, CPF, URL privada ou senha do terminal em log, auditoria, payload da outbox ou frontend; o payload leva apenas identificadores e a versão da foto;
+- apresentar “face sincronizada” quando o terminal só confirmou o usuário: a tela mostra cadastro, foto e terminal em linhas separadas;
+- tratar timeout como sucesso.
+
+## 21.3 Condições para ativação operacional
+
+O envio fica **desligado por padrão** e só sai do SDV quando todas as condições abaixo forem verdadeiras ao mesmo tempo:
+
+1. bandeira `SDV_INTEGRACAO_FOTO_FACIAL=true` (`config('integracoes.foto_facial_habilitada')`);
+2. capacidade `credencial_facial` marcada como homologada no perfil do modelo e firmware (`config/integracoes.php`, `perfis_homologados`), seguindo o procedimento do `docs/015` §8;
+3. homologação de bancada específica do envio de foto (roteiro em `docs/021` §10), com o resultado registrado no `docs/016`;
+4. decisões de dados formalizadas pelo Product Owner: finalidade e base legal (PEN-ADR-013-001), texto de transparência ao titular, retenção e descarte da foto e da face no terminal (PEN-ADR-013-004) e alternativa não biométrica (PEN-ADR-013-006);
+5. remoção da face junto com o usuário confirmada em bancada, para que revogação e expiração apaguem a face do terminal.
+
+Enquanto qualquer condição faltar, a tela mostra **“Foto salva; envio facial pendente”** e o cadastro, a foto e o envio do usuário ao terminal continuam funcionando.
+
+## 21.4 Protocolo previsto
+
+Operação `enviar_foto_facial` no adaptador Hikvision (`app/Integracoes/Adaptadores/Hikvision`), usando `PUT /ISAPI/Intelligent/FDLib/FDSetUp?format=json` em multipart (parte JSON `FaceDataRecord` com `faceLibType=blackFD`, `FDID=1`, `FPID` = número do usuário no terminal, e parte de imagem JPEG). O caminho consta da documentação oficial ISAPI; os nomes das partes, o limite de tamanho (provisório: 200 KB) e a remoção da face junto com o usuário **ainda precisam ser confirmados** no guia do firmware V3.18.0 e na bancada. O contrato está coberto pelo simulador e por testes com `Http::fake`; não há envio real homologado.
+
+## 21.5 Critérios de aceite adicionais
+
+**CA-ADR-013-011:** a foto da pessoa é distinta das imagens do documento.
+**CA-ADR-013-012:** o SDV não guarda template.
+**CA-ADR-013-013:** o envio exige bandeira, capacidade homologada e cadastro do usuário já confirmado no terminal.
+**CA-ADR-013-014:** foto nova invalida o estado sincronizado da versão anterior.
+**CA-ADR-013-015:** revogação confirmada marca a face como removida.
+**CA-ADR-013-016:** foto e envio não concedem acesso nem acionam relé.
+
 ## Situação do ADR
 
-**Adiado com aprovação formal.**
+**Proposto (revisão AJ-010).** O adiamento de 30/07/2026 continua valendo para qualquer uso fora do §21. O §21 está implementado e desligado; a ativação depende das condições do §21.3 e de aprovação do Product Owner nesta tabela.

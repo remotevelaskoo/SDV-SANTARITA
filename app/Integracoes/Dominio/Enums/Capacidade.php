@@ -22,6 +22,7 @@ enum Capacidade: string
     case ReceberEventos = 'receber_eventos';
     case AberturaRemota = 'abertura_remota';
     case ConsultarResultadoComando = 'consultar_resultado_comando';
+    // Foto da pessoa no cadastro do terminal (AJ-010). Exige ADR-013 1.1.0, flag e homologação.
     case CredencialFacial = 'credencial_facial';
     case IdempotenciaNativa = 'idempotencia_nativa';
     // O terminal aplica sozinho o início e o fim da vigência da credencial (AJ-006, turista 24h).

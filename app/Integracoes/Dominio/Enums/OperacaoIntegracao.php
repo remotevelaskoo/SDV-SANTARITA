@@ -13,6 +13,8 @@ enum OperacaoIntegracao: string
     case ColetarEventos = 'coletar_eventos';
     case AberturaRemota = 'abertura_remota';
     case ConsultarResultadoComando = 'consultar_resultado_comando';
+    // Foto atual da pessoa associada ao cadastro já gravado no terminal (AJ-010, ADR-013 1.1.0).
+    case EnviarFotoFacial = 'enviar_foto_facial';
 
     public function capacidadeExigida(): ?Capacidade
     {
@@ -25,6 +27,7 @@ enum OperacaoIntegracao: string
             self::ColetarEventos => Capacidade::ColetarEventos,
             self::AberturaRemota => Capacidade::AberturaRemota,
             self::ConsultarResultadoComando => Capacidade::ConsultarResultadoComando,
+            self::EnviarFotoFacial => Capacidade::CredencialFacial,
         };
     }
 

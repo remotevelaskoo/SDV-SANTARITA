@@ -8,6 +8,7 @@ use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
 use App\Integracoes\Dominio\Dados\EventoEquipamento;
+use App\Integracoes\Dominio\Dados\FotoFacialParaEnviar;
 use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
@@ -44,6 +45,9 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
 
     /** @var array<string, array<string, string>> equipamento => credencial => id externo */
     private array $credenciais = [];
+
+    /** @var array<string, array<string, string>> equipamento => credencial => versão da foto (nunca a imagem) */
+    private array $fotos = [];
 
     /** @var array<string, list<array<string, mixed>>> eventos brutos pendentes */
     private array $eventos = [];
@@ -100,6 +104,12 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
         return $this->credenciais[$equipamentoId] ?? [];
     }
 
+    /** @return array<string, string> credencial => versão da foto associada no terminal simulado */
+    public function fotosGravadas(string $equipamentoId): array
+    {
+        return $this->fotos[$equipamentoId] ?? [];
+    }
+
     public function totalAberturasFisicas(string $equipamentoId): int
     {
         return array_sum($this->aberturas[$equipamentoId] ?? []);
@@ -112,6 +122,7 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
 
     public function reiniciar(): void
     {
+        $this->fotos = [];
         $this->cenarios = $this->capacidades = $this->credenciais = $this->eventos = $this->aberturas = $this->chamadas = $this->cenariosCaptura = [];
     }
 
@@ -170,14 +181,29 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
         }, efeitoTardio: fn () => $this->gravar($equipamento->equipamentoId, $credencial->credencialId));
     }
 
+    /** A foto só é aceita para um usuário que já existe no terminal, como no equipamento real. */
+    public function enviarFotoFacial(ContextoEquipamento $equipamento, FotoFacialParaEnviar $foto): ResultadoOperacao
+    {
+        return $this->executar($equipamento, OperacaoIntegracao::EnviarFotoFacial, Capacidade::CredencialFacial, function () use ($equipamento, $foto) {
+            if (! isset($this->credenciais[$equipamento->equipamentoId][$foto->credencialId])) {
+                return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'usuario_inexistente_no_terminal', 'O cadastro da pessoa não existe no terminal.');
+            }
+            $this->fotos[$equipamento->equipamentoId][$foto->credencialId] = $foto->versaoFoto;
+
+            return ResultadoOperacao::confirmado($this->credenciais[$equipamento->equipamentoId][$foto->credencialId], ['versao_foto' => $foto->versaoFoto]);
+        }, efeitoTardio: function () use ($equipamento, $foto) {
+            $this->fotos[$equipamento->equipamentoId][$foto->credencialId] = $foto->versaoFoto;
+        });
+    }
+
     public function revogarCredencial(ContextoEquipamento $equipamento, string $credencialId, ?string $idExterno): ResultadoOperacao
     {
         return $this->executar($equipamento, OperacaoIntegracao::RevogarCredencial, Capacidade::RevogarCredencial, function () use ($equipamento, $credencialId) {
-            unset($this->credenciais[$equipamento->equipamentoId][$credencialId]);
+            unset($this->credenciais[$equipamento->equipamentoId][$credencialId], $this->fotos[$equipamento->equipamentoId][$credencialId]);
 
             return ResultadoOperacao::confirmado();
         }, efeitoTardio: function () use ($equipamento, $credencialId) {
-            unset($this->credenciais[$equipamento->equipamentoId][$credencialId]);
+            unset($this->credenciais[$equipamento->equipamentoId][$credencialId], $this->fotos[$equipamento->equipamentoId][$credencialId]);
         });
     }
 
@@ -186,7 +212,7 @@ class SimuladorEquipamento implements PortaEquipamentoAcesso
         return $this->executar($equipamento, OperacaoIntegracao::ConsultarSincronizacao, Capacidade::ConsultarSincronizacao, function () use ($equipamento, $credencialId) {
             $gravado = $this->credenciais[$equipamento->equipamentoId][$credencialId] ?? null;
 
-            return ResultadoOperacao::confirmado($gravado, ['presente' => $gravado !== null]);
+            return ResultadoOperacao::confirmado($gravado, ['presente' => $gravado !== null, 'faces' => isset($this->fotos[$equipamento->equipamentoId][$credencialId]) ? 1 : 0]);
         });
     }
 
