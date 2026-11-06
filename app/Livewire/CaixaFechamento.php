@@ -19,6 +19,22 @@ class CaixaFechamento extends Component
 {
     public string $turnoId;
 
+    /**
+     * Revalidar o direito de consultar fechamentos a cada atualização Livewire,
+     * não apenas na entrada pela rota protegida.
+     */
+    public function boot(): void
+    {
+        $user = Auth::user();
+
+        abort_unless(
+            $user instanceof User
+            && ($user->hasPermission(CaixasOperador::PERMISSAO_PROPRIO)
+                || $user->hasPermission(CaixasOperador::PERMISSAO_CONSOLIDADO)),
+            403
+        );
+    }
+
     public function mount(string $turno, CaixasOperador $caixas): void
     {
         // A consulta de fechamento de outro operador é auditada uma vez, na abertura.
