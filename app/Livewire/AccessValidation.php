@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Integracoes\Aplicacao\CamerasPlaca;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
+use App\Livewire\Concerns\CadastroRapidoAtendimento;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
 use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
@@ -11,9 +12,7 @@ use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
-use App\Models\Imovel;
 use App\Models\Pessoa;
-use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationArquivo;
@@ -36,7 +35,9 @@ use Livewire\Component;
 
 class AccessValidation extends Component
 {
-    use CapturaDocumentoAssistida;
+    use CadastroRapidoAtendimento, CapturaDocumentoAssistida {
+        CadastroRapidoAtendimento::avancarParaConferencia insteadof CapturaDocumentoAssistida;
+    }
 
     private const PONTO_ACESSO = 'Portaria Principal';
 
@@ -76,26 +77,6 @@ class AccessValidation extends Component
 
     public bool $documentRevealed = false;
 
-    public bool $quickRegistrationOpen = false;
-
-    public bool $quickPersonRegistered = false;
-
-    public bool $quickDuplicateFound = false;
-
-    public string $quickName = '';
-
-    public string $quickDocument = '';
-
-    public string $quickPhone = '';
-
-    public string $quickAccessType = 'visitante';
-
-    public string $quickResponsible = '';
-
-    public string $quickPropertyCode = '';
-
-    public string $quickNotes = '';
-
     /**
      * Pessoa do atendimento. Só muda pelos métodos do servidor (seleção na
      * busca ou cadastro rápido); nunca é escolhida automaticamente (AJ-006).
@@ -116,6 +97,7 @@ class AccessValidation extends Component
 
         $this->currentPessoaId = $pessoa->id;
         $this->quickPersonRegistered = false;
+        $this->quickResultado = null;
         $this->documentRevealed = false;
         $this->busca = '';
         unset($this->currentPerson, $this->currentProtectedFiles);
@@ -133,6 +115,7 @@ class AccessValidation extends Component
     {
         $this->currentPessoaId = null;
         $this->quickPersonRegistered = false;
+        $this->quickResultado = null;
         $this->documentRevealed = false;
         unset($this->currentPerson, $this->currentProtectedFiles);
     }
@@ -146,134 +129,6 @@ class AccessValidation extends Component
         }
 
         return app(BuscaPessoasValidacao::class)->buscar($this->busca, $this->canViewImage());
-    }
-
-    public function openQuickRegistration(): void
-    {
-        // O que o operador já digitou na busca vira ponto de partida do cadastro.
-        $termo = trim($this->busca);
-        if ($this->quickName === '' && preg_match('/^[\p{L} \'.-]{3,}$/u', $termo)) {
-            $this->quickName = $termo;
-        } elseif ($this->quickDocument === '' && strlen(NormalizadorBusca::digitos($termo)) === 11) {
-            $this->quickDocument = $termo;
-        }
-
-        $this->quickRegistrationOpen = true;
-        $this->quickDuplicateFound = false;
-        $this->feedback = null;
-        $this->protocol = null;
-        $this->resetErrorBag();
-    }
-
-    public function cancelQuickRegistration(): void
-    {
-        $this->quickRegistrationOpen = false;
-        $this->quickDuplicateFound = false;
-        $this->resetQuickRegistrationFields();
-        $this->resetErrorBag();
-    }
-
-    public function checkQuickDocument(): void
-    {
-        $normalizado = $this->normalizeDocument($this->quickDocument);
-
-        $this->quickDuplicateFound = $normalizado !== '' && PessoaDocumento::query()
-            ->where('tipo', 'cpf')
-            ->where('valor_normalizado', $normalizado)
-            ->exists();
-
-        if ($this->quickDuplicateFound) {
-            $this->addError('quickDocument', 'Esta pessoa já possui cadastro. Localize o registro existente para evitar duplicidade.');
-        } else {
-            $this->resetErrorBag('quickDocument');
-        }
-    }
-
-    public function saveQuickRegistration(): void
-    {
-        $this->checkQuickDocument();
-
-        if ($this->quickDuplicateFound) {
-            return;
-        }
-
-        // Dados sugeridos pelo OCR com baixa confiança exigem conferência humana.
-        if ($this->camposConferencia !== []) {
-            foreach ($this->camposConferencia as $campo) {
-                $this->addError($campo, 'Requer conferência: confirme ou corrija este campo.');
-            }
-
-            return;
-        }
-
-        $this->validate([
-            'quickName' => ['required', 'string', 'min:3', 'max:120'],
-            'quickDocument' => ['required', 'string', 'min:11', 'max:20'],
-            'quickPhone' => ['required', 'string', 'min:8', 'max:20'],
-            'quickAccessType' => ['required', Rule::in(['visitante', 'prestador', 'morador', 'outro'])],
-            'quickResponsible' => ['required_if:quickAccessType,visitante,prestador', 'nullable', 'string', 'max:120'],
-            'quickPropertyCode' => ['required', 'string', 'max:40'],
-            'quickNotes' => ['nullable', 'string', 'max:200'],
-            'quickBirthDate' => ['nullable', 'date', 'before:today'],
-        ], [
-            'required' => 'Preencha este campo para continuar.',
-            'required_if' => 'Preencha este campo para o tipo de acesso selecionado.',
-            'min' => 'Informe um valor válido.',
-        ]);
-
-        $imovel = Imovel::query()->where('codigo', strtoupper($this->quickPropertyCode))->first();
-
-        if (! $imovel) {
-            $this->addError('quickPropertyCode', 'Imóvel não encontrado com este código.');
-
-            return;
-        }
-
-        $pessoa = Pessoa::query()->create([
-            'nome' => $this->quickName,
-            'data_nascimento' => $this->quickBirthDate !== '' ? $this->quickBirthDate : null,
-            'status' => 'ativo',
-            'versao' => 1,
-        ]);
-
-        PessoaDocumento::query()->create([
-            'pessoa_id' => $pessoa->id,
-            'tipo' => 'cpf',
-            'pais' => 'BR',
-            'valor_normalizado' => $this->normalizeDocument($this->quickDocument),
-            'valor_apresentacao' => $this->quickDocument,
-            'status' => 'ativo',
-            'started_at' => now(),
-        ]);
-
-        PessoaContato::query()->create([
-            'pessoa_id' => $pessoa->id,
-            'tipo' => 'telefone',
-            'valor' => $this->quickPhone,
-            'principal' => true,
-            'verificado' => false,
-            'started_at' => now(),
-        ]);
-
-        Vinculo::query()->create([
-            'pessoa_id' => $pessoa->id,
-            'imovel_id' => $imovel->id,
-            'tipo' => $this->quickAccessType,
-            'papel' => 'outro',
-            'status' => 'ativo',
-            'origem' => 'cadastro_manual',
-            'started_at' => now(),
-            'versao' => 1,
-        ]);
-
-        $this->currentPessoaId = $pessoa->id;
-        $this->quickPersonRegistered = true;
-        $this->quickRegistrationOpen = false;
-        $this->feedback = [
-            'variant' => 'warning',
-            'title' => 'Cadastro rápido anexado ao atendimento',
-            'message' => 'Os dados mínimos foram registrados. O cadastro ainda não autoriza a entrada e deve ser complementado depois.',
-        ];
     }
 
     public function deny(): void
@@ -420,9 +275,10 @@ class AccessValidation extends Component
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
             'ticketNumero', 'ticketDuplicadoConfirmado', 'capturaPlacaId', 'capturaPlacaFalha', 'placaInformada',
-            'quickDuplicateFound', 'quickName', 'quickDocument', 'quickPhone', 'quickAccessType',
-            'quickResponsible', 'quickPropertyCode', 'quickNotes',
+            'quickDuplicateFound', 'quickResultado',
         ]);
+        // Novo atendimento: nenhuma captura, prévia ou dado do cadastro anterior sobrevive.
+        $this->resetQuickRegistrationFields();
         $this->contribution = 'yes';
         $this->paymentMethod = 'dinheiro';
         $this->denialReason = 'sem_autorizacao';
@@ -741,24 +597,6 @@ class AccessValidation extends Component
                 'ticketNumero' => 'Este ticket já foi registrado em outro atendimento. Confira e confirme para continuar.',
             ]);
         }
-    }
-
-    private function resetQuickRegistrationFields(): void
-    {
-        $this->quickName = '';
-        $this->quickDocument = '';
-        $this->quickPhone = '';
-        $this->quickAccessType = 'visitante';
-        $this->quickResponsible = '';
-        $this->quickPropertyCode = '';
-        $this->quickNotes = '';
-        $this->quickBirthDate = '';
-        $this->digitarManualmente();
-    }
-
-    private function normalizeDocument(string $document): string
-    {
-        return preg_replace('/\D/', '', $document) ?? '';
     }
 
     public function render(): View

@@ -59,7 +59,7 @@ class CadastroAssistidoDocumentoTest extends TestCase
     {
         $usuario = User::factory()->create();
         $perfil = Perfil::factory()->create();
-        foreach (array_filter(['validacao.registrar', $comCaptura ? CadastroAssistidoDocumento::PERMISSAO : null]) as $chave) {
+        foreach (array_filter(['validacao.registrar', 'pessoas.gerenciar', $comCaptura ? CadastroAssistidoDocumento::PERMISSAO : null]) as $chave) {
             $permissao = Permissao::query()->firstOrCreate(['chave' => $chave], ['modulo' => 'teste', 'descricao' => $chave]);
             $perfil->permissoes()->attach($permissao->id, ['id' => (string) Str::uuid7(), 'implantacao_id' => ImplantacaoContext::current()->id]);
         }
@@ -105,7 +105,6 @@ class CadastroAssistidoDocumentoTest extends TestCase
         Livewire::actingAs($this->operador())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::desfocada()))
-            ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'repetir')
             ->assertSet('quickName', '')
             ->assertSee('Imagem desfocada. Aproxime o documento e capture novamente.');
@@ -125,13 +124,14 @@ class CadastroAssistidoDocumentoTest extends TestCase
         $tela = Livewire::actingAs($this->operador())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::boa()))
-            ->set('capturaVerso', $this->arquivo(ImagensDocumentoSinteticas::boa(), 'verso.jpg'))
-            ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'sugestao')
+            ->assertSet('quickEtapa', 'conferencia')
+            ->assertSet('quickDocNumero', 'RG-SINTETICO')
             ->assertSet('quickName', 'Pessoa Sintetica')
             ->assertSet('quickDocument', self::CPF)
             ->assertSet('quickBirthDate', '1990-05-12')
-            ->assertSet('camposConferencia', ['quickName'])
+            ->assertSet('camposConferencia', ['quickName', 'quickDocNumero'])
+            ->call('confirmarCampo', 'quickDocNumero')
             ->assertSee('Requer conferência')
             ->set('quickPhone', '(12) 99999-1234')
             ->set('quickResponsible', 'Responsável')
@@ -156,7 +156,6 @@ class CadastroAssistidoDocumentoTest extends TestCase
         Livewire::actingAs($this->operador())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::boa()))
-            ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'nao_reconhecido')
             ->assertSee('Documento não identificado. Faça nova captura ou digite os dados.')
             ->call('digitarManualmente')
@@ -178,7 +177,6 @@ class CadastroAssistidoDocumentoTest extends TestCase
             ->call('openQuickRegistration')
             ->set('capturaOrigem', 'arquivo')
             ->set('capturaFrente', $png)
-            ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'sugestao')
             ->assertSet('analiseDocumento.duplicidade', true)
             ->assertSet('quickDuplicateFound', true)
@@ -213,8 +211,7 @@ class CadastroAssistidoDocumentoTest extends TestCase
 
         $tela = Livewire::actingAs($this->operador())->test(AccessValidation::class)
             ->call('openQuickRegistration')
-            ->set('capturaFrente', $frente)
-            ->call('analisarDocumento');
+            ->set('capturaFrente', $frente);
 
         $auditoria = json_encode([DB::table('auditoria_eventos')->get(), DB::table('auditoria_contextos')->get(), DB::table('auditoria_alteracoes')->get()]);
         $this->assertStringNotContainsString('Nome Sigiloso', $auditoria);
@@ -263,7 +260,9 @@ class CadastroAssistidoDocumentoTest extends TestCase
             ->call('openQuickRegistration')
             ->set('capturaTipoDocumento', 'rg_cin')
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::boa()))
-            ->call('analisarDocumento')
+            ->assertSet('analiseDocumento', null)
+            ->assertSee('Capture o verso para a leitura começar.')
+            ->set('capturaVerso', $this->arquivo(ImagensDocumentoSinteticas::boa(), 'verso.jpg'))
             ->assertSet('analiseDocumento.status', 'sugestao')
             ->assertSet('quickName', 'Pessoa Sintetica')
             ->assertSet('quickDocument', self::CPF)
@@ -284,7 +283,6 @@ class CadastroAssistidoDocumentoTest extends TestCase
         Livewire::actingAs($this->operador())->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('capturaFrente', $this->arquivo(ImagensDocumentoSinteticas::boa()))
-            ->call('analisarDocumento')
             ->assertSet('analiseDocumento.status', 'nao_reconhecido')
             ->assertSee('O leitor automático não respondeu a tempo. Tente de novo em instantes ou preencha manualmente.')
             ->assertSet('quickName', '');

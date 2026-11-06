@@ -197,7 +197,7 @@ class BuscaIdentificacaoValidacaoTest extends TestCase
 
     public function test_cadastro_rapido_e_oferecido_quando_ninguem_e_encontrado_e_aproveita_o_termo(): void
     {
-        Livewire::actingAs($this->operador('validacao.registrar'))
+        Livewire::actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar'))
             ->test(AccessValidation::class)
             ->set('busca', 'Joana Inexistente')
             ->assertSee('Nenhuma pessoa localizada')
