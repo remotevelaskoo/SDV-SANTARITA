@@ -46,14 +46,14 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+      - name: Build
+        run: pnpm run build
       - name: PHP Pint
         run: vendor/bin/pint --test
       - name: Testes PHP
         run: php artisan test
       - name: Testes JS
         run: pnpm run test:js
-      - name: Build
-        run: pnpm run build
 
   banco:
     name: Migracoes e seed do zero
