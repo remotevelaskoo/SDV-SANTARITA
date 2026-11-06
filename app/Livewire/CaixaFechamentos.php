@@ -18,6 +18,22 @@ class CaixaFechamentos extends Component
 {
     public string $operador = '';
 
+    /**
+     * A rota HTTP é protegida, mas cada atualização Livewire exige autorização
+     * nova para impedir leitura após remoção de permissões.
+     */
+    public function boot(): void
+    {
+        $user = Auth::user();
+
+        abort_unless(
+            $user instanceof User
+            && ($user->hasPermission(CaixasOperador::PERMISSAO_PROPRIO)
+                || $user->hasPermission(CaixasOperador::PERMISSAO_CONSOLIDADO)),
+            403
+        );
+    }
+
     public function mount(AuditService $audit): void
     {
         if ($this->consolidado()) {
