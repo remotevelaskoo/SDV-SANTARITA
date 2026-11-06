@@ -1,0 +1,82 @@
+name: Validacao AJ-008 e AJ-009
+
+on:
+  push:
+    branches:
+      - codex/aj008-autorizacao-livewire
+      - codex/compat-aj008-aj009-menu-fechamentos
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    name: Testes PHP, JS e compilacao
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: PHP 8.4 e Composer
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+      - name: pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          run_install: false
+      - name: Node 22
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Validar Composer
+        run: composer validate --strict --no-check-publish
+      - name: Instalar PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Instalar JS
+        run: pnpm install --frozen-lockfile
+      - name: Preparar Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - name: PHP Pint
+        run: vendor/bin/pint --test
+      - name: Testes PHP
+        run: php artisan test
+      - name: Testes JS
+        run: pnpm run test:js
+      - name: Build
+        run: pnpm run build
+
+  banco:
+    name: Migracoes e seed do zero
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: PHP 8.4 e Composer
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+      - name: Instalar PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Preparar Laravel com banco descartavel em memoria
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - name: Criar e popular o banco de teste
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+        run: php artisan migrate:fresh --seed --force
