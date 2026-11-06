@@ -61,6 +61,7 @@ class ProfileNavigationTest extends TestCase
             Route::get('/caixa/fechamentos', fn () => 'OK')
                 ->middleware(['auth', 'permissao:caixa.proprio.gerenciar,caixa.consolidado.consultar'])
                 ->name('cash-register.closings');
+            Route::getRoutes()->refreshNameLookups();
         }
 
         $authorized = $this->operador('caixa.proprio.gerenciar');
