@@ -287,9 +287,30 @@ class CadastroRapidoFotoTest extends TestCase
         $outra = Pessoa::query()->create(['nome' => 'Gravada Antes', 'status' => 'ativo', 'versao' => 1]);
         PessoaDocumento::query()->create(['pessoa_id' => $outra->id, 'tipo' => 'cpf', 'pais' => 'BR', 'valor_normalizado' => '52998224725', 'valor_apresentacao' => self::CPF, 'status' => 'ativo', 'started_at' => now()]);
 
-        $tela->call('saveQuickRegistration')->assertHasErrors('quickDocument')->assertSet('quickPersonRegistered', false);
+        $tela->call('saveQuickRegistration')->assertHasErrors('quickDocument')->assertSet('quickPersonRegistered', false)
+            ->assertSet('quickEtapa', 'conferencia');
         $this->assertSame(1, Pessoa::query()->count());
         $this->assertSame(1, PessoaDocumento::query()->where('tipo', 'cpf')->count());
+    }
+
+    public function test_numero_de_documento_de_outra_pessoa_volta_para_a_conferencia_com_o_erro_no_campo(): void
+    {
+        $outra = Pessoa::query()->create(['nome' => 'Dona do Numero', 'status' => 'ativo', 'versao' => 1]);
+        PessoaDocumento::query()->create(['pessoa_id' => $outra->id, 'tipo' => 'cnh', 'pais' => 'BR', 'valor_normalizado' => '12345678900', 'valor_apresentacao' => '12345678900', 'status' => 'ativo', 'started_at' => now()]);
+
+        $tela = $this->conferido($this->atendimento()->call('openQuickRegistration')->call('digitarManualmente'))
+            ->set('quickName', 'Pessoa Nova')
+            ->set('quickDocument', self::CPF)
+            ->set('quickDocNumero', '12345678900')
+            ->call('irParaEtapa', 'foto')
+            ->assertSet('quickEtapa', 'foto');
+
+        $tela->call('saveQuickRegistration')
+            ->assertHasErrors('quickDocNumero')
+            ->assertHasNoErrors('quickDocument')
+            ->assertSet('quickEtapa', 'conferencia')
+            ->assertSet('quickPersonRegistered', false);
+        $this->assertSame(1, Pessoa::query()->count());
     }
 
     public function test_clique_duplo_nao_cria_duas_pessoas(): void

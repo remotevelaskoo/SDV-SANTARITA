@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
@@ -270,6 +271,8 @@ trait CadastroRapidoAtendimento
 
         try {
             if (! $this->dadosConferidos()) {
+                $this->quickEtapa = 'conferencia'; // o erro fica visível junto do campo
+
                 return;
             }
 
@@ -284,12 +287,15 @@ trait CadastroRapidoAtendimento
             $imovel = $this->quickPropertyCode !== '' ? Imovel::query()->where('codigo', strtoupper(trim($this->quickPropertyCode)))->first() : null;
             if ($this->quickPropertyCode !== '' && $imovel === null) {
                 $this->addError('quickPropertyCode', 'Imóvel não encontrado com este código.');
+                $this->quickEtapa = 'conferencia';
 
                 return;
             }
 
             $pessoa = $this->gravarPessoa($imovel);
             if ($pessoa === null) {
+                $this->quickEtapa = 'conferencia';
+
                 return;
             }
 
@@ -313,6 +319,10 @@ trait CadastroRapidoAtendimento
                 'message' => 'Os dados mínimos foram registrados. O cadastro ainda não autoriza a entrada e deve ser complementado depois.',
             ];
             $this->limparCapturasCadastro();
+        } catch (ValidationException $e) {
+            $this->quickEtapa = 'conferencia';
+
+            throw $e;
         } finally {
             $trava->release();
         }
@@ -383,6 +393,13 @@ trait CadastroRapidoAtendimento
                     return $pessoa;
                 }
 
+                $numero = NormalizadorBusca::documento($this->quickDocNumero);
+                if ($numero !== '' && $this->numeroDocumentoEmUso($numero)) {
+                    $this->addError('quickDocNumero', 'Este número de documento já pertence a outro cadastro. Confira o número ou busque a pessoa pelo nome.');
+
+                    return null;
+                }
+
                 $pessoa = Pessoa::query()->create([
                     'nome' => trim($this->quickName),
                     'data_nascimento' => $this->quickBirthDate !== '' ? $this->quickBirthDate : null,
@@ -400,7 +417,6 @@ trait CadastroRapidoAtendimento
                     'started_at' => now(),
                 ]);
 
-                $numero = NormalizadorBusca::documento($this->quickDocNumero);
                 if ($numero !== '') {
                     // O número vai com o tipo do documento lido; nunca é tratado como CPF.
                     PessoaDocumento::query()->create([
@@ -429,11 +445,27 @@ trait CadastroRapidoAtendimento
             });
         } catch (UniqueConstraintViolationException) {
             // Duas gravações simultâneas do mesmo CPF (ou do mesmo número de documento).
+            $numero = NormalizadorBusca::documento($this->quickDocNumero);
+            if ($numero !== '' && $this->numeroDocumentoEmUso($numero) && ! PessoaDocumento::query()->where('tipo', 'cpf')->where('valor_normalizado', $cpf)->exists()) {
+                $this->addError('quickDocNumero', 'Este número de documento acabou de ser cadastrado em outra pessoa. Confira o número.');
+
+                return null;
+            }
+
             $this->quickDuplicateFound = true;
             $this->addError('quickDocument', 'Este documento acabou de ser cadastrado. Use o cadastro existente para evitar duplicidade.');
 
             return null;
         }
+    }
+
+    private function numeroDocumentoEmUso(string $numero): bool
+    {
+        return PessoaDocumento::query()
+            ->where('tipo', $this->capturaTipoDocumento === 'rg_cin' ? 'rg' : 'cnh')
+            ->where('pais', 'BR')
+            ->where('valor_normalizado', $numero)
+            ->exists();
     }
 
     /** Turista não ganha vínculo artificial com imóvel; reutilizado mantém o vínculo que já tem. */
