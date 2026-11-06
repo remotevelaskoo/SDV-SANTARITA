@@ -53,6 +53,26 @@ class ProfileNavigationTest extends TestCase
         Livewire::test(Dashboard::class)->assertForbidden();
     }
 
+    public function test_cash_closings_menu_is_visible_only_to_authorized_operators(): void
+    {
+        // AJ-008 ainda pode não estar integrado: simula sua rota com a permissão real.
+        // Quando o AJ-008 entrar na main, usa a rota existente em vez de substituí-la.
+        if (! Route::has('cash-register.closings')) {
+            Route::get('/caixa/fechamentos', fn () => 'OK')
+                ->middleware(['auth', 'permissao:caixa.proprio.gerenciar,caixa.consolidado.consultar'])
+                ->name('cash-register.closings');
+        }
+
+        $authorized = $this->operador('caixa.proprio.gerenciar');
+        $routes = collect(Navigation::groups($authorized)['Operação'])->pluck('route')->all();
+        $this->assertContains('cash-register', $routes);
+        $this->assertContains('cash-register.closings', $routes);
+
+        $unauthorized = $this->operador('validacao.registrar');
+        $unauthorizedRoutes = collect(Navigation::groups($unauthorized)['Operação'])->pluck('route')->all();
+        $this->assertNotContains('cash-register.closings', $unauthorizedRoutes);
+    }
+
     public function test_management_permission_allows_dashboard_in_http_and_livewire(): void
     {
         $this->withoutVite();
