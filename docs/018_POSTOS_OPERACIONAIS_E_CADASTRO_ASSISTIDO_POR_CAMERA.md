@@ -168,3 +168,8 @@ recorte da foto não é solicitado e a captura continua sem persistência. Leito
 **Retenção.** `SDV_CAPTURA_DOCUMENTO_RETENCAO=nao_persistir`: o upload temporário é apagado logo
 após a análise e nenhuma imagem é guardada. A auditoria (`documento_capturado_analisado`) registra
 origem, resultado, códigos de qualidade e nomes de campos, nunca imagem, CPF ou outro valor.
+
+
+## 13. Evolução solicitada — AJ-010 (06/11/2026)
+
+O Product Owner solicitou a experiência integrada: fotografar documento, extrair e conferir os dados, fotografar a pessoa e salvar/enviar para o terminal facial no próprio cadastro rápido. A especificação está em [SDV-OPE-021](021_CADASTRO_RAPIDO_FOTO_OCR_E_FACIAL.md). É escopo para implementação; não é evidência de função já entregue. Reutilizar o leitor interno e os serviços de foto existentes, preservando a análise temporária dos documentos. O envio atual de cadastro sem foto não atende, sozinho, ao envio de credencial facial solicitado; a extensão depende de implementação, revisão do ADR-013 e homologação específica.
