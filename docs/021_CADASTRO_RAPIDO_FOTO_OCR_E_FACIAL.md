@@ -3,7 +3,7 @@
 **Produto:** SDV Access — Santa Rita
 **Data:** 06/11/2026
 **Origem:** solicitação do Product Owner: aplicar ao cadastro rápido o modelo de extração por foto do formulário público, com captura da foto da pessoa para envio ao terminal facial.
-**Situação:** especificação para implementação e revisão; não implementado por este documento.
+**Situação:** implementado no PR #74 (entrega 1 completa; entrega 2 com contrato simulado e adaptador prontos, **sem homologação de bancada e desligada**). Ver §10 e §11.
 **Branch documental:** `codex/aj010-cadastro-rapido-foto-ocr`
 
 ## 1. Resultado esperado
@@ -115,3 +115,49 @@ Auditar captura/conferência, criação/reutilização da pessoa, versão da fot
 Continuar nesta branch ou abrir uma branch de implementação referenciando este documento e PR. Trabalhar em entregas pequenas, com testes e atualização do acompanhamento no documento 013. Não incorporar automaticamente os PRs #69 ou #70. Não fazer merge ou implantação nesta entrega documental.
 
 Atualizar documentos 018, 019 e 020 conforme a implementação, além do ADR-013 quando suas decisões forem formalizadas. Relatar separadamente o que está implementado, simulado, homologado em bancada e habilitado para operação.
+
+
+## 10. Situação da implementação (06/11/2026)
+
+| Item | Implementado | Simulado / testado | Homologado em bancada | Habilitado para operação |
+|---|---|---|---|---|
+| Etapas Documento → Conferência → Foto no cadastro rápido | sim | testes Livewire | não se aplica | sim (após merge) |
+| Leitura automática do documento (mesmo leitor do formulário público) | sim | `Http::fake` + imagens sintéticas | leitor já homologado no AJ-005 | sim, quando `DOCUMENT_OCR_ENABLED=true` |
+| Número do documento (RG/CNH) separado do CPF | sim | testes | — | sim |
+| Reuso explícito de cadastro existente pelo CPF | sim | testes, inclusive CPF gravado por outro atendimento antes do salvamento | — | sim |
+| Foto atual da pessoa, prévia, refazer, validação no servidor, armazenamento privado versionado | sim | testes com imagens sintéticas | — | sim |
+| Envio do usuário ao terminal (`cadastro_pessoa`) | já existia (AJ-006) | simulador | sim (DS-K1T673DX-BR V3.18.0) | conforme `docs/016` |
+| Envio da foto ao terminal (`enviar_foto_facial`) | sim | simulador + contrato Hikvision com `Http::fake` | **não** | **não** (`SDV_INTEGRACAO_FOTO_FACIAL=false` e capacidade `credencial_facial` bloqueada) |
+
+### 10.1 Como ficou
+
+- **Sequência:** o cadastro rápido abre na etapa Documento. Ao capturar a frente (e o verso, obrigatório para RG/CIN), a leitura começa sozinha; não há botão “Analisar”. A conferência mostra nome, CPF, nascimento e número do documento, todos editáveis. Uma nova leitura não sobrescreve campo já corrigido pelo operador e avisa isso. “Digitar os dados manualmente” pula para a conferência a qualquer momento.
+- **Foto da pessoa:** câmera própria de finalidade `rosto` (pode ser diferente da câmera de documentos), apenas vídeo, prévia e “Refazer foto”. O servidor valida tipo (JPEG/PNG), tamanho (até 5 MB), lado mínimo de 320 px e brilho. Se a pessoa já tem foto, ela é mantida, a menos que o operador marque “Substituir a foto atual”.
+- **Duplicidade:** o CPF é consultado na implantação ativa; se existir, o operador escolhe “Usar este cadastro” (auditoria `cadastro_rapido_reutilizou_pessoa`). Identidade e contato do cadastro existente não são sobrescritos. A criação usa transação com `lockForUpdate` e trata violação do índice único. Se o número do RG/CNH já pertence a outra pessoa, o salvamento volta para a conferência com o erro no campo do número. Qualquer erro de conferência encontrado ao salvar também leva de volta à etapa Conferência.
+- **Salvar / Salvar e enviar:** um bloqueio por atendimento (`Cache::lock`) e o token do formulário impedem duplo clique. O resultado mostra quatro linhas separadas: cadastro, foto, terminal (cadastro do usuário) e terminal (foto). Terminal fora do ar não desfaz o cadastro nem a foto.
+- **Autorização:** salvar não cria autorização. Ao enviar para a facial, visitante e turista recebem a visita de até 24 h do AJ-006 (turista sem vínculo com imóvel); morador, prestador e outro usam a autorização do vínculo. **Decisão a confirmar pelo PO:** visitante usar a mesma visita de 24 h do turista.
+- **Permissões:** toda ação do cadastro rápido exige `validacao.registrar` e `pessoas.gerenciar`; o envio exige também `facial.enviar`. As permissões são conferidas a cada requisição Livewire.
+- **Limpeza:** cancelar, iniciar outro atendimento ou concluir o cadastro descarta capturas, prévias e temporários e fecha as câmeras (evento `cadastro-rapido-encerrado`).
+- **Envio da foto:** depois do pedido `cadastro_pessoa`, o `EnvioFacial` registra, quando permitido, um pedido `enviar_foto_facial` na outbox com chave `foto-facial:{credencial}:{terminal}:{checksum}:{tentativa}`. O payload leva apenas identificadores e a versão (checksum) da foto. O worker só envia depois que o usuário estiver sincronizado no terminal (senão repete), relê e confere a foto, reduz em memória para JPEG de até 640 px e chama o adaptador. Foto nova marca a anterior como “não enviada” em todos os terminais; revogação confirmada marca a face como removida. Estado em `foto_facial_sincronizacoes`.
+
+### 10.2 Pendências para ativar o envio da foto
+
+1. Confirmar no guia ISAPI do firmware V3.18.0 os nomes das partes do multipart de `PUT /ISAPI/Intelligent/FDLib/FDSetUp` (`FaceDataRecord`, `img`), a biblioteca (`blackFD`, `FDID=1`) e o limite de tamanho (provisório: 200 KB / 640 px).
+2. Confirmar em bancada que remover o usuário (`UserInfo/Delete`) também remove a face; se não remover, implementar a remoção oficial da face antes da ativação.
+3. Executar o roteiro do §11 com amostras autorizadas e registrar o resultado no `docs/016`.
+4. Marcar `credencial_facial` como homologada no perfil do firmware (`docs/015` §8) e ligar `SDV_INTEGRACAO_FOTO_FACIAL=true` no ambiente.
+5. Formalizar com o PO as decisões do ADR-013 §21.3 (finalidade, base legal, transparência, retenção, alternativa).
+
+## 11. Roteiro de homologação de bancada do envio da foto
+
+Pré-requisitos: terminal de bancada DS-K1T673DX-BR V3.18.0 já homologado para usuário (`docs/016`), pessoa de teste com autorização expressa, ambiente de homologação com a bandeira e a capacidade ligadas **somente nele**.
+
+1. Registrar modelo, firmware, número de série e `numOfFace` inicial (consulta de sincronização).
+2. Cadastro rápido com a pessoa de teste → “Salvar e enviar para a facial”. Conferir: cadastro do usuário confirmado; depois foto confirmada; `numOfFace` = 1.
+3. Reconhecimento no terminal com a pessoa presente: registrar se reconheceu e se **nenhum relé foi acionado pelo envio**.
+4. Reenviar sem mudar a foto: o pedido não deve ser repetido.
+5. Trocar a foto e reenviar: o estado anterior vira “não enviada” e a nova versão é confirmada.
+6. Enviar com terminal desligado: cadastro e foto continuam salvos; estado “pendente/falhou” sem afirmar sincronização; após religar, reprocessar.
+7. Imagem acima do limite ou PNG: recusa clara sem chamar o terminal.
+8. Revogar a autorização (ou deixar expirar): usuário e face removidos; `numOfFace` = 0; estado “removido”.
+9. Registrar resultados, respostas sanitizadas e versão do SDV no `docs/016`. Apagar a pessoa de teste do terminal ao final.
