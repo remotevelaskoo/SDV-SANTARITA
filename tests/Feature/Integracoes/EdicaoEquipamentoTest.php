@@ -286,7 +286,7 @@ class EdicaoEquipamentoTest extends TestCase
     {
         $equipamento = $this->terminalHomologado();
 
-        $this->actingAs($this->usuarioCom('dashboard.visualizar'))->get('/equipamentos')->assertRedirect(route('dashboard'));
+        $this->actingAs($this->usuarioCom('dashboard.visualizar'))->get('/equipamentos')->assertRedirect(route('home'));
         Livewire::actingAs($this->usuarioCom('dashboard.visualizar'))
             ->test(EquipamentoManagement::class)
             ->assertForbidden();

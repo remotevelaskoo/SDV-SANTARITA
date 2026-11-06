@@ -5,6 +5,7 @@ on:
     branches:
       - codex/aj008-autorizacao-livewire
       - codex/compat-aj008-aj009-menu-fechamentos
+      - codex/validacao-integrada-aj008-aj009
   pull_request:
   workflow_dispatch:
 

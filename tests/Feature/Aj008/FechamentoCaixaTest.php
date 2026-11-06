@@ -401,7 +401,7 @@ class FechamentoCaixaTest extends TestCase
         $semCaixa = $this->operador('validacao.registrar');
 
         foreach (['cash-register.closings' => [], 'cash-register.closing' => [$fechado->id], 'cash-register.closing.print' => [$fechado->id]] as $rota => $parametros) {
-            $this->actingAs($semCaixa)->get(route($rota, $parametros))->assertRedirect(route('dashboard'));
+            $this->actingAs($semCaixa)->get(route($rota, $parametros))->assertRedirect(route('home'));
         }
         auth()->logout();
         $this->get(route('cash-register.closing', $fechado->id))->assertRedirect(route('login'));

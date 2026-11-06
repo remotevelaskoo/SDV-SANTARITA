@@ -23,7 +23,7 @@ class EnsureImplantacaoSelected
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! Auth::check() || $request->routeIs(['implantacao.selecionar', 'logout'])) {
+        if (! Auth::check() || $request->routeIs(['implantacao.selecionar', 'logout']) || $this->isSelectionUpdate($request)) {
             return $next($request);
         }
 
@@ -53,5 +53,36 @@ class EnsureImplantacaoSelected
         }
 
         return $next($request);
+    }
+
+    /**
+     * A escolha da implantação é uma ação Livewire (POST no endpoint de
+     * atualização do Livewire), que também passa por este middleware. Sem esta
+     * exceção, quem tem 2+ implantações seria devolvido à própria tela de
+     * seleção e nunca conseguiria escolher. Só passa a requisição que contém
+     * exclusivamente o componente de seleção; o Livewire ainda valida a
+     * assinatura de cada snapshot antes de executar a ação.
+     */
+    private function isSelectionUpdate(Request $request): bool
+    {
+        if (! app('livewire')->isLivewireRequest()) {
+            return false;
+        }
+
+        $components = $request->input('components');
+
+        if (! is_array($components) || $components === []) {
+            return false;
+        }
+
+        foreach ($components as $component) {
+            $snapshot = json_decode((string) data_get($component, 'snapshot'), true);
+
+            if (data_get($snapshot, 'memo.name') !== 'implantacao-selection') {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

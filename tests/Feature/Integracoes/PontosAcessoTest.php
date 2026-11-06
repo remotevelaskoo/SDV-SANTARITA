@@ -39,7 +39,7 @@ class PontosAcessoTest extends TestCase
 
     public function test_rota_exige_permissao(): void
     {
-        $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/pontos-acesso')->assertRedirect(route('dashboard'));
+        $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/pontos-acesso')->assertRedirect(route('home'));
         $this->actingAs($this->usuarioCom('integracoes.gerenciar'))->get('/pontos-acesso')->assertOk()->assertSee('Novo ponto de acesso');
     }
 

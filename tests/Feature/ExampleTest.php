@@ -165,7 +165,7 @@ class ExampleTest extends TestCase
             ->assertSee('Identificação ou senha inválida.');
     }
 
-    public function test_the_demo_login_opens_the_dashboard(): void
+    public function test_the_demo_login_opens_the_authorized_home(): void
     {
         $this->portariaOperator();
 
@@ -174,7 +174,7 @@ class ExampleTest extends TestCase
             ->assertSet('identification', 'portaria')
             ->assertSet('password', 'sdv2026')
             ->call('login')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('home'));
 
         $this->assertAuthenticated();
     }
@@ -217,7 +217,7 @@ class ExampleTest extends TestCase
             ->set('identification', 'operador.limpo')
             ->set('password', 'senha-correta')
             ->call('login')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('home'));
 
         Auth::logout();
 
@@ -286,7 +286,7 @@ class ExampleTest extends TestCase
     public function test_the_dashboard_shows_the_real_logged_in_operator_name(): void
     {
         $this->withoutVite();
-        $user = $this->portariaOperator();
+        $user = $this->operatorWithPermissions('dashboard.visualizar');
         $user->update(['name' => 'Operador de Teste']);
 
         $response = $this->actingAs($user)->get('/dashboard');
@@ -297,7 +297,7 @@ class ExampleTest extends TestCase
     public function test_the_dashboard_renders_the_approved_visual_structure(): void
     {
         $this->withoutVite();
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->operatorWithPermissions('dashboard.visualizar'));
 
         $response = $this->get('/dashboard');
 
@@ -361,6 +361,8 @@ class ExampleTest extends TestCase
 
     public function test_the_dashboard_period_is_interactive_and_does_not_claim_unavailable_camera_integration(): void
     {
+        $this->actingAs($this->operatorWithPermissions('dashboard.visualizar'));
+
         Livewire::test(Dashboard::class)
             ->assertSet('period', 'hoje')
             ->call('setPeriod', '7dias')
@@ -1362,13 +1364,13 @@ class ExampleTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_an_authenticated_user_without_the_permission_is_redirected_to_the_dashboard(): void
+    public function test_an_authenticated_user_without_the_permission_is_redirected_to_the_home(): void
     {
         $this->actingAs(User::factory()->create());
 
         $response = $this->get('/imoveis');
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('home'));
         $this->assertSame('Sem permissão para acessar esta área.', session('erro'));
     }
 
@@ -1382,14 +1384,14 @@ class ExampleTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_the_dashboard_is_reachable_by_any_authenticated_user_regardless_of_perfil(): void
+    public function test_the_dashboard_requires_management_permission(): void
     {
         $this->withoutVite();
         $this->actingAs(User::factory()->create());
 
         $response = $this->get('/dashboard');
 
-        $response->assertOk();
+        $response->assertRedirect(route('home'));
     }
 
     public function test_the_public_pre_registration_route_does_not_require_authentication(): void
@@ -2454,7 +2456,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
 
         $user = User::factory()->create();
-        $this->actingAs($user)->get('/usuarios')->assertRedirect(route('dashboard'));
+        $this->actingAs($user)->get('/usuarios')->assertRedirect(route('home'));
 
         $admin = $this->operatorWithPermissions('usuarios.administrar');
         $this->actingAs($admin)->get('/usuarios')->assertOk();
@@ -2654,7 +2656,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
 
         $user = User::factory()->create();
-        $this->actingAs($user)->get('/perfis')->assertRedirect(route('dashboard'));
+        $this->actingAs($user)->get('/perfis')->assertRedirect(route('home'));
 
         $admin = $this->operatorWithPermissions('perfis.administrar');
         $this->actingAs($admin)->get('/perfis')->assertOk();
@@ -2685,7 +2687,7 @@ class ExampleTest extends TestCase
         UsuarioImplantacao::factory()->for($user)->create(['status' => 'ativa']);
         ImplantacaoContext::forgetCurrent();
 
-        $this->actingAs($user)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->get('/inicio')->assertRedirect(route('sessions'));
 
         $this->assertSame((string) $implantacao->id, session('implantacao_atual_id'));
     }
@@ -2723,7 +2725,7 @@ class ExampleTest extends TestCase
 
         Livewire::test(ImplantacaoSelection::class)
             ->call('selecionar', (string) $implantacaoB->id)
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('home'));
 
         $this->assertSame($implantacaoB->id, ImplantacaoContext::current()->id);
     }
@@ -2866,7 +2868,7 @@ class ExampleTest extends TestCase
         $this->seed(ConfiguracaoSeeder::class);
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/configuracoes')->assertRedirect(route('dashboard'));
+        $this->actingAs($user)->get('/configuracoes')->assertRedirect(route('home'));
 
         $admin = $this->operatorWithPermissions('configuracoes.gerenciar');
         $this->actingAs($admin)->get('/configuracoes')->assertOk();
@@ -3015,7 +3017,7 @@ class ExampleTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/catalogos')->assertRedirect(route('dashboard'));
+        $this->actingAs($user)->get('/catalogos')->assertRedirect(route('home'));
 
         $admin = $this->operatorWithPermissions('catalogos.gerenciar');
         $this->actingAs($admin)->get('/catalogos')->assertOk();

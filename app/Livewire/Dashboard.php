@@ -16,6 +16,15 @@ class Dashboard extends Component
 {
     public string $period = 'hoje';
 
+    /**
+     * Executa em toda requisição Livewire, antes de qualquer ação: uma tela já
+     * aberta perde o acesso assim que a permissão é revogada (AJ-009).
+     */
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->hasPermission('dashboard.visualizar'), 403);
+    }
+
     public function setPeriod(string $period): void
     {
         if (in_array($period, ['hoje', '7dias', '30dias'], true)) {
