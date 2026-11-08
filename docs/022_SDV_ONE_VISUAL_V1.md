@@ -31,7 +31,7 @@ Revisar as duas versões lado a lado antes de aprovar o PR. Para visualizar o c�
 ## Limites e próximos ajustes
 
 - A busca global continua desabilitada como antes; o redesign **não** inventa uma funcionalidade de busca.
-- O status de caixa e a lista de notificações do cabeçalho são demonstrativos no código anterior; revisão funcional futura deve usar apenas dados reais.
+- Na continuação **v2 (PR #78)**, o status de caixa e as notificações do cabeçalho foram substituídos por dados reais filtrados por permissão e implantação. O status de caixa próprio aparece apenas ao usuário autorizado; pré-cadastros são contabilizados apenas a quem pode analisá-los.
 - A liberação física permanece desativada por padrão, dependendo da homologação do hardware.
 - O projeto ainda usa o nome técnico interno SDV Access onde necessário; esta fase altera principalmente a identidade visível.
 - O novo layout foi inspirado na imagem de referência aprovada, mas substitui a fotografia arquitetônica por decoração leve em CSS para evitar dependências externas.
@@ -47,3 +47,12 @@ Revisar as duas versões lado a lado antes de aprovar o PR. Para visualizar o c�
 6. Testar responsividade e aprovar visualmente no iPad antes de incorporar à `main`.
 
 **Nota:** o teste de criação de banco nesta branch executa apenas `migrate:fresh` em SQLite descartável. O erro preexistente do `PostoSeeder` quando `--seed` é executado está tratado separadamente no PR #72.
+
+## Continuação v2 — dados reais no cabeçalho
+
+- Novo `App\\Support\\OperationalHeaderState`: consulta situação do caixa por operador ou permissão consolidada e fila de pré-cadastros por implantação.
+- O sininho só mostra indicador visual quando existe pendência real visível ao perfil; os eventos antes escritos diretamente na Blade foram removidos.
+- Posto e implantação do menu de usuário refletem o contexto da sessão.
+- O campo de busca continua sem funcionalidade e é identificado como **em desenvolvimento**; não é possível confundi-lo com busca pronta.
+- `tests/Feature/SdvOneHeaderStateTest.php` cobre os dados do cabeçalho, permissões e isolamento de implantação.
+- PR de revisão: https://github.com/remotevelaskoo/SDV-SANTARITA/pull/78 (depende do PR #77).
