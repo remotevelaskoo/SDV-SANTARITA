@@ -2210,3 +2210,11 @@ button:disabled, input:disabled { cursor: not-allowed; }
     .validation-plate { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 }
 .camera-placas-teste { display: block; width: 100%; max-width: 40rem; margin-top: 0.6rem; border-radius: var(--radius-md); background: #111827; }
+
+/* AJ-010 §12 — Nome completo por voz (somente no cadastro rápido) */
+.nome-por-voz__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.375rem; }
+.nome-por-voz__botoes { display: inline-flex; flex-wrap: wrap; gap: 0.375rem; }
+.nome-por-voz__microfone .ui-button__content { display: inline-flex; align-items: center; gap: 0.375rem; }
+.nome-por-voz__microfone[aria-pressed="true"] { border-color: var(--danger); color: var(--danger); background: var(--danger-surface); }
+.nome-por-voz__mensagem { color: var(--neutral-600); font-size: 0.8125rem; }
+.nome-por-voz__mensagem:empty { display: none; }

@@ -136,6 +136,29 @@ trait CadastroRapidoAtendimento
         $this->quickEtapa = $etapa;
     }
 
+    /**
+     * Nome completo ditado no navegador (docs/021 §12). Só preenche o campo:
+     * não salva, não fotografa, não autoriza e não envia. A transcrição não
+     * vai para log nem auditoria; conta como edição do operador para o OCR.
+     */
+    public function preencherNomePorVoz(string $texto): void
+    {
+        $this->exigirPermissoesCadastro();
+        if (! $this->quickRegistrationOpen || $this->quickEtapa === 'foto') {
+            return;
+        }
+
+        $nome = trim((string) preg_replace('/\s+/u', ' ', $texto));
+        if ($nome === '') {
+            return; // resultado vazio não apaga o nome atual
+        }
+
+        $this->quickName = mb_substr($nome, 0, 120);
+        $this->marcarEditado('quickName');
+        $this->resetErrorBag('quickName');
+        $this->validateOnly('quickName', ['quickName' => ['required', 'string', 'min:3', 'max:120']], ['min' => 'Informe um valor válido.']);
+    }
+
     public function checkQuickDocument(): void
     {
         $normalizado = $this->normalizeDocument($this->quickDocument);
