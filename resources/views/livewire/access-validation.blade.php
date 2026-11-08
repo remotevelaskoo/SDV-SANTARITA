@@ -1,4 +1,16 @@
-<div class="validation-page">
+<div class="validation-page sdv-one-validation">
+    <section class="sdv-one-page-intro sdv-one-page-intro--validation" aria-labelledby="sdv-one-validation-heading">
+        <div class="sdv-one-page-intro__copy">
+            <span class="sdv-one-page-intro__eyebrow"><x-icon name="shield" /> Controle de acesso</span>
+            <h2 id="sdv-one-validation-heading">Validação de entrada</h2>
+            <p>Identifique a pessoa, confira as informações e registre a decisão com segurança.</p>
+        </div>
+        <div class="sdv-one-page-intro__flow" aria-label="Etapas do atendimento">
+            <span><strong>01</strong> Identificação</span>
+            <span><strong>02</strong> Conferência</span>
+            <span><strong>03</strong> Decisão</span>
+        </div>
+    </section>
     @if ($feedback)
         <section class="validation-feedback" aria-label="Resultado do atendimento">
             <x-ui.toast :variant="$feedback['variant']" :title="$feedback['title']" :dismissible="false">
@@ -24,7 +36,7 @@
     <section class="validation-context" aria-label="Contexto do atendimento">
         <div><span>Ponto de acesso</span><strong>Portaria Principal</strong></div>
         <div><span>Direção</span><strong>Entrada</strong></div>
-        <div><span>Integração</span><x-ui.badge variant="success" icon="check-circle">Conectada</x-ui.badge></div>
+        <div><span>Equipamentos</span><x-ui.badge variant="neutral" icon="info">Sem acionamento nesta tela</x-ui.badge></div>
         <div><span>Ambiente</span><x-ui.badge variant="info">Demonstração</x-ui.badge></div>
     </section>
 
