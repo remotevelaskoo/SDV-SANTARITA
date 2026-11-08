@@ -177,7 +177,7 @@ Pré-requisitos: terminal de bancada DS-K1T673DX-BR V3.18.0 já homologado para 
 
 ## 12. Nome completo por voz — complemento aprovado pelo PO em 07/11/2026
 
-**Situação:** especificação aprovada; implementação e execução dos testes pendentes. Este registro não comprova entrega do recurso.
+**Situação:** implementado no PR #74 em 08/11/2026 e testado com reconhecimento simulado (§12.7). Falta a verificação manual com microfone real nos computadores e celulares da portaria.
 
 ### 12.1 Objetivo e escopo
 
@@ -235,3 +235,17 @@ Verificar manualmente computador e celular usados pela portaria, incluindo permi
 ### 12.6 Orientação ao Claude
 
 Puxar a atualização de `codex/aj010-cadastro-rapido-foto-ocr` e ler este documento, principalmente §10.1.1 e §12, antes de implementar. Manter a entrega restrita a este complemento e preservar o trabalho do AJ-010 em andamento. Atualizar a situação desta seção e o acompanhamento do documento 013 somente após implementação e testes, distinguindo simulação, verificação manual e limitações de compatibilidade. Esta entrega documental não autoriza merge nem implantação.
+
+### 12.7 Implementação (08/11/2026)
+
+- **Onde:** só no campo Nome completo da etapa Conferência do cadastro rápido (`access-validation.blade.php`, componente Alpine `nomePorVoz` em `resources/js/nome-por-voz.js`). Não há microfone no cadastro completo, no formulário público nem na análise do pré-cadastro, e o teste confere isso.
+- **Mecanismo:** Web Speech API do navegador (`SpeechRecognition` / `webkitSpeechRecognition`), `lang = pt-BR`, sem resultados parciais, uma frase por vez. Não há dependência nova, serviço pago nem credencial. **Atenção:** no Chrome e no Edge o áudio é enviado ao serviço de reconhecimento do fabricante do navegador (Google ou Microsoft) e exige internet; o SDV não recebe nem guarda áudio. O processamento não é local. O Firefox não oferece a API; nele aparece só o aviso “Preenchimento por voz indisponível neste navegador. Digite o nome.”. O Safari oferece a API com prefixo; não foi verificado.
+- **Fluxo:** o botão “Preencher por voz” (com ícone, foco visível, acionável por teclado) inicia a escuta e passa a se chamar “Cancelar”. A mensagem “Ouvindo… fale o nome completo.” fica visível. O resultado final, não vazio, chama `preencherNomePorVoz` no Livewire, que confere permissão, normaliza espaços, limita a 120 caracteres, marca o campo como editado (o OCR não o sobrescreve) e valida só o nome. Não salva, não fotografa, não autoriza e não envia.
+- **Proteções:** uma sessão por vez; cada sessão tem número e os retornos de uma sessão encerrada são ignorados; digitar no campo durante a escuta cancela a transcrição pendente; mudar de etapa, cancelar o atendimento ou sair da página encerra a escuta. Falha, silêncio ou cancelamento não apagam o nome. Não há nova tentativa automática nem novo pedido de permissão sem clique.
+- **Erros:** sem fala → “Não consegui entender…”; permissão negada → orientação para liberar o microfone ou digitar; sem microfone; serviço sem internet; outros → mensagem genérica com nova tentativa.
+- **Privacidade:** nenhuma transcrição em log, auditoria ou localStorage; as câmeras continuam pedindo só vídeo.
+- **Testes executados:**
+  - `tests/js/nome-por-voz.test.mjs` (9 testes, reconhecimento simulado): início só no clique e em pt-BR, resultado final, parcial/vazio, digitação durante a escuta, cancelamento e nova tentativa, sessão única e retorno atrasado, erros, sem suporte;
+  - `tests/Feature/Aj010/NomePorVozTest.php` (7 testes): escopo do microfone, preenchimento sem salvar/enviar/autorizar, vazio preserva, validação, OCR posterior respeita o nome, etapa Foto/atendimento encerrado/permissão, visitante sem imóvel continua sem autorização;
+  - navegador (Playwright, Chromium com reconhecimento simulado), computador 1366×900 e celular Pixel 7: teclado, mensagem de escuta, cancelamento, erro, nova tentativa, digitação durante a escuta, sem rolagem horizontal e sem erro de JavaScript; navegador sem a API mostra só o aviso.
+- **Pendente:** teste manual com microfone real (permissão inicial, ruído da portaria, convivência com a câmera) nos computadores e celulares usados na portaria.
