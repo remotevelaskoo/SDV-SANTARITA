@@ -38,7 +38,7 @@ class TelaEquipamentosTest extends TestCase
     public function test_rota_exige_autenticacao_e_permissao(): void
     {
         $this->get('/equipamentos')->assertRedirect(route('login'));
-        $this->actingAs($this->usuarioCom('dashboard.visualizar'))->get('/equipamentos')->assertRedirect(route('dashboard'));
+        $this->actingAs($this->usuarioCom('dashboard.visualizar'))->get('/equipamentos')->assertRedirect(route('home'));
         $this->actingAs($this->usuarioCom('integracoes.gerenciar'))->get('/equipamentos')->assertOk()->assertSee('Equipamentos');
     }
 

@@ -1,64 +1,51 @@
+@props(['context' => 'sidebar'])
+
 @php
-    $groups = [
-        'Operação' => [
-            ['label' => 'Modo Portaria', 'icon' => 'door', 'route' => 'portaria'],
-            ['label' => 'Dashboard', 'icon' => 'grid', 'route' => 'dashboard'],
-            ['label' => 'Validação de entrada', 'icon' => 'shield', 'route' => 'validation'],
-            ['label' => 'Pré-cadastro', 'icon' => 'badge-check', 'counter' => 3, 'route' => 'pre-registrations'],
-            ['label' => 'Entradas e saídas', 'icon' => 'door', 'route' => 'access-history'],
-        ],
-        'Cadastros' => [
-            ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
-            ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people.create'],
-            ['label' => 'Empresas e prestadores', 'icon' => 'users-round', 'route' => 'companies'],
-            ['label' => 'Veículos', 'icon' => 'car', 'route' => 'vehicles'],
-        ],
-        'Gestão' => [
-            ['label' => 'Administração', 'icon' => 'settings', 'route' => 'users'],
-            ['label' => 'Perfis e permissões', 'icon' => 'key', 'route' => 'profiles'],
-            ['label' => 'Configurações', 'icon' => 'settings', 'route' => 'settings'],
-            ['label' => 'Motivos de negativa', 'icon' => 'file', 'route' => 'catalogs'],
-            ['label' => 'Equipamentos', 'icon' => 'shield', 'route' => 'equipment'],
-            ['label' => 'Pontos de acesso', 'icon' => 'door', 'route' => 'access-points'],
-            ['label' => 'Câmeras de placas', 'icon' => 'car', 'route' => 'plate-cameras'],
-            ['label' => 'Postos e operadores', 'icon' => 'users', 'route' => 'posts'],
-            ['label' => 'Relatórios', 'icon' => 'chart', 'route' => 'reports'],
-            ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
-            ['label' => 'Logs e auditoria', 'icon' => 'scroll', 'route' => 'audit-log'],
-            ['label' => 'Manutenção', 'icon' => 'wrench'],
-            ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
-        ],
-    ];
+    // Itens já filtrados no servidor pelas permissões efetivas da implantação
+    // atual (AJ-009). Recolher grupos, compactar a barra ou abrir a gaveta só
+    // mudam a apresentação: nada que não esteja aqui chega ao navegador.
+    $groups = \App\Support\Navigation::groups(auth()->user());
+    $currentRoute = \App\Support\Navigation::currentRoute($groups);
+    $isCurrent = fn (array $item): bool => $item['route'] === $currentRoute;
 @endphp
 
-<nav class="navigation" aria-label="Módulos do sistema">
+<nav class="navigation" aria-label="Módulos do sistema" data-navigation="{{ $context }}">
     @foreach ($groups as $group => $items)
-        <section class="navigation__group" aria-labelledby="nav-{{ Str::slug($group) }}">
-            <h2 id="nav-{{ Str::slug($group) }}">{{ $group }}</h2>
-            <ul>
-                @foreach ($items as $item)
-                    <li>
-                        @if (isset($item['route']))
+        @php
+            $id = 'nav-'.$context.'-'.\Illuminate\Support\Str::slug($group);
+            $open = collect($items)->contains($isCurrent) || $group === 'Visão geral' || ($currentRoute === null && $loop->first);
+        @endphp
+        <section @class(['navigation__group', 'is-open' => $open]) data-nav-group>
+            <h2 class="navigation__heading">
+                <button
+                    type="button"
+                    class="navigation__group-toggle"
+                    aria-expanded="{{ $open ? 'true' : 'false' }}"
+                    aria-controls="{{ $id }}"
+                    data-nav-group-toggle
+                >
+                    <span>{{ $group }}</span>
+                    <x-icon name="chevron-down" />
+                </button>
+            </h2>
+            <div class="navigation__panel" id="{{ $id }}" data-nav-group-panel>
+                <ul aria-label="{{ $group }}">
+                    @foreach ($items as $item)
+                        @php($current = $isCurrent($item))
+                        <li>
                             <a
-                                @class(['navigation__item', 'navigation__item--active' => request()->routeIs($item['route'])])
+                                @class(['navigation__item', 'navigation__item--active' => $current])
                                 href="{{ route($item['route']) }}"
-                                @if (request()->routeIs($item['route'])) aria-current="page" @endif
+                                data-nav-label="{{ $item['label'] }}"
+                                @if ($current) aria-current="page" @endif
                             >
                                 <x-icon :name="$item['icon']" />
-                                <span>{{ $item['label'] }}</span>
+                                <span class="navigation__label">{{ $item['label'] }}</span>
                             </a>
-                        @else
-                            <span class="navigation__item navigation__item--disabled" aria-disabled="true" title="Módulo será portado em uma próxima etapa">
-                                <x-icon :name="$item['icon']" />
-                                <span>{{ $item['label'] }}</span>
-                                @if (isset($item['counter']))
-                                    <small class="navigation__counter">{{ $item['counter'] }}</small>
-                                @endif
-                            </span>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </section>
     @endforeach
 </nav>

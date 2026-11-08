@@ -54,7 +54,7 @@ class ImplantacaoSelection extends Component
         // mais seguro aqui do que uma transição SPA: evita qualquer risco
         // de a navegação para o dashboard correr antes do commit da sessão
         // desta requisição.
-        return $this->redirectRoute('dashboard');
+        return $this->redirectRoute('home');
     }
 
     public function render(): View

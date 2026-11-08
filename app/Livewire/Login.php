@@ -82,7 +82,7 @@ class Login extends Component
             classification: 'restrita',
         );
 
-        return $this->redirectRoute('dashboard', navigate: true);
+        return $this->redirectRoute('home', navigate: true);
     }
 
     public function render(): View

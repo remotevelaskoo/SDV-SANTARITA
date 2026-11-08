@@ -148,7 +148,7 @@ class ProtectedFileTest extends TestCase
 
         $this->actingAs(User::factory()->create())
             ->get(route('protected-files.show', $file))
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('home'));
     }
 
     public function test_authorized_view_is_inline_not_cached_and_audited_without_storage_secrets(): void
