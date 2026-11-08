@@ -2218,3 +2218,10 @@ button:disabled, input:disabled { cursor: not-allowed; }
 .nome-por-voz__microfone[aria-pressed="true"] { border-color: var(--danger); color: var(--danger); background: var(--danger-surface); }
 .nome-por-voz__mensagem { color: var(--neutral-600); font-size: 0.8125rem; }
 .nome-por-voz__mensagem:empty { display: none; }
+
+/* AJ-010 §13 — Fotografar documento / Cadastrar manualmente na abertura */
+.captura-documento__escolha { display: grid; gap: 0.5rem; }
+.captura-documento__escolha .ui-button { width: 100%; min-height: 3rem; font-size: 0.95rem; }
+@media (min-width: 640px) {
+    .captura-documento__escolha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -64,6 +64,18 @@ export function camerasDoPosto({ implantacaoId, postoId, modo = 'captura' }) {
         },
 
         /** Pede permissão de câmera (somente vídeo) para liberar a lista com nomes. */
+        /** Botão "Fotografar documento" na abertura do cadastro rápido (docs/021 §13). */
+        async fotografarDocumento() {
+            if (!this.ativa) {
+                if (this.escolhas.documentos) {
+                    await this.abrir();
+                } else {
+                    await this.autorizar();
+                }
+            }
+            this.$refs.camera?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+        },
+
         async autorizar() {
             try {
                 const teste = await navigator.mediaDevices.getUserMedia(restricoesVideo(null));

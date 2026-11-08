@@ -95,7 +95,7 @@
                         @endif
 
                         <div class="quick-registration__fields">
-                            <div class="nome-por-voz" x-data="nomePorVoz()" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()">
+                            <div class="nome-por-voz" x-data="nomePorVoz()" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()" x-on:cadastro-rapido-foco-nome.window="focarNome()">
                                 <x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />
                                 {{-- Voz só neste campo (docs/021 §12): começa no clique, não salva nem envia nada. --}}
                                 <div class="nome-por-voz__acoes">

@@ -2,14 +2,24 @@
 <section class="captura-documento" aria-label="Fotografar documento"
     x-data="camerasDoPosto({ implantacaoId: @js($cameras['implantacao']), postoId: @js($cameras['posto']), modo: 'captura' })"
     x-on:cadastro-rapido-encerrado.window="encerrar()">
+    {{-- Duas entradas claras logo na abertura (docs/021 §13). --}}
+    <div class="captura-documento__escolha" role="group" aria-label="Como cadastrar" x-init="$nextTick(() => $el.scrollIntoView({ block: 'center' }))">
+        <button type="button" class="ui-button ui-button--primary ui-button--lg" x-on:click="fotografarDocumento()">
+            <span class="ui-button__content">Fotografar documento</span>
+        </button>
+        <button type="button" class="ui-button ui-button--secondary ui-button--lg" wire:click="digitarManualmente" x-on:click="encerrar()">
+            <span class="ui-button__content">Cadastrar manualmente</span>
+        </button>
+    </div>
+
     <header>
-        <strong>Fotografar documento</strong>
+        <strong>Foto do documento</strong>
         <small>A imagem é usada só para ler os dados e não é guardada. Não é biometria. A leitura começa sozinha depois da captura.</small>
     </header>
 
     <p class="equipamento-management-aviso" x-show="aviso" x-text="aviso"></p>
 
-    <div class="captura-documento__camera">
+    <div class="captura-documento__camera" x-ref="camera">
         <label class="ui-field">
             <span class="ui-field__label">Tipo do documento</span>
             <span class="ui-select-control">
@@ -79,7 +89,4 @@
         @endif
     @endif
 
-    <div class="equipamento-management-acoes">
-        <x-ui.button variant="ghost" size="sm" wire:click="digitarManualmente">Digitar os dados manualmente</x-ui.button>
-    </div>
 </section>
