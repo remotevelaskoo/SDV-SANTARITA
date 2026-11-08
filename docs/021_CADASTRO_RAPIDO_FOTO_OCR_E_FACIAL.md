@@ -249,3 +249,34 @@ Puxar a atualização de `codex/aj010-cadastro-rapido-foto-ocr` e ler este docum
   - `tests/Feature/Aj010/NomePorVozTest.php` (7 testes): escopo do microfone, preenchimento sem salvar/enviar/autorizar, vazio preserva, validação, OCR posterior respeita o nome, etapa Foto/atendimento encerrado/permissão, visitante sem imóvel continua sem autorização;
   - navegador (Playwright, Chromium com reconhecimento simulado), computador 1366×900 e celular Pixel 7: teclado, mensagem de escuta, cancelamento, erro, nova tentativa, digitação durante a escuta, sem rolagem horizontal e sem erro de JavaScript; navegador sem a API mostra só o aviso.
 - **Pendente:** teste manual com microfone real (permissão inicial, ruído da portaria, convivência com a câmera) nos computadores e celulares usados na portaria.
+
+
+## 13. Cadastro manual em destaque — complemento aprovado pelo PO em 07/11/2026
+
+**Situação:** especificação aprovada, pendente de implementação e testes. O PO informou que o AJ-010 já está na main e identificou dificuldade para encontrar a entrada manual.
+
+### 13.1 Resultado esperado
+
+Ao abrir o cadastro rápido, o porteiro deve encontrar imediatamente duas ações claras: **Fotografar documento** e **Cadastrar manualmente**. A entrada manual deve ser um botão de destaque no topo da etapa Documento, antes da câmera e das instruções, visível sem expandir menus ou rolar a tela em computador e celular. Não deixar essa opção apenas como link discreto, dentro de detalhes ou como alternativa apresentada somente após erro do OCR.
+
+Usar botões com legibilidade e área de toque adequadas ao Design System. Em telas largas podem ficar lado a lado; em telas pequenas, empilhados. Não alterar o cadastro completo nem adicionar novos caminhos ou formulários duplicados.
+
+### 13.2 Comportamento
+
+- **Cadastrar manualmente** abre diretamente a etapa Conferência e coloca o foco no Nome completo, reutilizando o fluxo manual existente e suas validações.
+- O operador pode digitar ou usar o microfone do nome. Não exigir tentativa de fotografia documental, OCR ou permissão de câmera/microfone para iniciar a digitação.
+- A escolha não salva automaticamente, não cria pessoa, vínculo ou autorização e não envia nada ao terminal.
+- Preservar dados já digitados/conferidos e não apagar o atendimento ao alternar para entrada manual; encerrar qualquer captura/reconhecimento pendente para impedir retorno tardio sobrescrevendo campos.
+- Manter a etapa Foto da pessoa, as ações finais e suas regras já existentes. Entrar manualmente não dispensa a fotografia nem muda sua regra vigente.
+- Preservar telefone e imóvel opcionais (§10.1.1), microfone somente no Nome completo do cadastro rápido (§12), permissões, vigência e autorização exigidas para a facial.
+
+### 13.3 Critérios de aceite e orientação ao Claude
+
+1. A ação **Cadastrar manualmente** aparece com destaque no primeiro bloco do cadastro rápido, antes da câmera, sem abrir menu, em computador e celular.
+2. Clique ou ativação por teclado abre Conferência, com foco no nome e sem iniciar câmera, microfone ou OCR.
+3. Digitação, nome por voz e continuação para Foto funcionam pelo mesmo fluxo existente; nenhuma gravação ou integração é disparada pela escolha do modo.
+4. Dados preenchidos são preservados; processamento atrasado não sobrescreve correções ao trocar para manual.
+5. Cadastro e fotografia continuam salvando sem telefone, sem imóvel e sem ambos; ausência de imóvel não gera vínculo fictício ou autorização automática.
+6. Validar visualmente computador e celular, foco visível, contraste, área de toque e ausência de rolagem horizontal. Registrar verificações efetivamente realizadas.
+
+Claude: partir da main atual, implementar somente este ajuste visual/de navegação e reaproveitar a ação manual existente. Incluir testes pertinentes de abertura da etapa manual e preservação das regras; atualizar esta seção e o acompanhamento do documento 013 com os resultados reais. Não registrar como implementado antes da entrega. Não fazer merge nem implantação automaticamente.
