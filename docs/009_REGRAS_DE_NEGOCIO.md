@@ -219,6 +219,8 @@ O sistema deverá alertar quando houver vínculos incompatíveis ou sobrepostos 
 **RN-023 — Responsável pelo visitante**  
 Todo visitante autorizado deverá possuir um responsável identificado.
 
+> Nota (08/11/2026, AJ-010): no cadastro rápido da Validação de Entrada o campo de responsável existe só para morador e é opcional; o cadastro do visitante não o exige (`docs/021` §14). Esta regra trata da autorização, não do cadastro da pessoa.
+
 **RN-024 — Imóvel de destino**  
 Todo visitante deverá estar associado a um imóvel ou destino válido.
 

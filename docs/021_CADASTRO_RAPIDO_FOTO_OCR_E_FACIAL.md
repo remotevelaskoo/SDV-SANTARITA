@@ -298,7 +298,7 @@ Claude: partir da main atual, implementar somente este ajuste visual/de navegaç
 
 ## 14. Responsável somente para morador — decisão do PO em 07/11/2026
 
-**Situação:** aprovado para implementação; código e testes ainda pendentes. Nesta primeira fase a operação trabalhará com visitantes. O campo atual “Responsável pelo acesso”, cuja ajuda exige preenchimento para visitante, prestador ou turista, não corresponde à nova decisão.
+**Situação:** implementado na branch `codex/aj010-visitante-sem-responsavel` em 08/11/2026, aguardando revisão e merge (§14.5). Nesta primeira fase a operação trabalhará com visitantes. O antigo campo “Responsável pelo acesso”, cuja ajuda exigia preenchimento para visitante, prestador ou turista, foi ajustado.
 
 ### 14.1 Regra aprovada e precedência
 
@@ -327,3 +327,14 @@ Ausência de responsável não deve impedir salvar pessoa e foto. O envio à fac
 ### 14.4 Orientação ao Claude
 
 Partir da main atual e implementar esta seção, verificando onde o campo é apresentado e validado (inclusive `AccessValidation`, serviços de cadastro e views). Conciliar as especificações dependentes de cadastro/regras de negócio que ainda digam que visitante deve preencher este campo. Não ampliar a alteração para dispensar aprovação ou autorização de acesso. Executar testes pertinentes e atualizar esta seção e o documento 013 com os resultados reais, sem marcar como implementado antecipadamente. Não fazer merge nem implantação automaticamente.
+
+### 14.5 Implementação (08/11/2026)
+
+- **Interface:** o campo “Responsável (opcional)” só aparece quando o tipo é morador, com a ajuda “Só para morador. Deixe em branco se não houver.”. Para visitante, prestador, turista e outro, o campo e a antiga indicação “Obrigatório para visitante, prestador ou turista” não aparecem mais.
+- **Backend:** a regra `required_if` foi removida; o responsável é `nullable`, até 120 caracteres. Para morador, continua opcional, como antes. Ao trocar o tipo para algo diferente de morador, o valor é limpo, e qualquer valor que chegue ao salvar para outro tipo (residual ou forjado) é descartado antes da validação e da gravação.
+- **Autorização:** nada mudou nas regras da facial. Salvar não cria autorização. No envio, a visita de 24 h de visitante com imóvel e de turista (§10.1.1) é registrada **sem nome de responsável** quando não houver um. Visitante sem imóvel continua sem autorização automática, e o envio é recusado se não houver autorização vigente. Dados históricos não foram alterados.
+- **Ponto para o PO:** a RN-023 (`docs/009`) diz que todo visitante *autorizado* deve ter um responsável identificado. Esta seção não mexe nisso, mas a visita automática criada no envio à facial agora pode não ter responsável. Se a RN-023 precisar valer para essa visita, será necessário decidir como o responsável é informado fora deste formulário.
+- **Testes executados:**
+  - `tests/Feature/Aj010/VisitanteSemResponsavelTest.php` (10 testes): campo só para morador; visitante manual salva pessoa e foto sem responsável com e sem telefone/imóvel (4 combinações); visitante após OCR; troca de morador para visitante e valor forjado ignorados, sem responsável gravado em autorização ou vínculo; morador continua opcional e validado; prestador, turista e outro salvam sem responsável; sem autorização vigente o envio continua impedido.
+  - Suíte completa `php artisan test`: 497 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
+  - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: campo ausente para visitante, presente para morador, limpo ao voltar para visitante; sem rolagem horizontal e sem erro de JavaScript.
