@@ -47,6 +47,9 @@ trait CadastroRapidoAtendimento
 {
     public const ETAPAS_CADASTRO = ['documento', 'conferencia', 'foto'];
 
+    /** Tipos em que o campo de responsável existe; obrigatório só para visitante. */
+    private const TIPOS_COM_RESPONSAVEL = ['visitante', 'morador'];
+
     /** Tipos com visita de até 24 horas no envio à facial (modelo do AJ-006). */
     public bool $quickRegistrationOpen = false;
 
@@ -159,7 +162,7 @@ trait CadastroRapidoAtendimento
         $this->validateOnly('quickName', ['quickName' => ['required', 'string', 'min:3', 'max:120']], ['min' => 'Informe um valor válido.']);
     }
 
-    /** Ao trocar o tipo, o responsável só sobrevive para morador (docs/021 §14). */
+    /** Ao trocar o tipo, o responsável só sobrevive para visitante e morador (docs/021 §14). */
     public function updatedQuickAccessType(): void
     {
         $this->descartarResponsavelForaDeMorador();
@@ -168,7 +171,7 @@ trait CadastroRapidoAtendimento
     /** Valor residual ou forjado para outro tipo é ignorado: nada de responsável fictício. */
     private function descartarResponsavelForaDeMorador(): void
     {
-        if ($this->quickAccessType !== 'morador') {
+        if (! in_array($this->quickAccessType, self::TIPOS_COM_RESPONSAVEL, true)) {
             $this->quickResponsible = '';
             $this->resetErrorBag('quickResponsible');
         }
@@ -389,14 +392,17 @@ trait CadastroRapidoAtendimento
             // Telefone e imóvel são opcionais no cadastro rápido (complemento do PO ao AJ-010); validados só quando informados.
             'quickPhone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9()+\-.\s]+$/'],
             'quickAccessType' => ['required', Rule::in(['visitante', 'prestador', 'morador', 'turista', 'outro'])],
-            // Responsável só existe para morador e é opcional (docs/021 §14).
-            'quickResponsible' => ['nullable', 'string', 'max:120'],
-            'quickPropertyCode' => ['nullable', 'string', 'max:40'],
+            // Visitante: imóvel e responsável obrigatórios. Morador: responsável opcional.
+            // Turista e demais tipos: sem responsável (docs/021 §14, revisão de 08/11/2026).
+            'quickResponsible' => ['required_if:quickAccessType,visitante', 'nullable', 'string', 'max:120'],
+            'quickPropertyCode' => ['required_if:quickAccessType,visitante', 'nullable', 'string', 'max:40'],
             'quickNotes' => ['nullable', 'string', 'max:200'],
             'quickBirthDate' => ['nullable', 'date', 'before:today'],
         ], [
             'required' => 'Preencha este campo para continuar.',
             'required_if' => 'Preencha este campo para o tipo de acesso selecionado.',
+            'quickResponsible.required_if' => 'Informe o responsável pelo visitante.',
+            'quickPropertyCode.required_if' => 'Informe o imóvel que o visitante vai visitar.',
             'min' => 'Informe um valor válido.',
             'quickPhone.regex' => 'Use só números, espaços, parênteses, + ou -.',
         ]);
@@ -576,8 +582,8 @@ trait CadastroRapidoAtendimento
     private function enviarParaFacial(Pessoa $pessoa, ?Imovel $imovel, User $usuario): array
     {
         $autorizacao = null;
-        // Visitante e turista: visita própria de no máximo 24 horas (AJ-006). Visitante sem imóvel
-        // não ganha visita automática: o envio segue a autorização vigente que já existir.
+        // Turista: entrada de até 24 h sem imóvel nem responsável. Visitante: visita de até 24 h
+        // ao imóvel informado, com o responsável informado (ambos exigidos na conferência).
         $criaVisita = $this->quickAccessType === 'turista' || ($this->quickAccessType === 'visitante' && $imovel !== null);
         if ($criaVisita) {
             $autorizacoes = app(AutorizacoesAcesso::class);

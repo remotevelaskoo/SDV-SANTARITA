@@ -328,7 +328,9 @@ class CadastroRapidoFotoTest extends TestCase
     #[DataProvider('camposOpcionaisAusentes')]
     public function test_salva_cadastro_e_foto_sem_telefone_ou_sem_imovel(string $telefone, string $imovel): void
     {
-        foreach (['visitante', 'morador', 'prestador', 'outro'] as $i => $tipo) {
+        // Visitante exige imóvel (docs/021 §14); sem imóvel, o turista entra no lugar dele.
+        $tipos = $imovel === '' ? ['turista', 'morador', 'prestador', 'outro'] : ['visitante', 'morador', 'prestador', 'outro'];
+        foreach ($tipos as $i => $tipo) {
             $cpf = ['529.982.247-25', '111.444.777-35', '935.411.347-80', '286.255.878-87'][$i];
             $this->atendimento()->call('openQuickRegistration')->call('digitarManualmente')
                 ->set('quickName', 'Pessoa Opcional '.$tipo)
