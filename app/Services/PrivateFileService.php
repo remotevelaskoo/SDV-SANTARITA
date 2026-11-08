@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Integracoes\Dominio\Enums\EstadoSincronizacao;
 use App\Models\Arquivo;
+use App\Models\FotoFacialSincronizacao;
 use App\Models\Pessoa;
 use App\Models\PessoaArquivo;
 use App\Models\PreRegistration;
@@ -224,6 +226,19 @@ class PrivateFileService
                     'is_current' => true,
                     'linked_at' => now(),
                 ]);
+
+                // Foto nova invalida o "sincronizado" da anterior em cada terminal (AJ-010).
+                FotoFacialSincronizacao::query()
+                    ->where('pessoa_id', $pessoa->id)
+                    ->where('estado', '!=', EstadoSincronizacao::Removido->value)
+                    ->get()
+                    ->each(fn (FotoFacialSincronizacao $registro) => $registro->forceFill([
+                        'arquivo_id' => $file->id,
+                        'versao_foto' => $file->checksum_sha256,
+                        'estado' => EstadoSincronizacao::NaoEnviado,
+                        'erro_sanitizado' => 'Foto substituída no SDV; o terminal mantém a versão anterior até um novo envio.',
+                        'versao' => $registro->versao + 1,
+                    ])->save());
 
                 $this->audit->record(
                     action: 'recebeu_arquivos_protegidos',

@@ -15,11 +15,13 @@ use App\Integracoes\Dominio\Enums\EstadoSincronizacao;
 use App\Integracoes\Dominio\Enums\OperacaoIntegracao;
 use App\Integracoes\Dominio\Enums\ResultadoEquipamento;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
+use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Integracoes\Infra\RegistroAdaptadores;
 use App\Integracoes\Infra\SanitizadorIntegracao;
 use App\Models\CredencialSincronizacao;
 use App\Models\Equipamento;
 use App\Models\EquipamentoCapacidade;
+use App\Models\FotoFacialSincronizacao;
 use App\Models\HistoricoAcesso;
 use App\Models\IntegracaoOcorrencia;
 use App\Models\OperacaoIntegracao as Operacao;
@@ -51,6 +53,7 @@ class ProcessadorOperacoes
         private SanitizadorIntegracao $sanitizador,
         private ColetorEventos $coletor,
         private AuditService $audit,
+        private PreparadorFotoFacial $fotos,
     ) {}
 
     public function processar(string $operacaoId): ?Operacao
@@ -173,6 +176,21 @@ class ProcessadorOperacoes
             return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'biometria_bloqueada_adr013', 'Credencial facial bloqueada até a aprovação do ADR-013.');
         }
 
+        if ($tipo === OperacaoIntegracao::EnviarFotoFacial) {
+            // Flag revalidada no envio (ADR-013 1.1.0): desligar interrompe a fila.
+            if (! config('integracoes.foto_facial_habilitada')) {
+                return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'foto_facial_desabilitada', 'Envio de foto ao terminal desligado até a aprovação do ADR-013 e a homologação em bancada.');
+            }
+            $cadastro = CredencialSincronizacao::query()
+                ->where('equipamento_id', $equipamento->id)
+                ->where('credencial_id', $operacao->payload['credencial_id'] ?? '')
+                ->first();
+            if ($cadastro?->estado !== EstadoSincronizacao::Sincronizado) {
+                // A foto só vai para um usuário que o terminal confirmou; tenta de novo depois.
+                return new ResultadoOperacao(ResultadoEquipamento::FalhaTecnica, 'cadastro_pendente_no_terminal', 'O cadastro da pessoa ainda não foi confirmado pelo terminal.');
+            }
+        }
+
         $capacidade = $tipo->capacidadeExigida();
         if ($capacidade !== null && ! $equipamento->suporta($capacidade)) {
             return ResultadoOperacao::capacidadeAusente($capacidade, 'não verificada para este terminal');
@@ -217,7 +235,17 @@ class ProcessadorOperacoes
                     atorId: $operacao->ator_id,
                 )),
                 OperacaoIntegracao::ConsultarResultadoComando => $porta->consultarResultadoComando($contexto, $p['comando_id']),
+                OperacaoIntegracao::EnviarFotoFacial => $porta->enviarFotoFacial($contexto, $this->fotos->preparar(
+                    $p['pessoa_id'],
+                    $p['arquivo_id'],
+                    $p['versao_arquivo'],
+                    $p['credencial_id'],
+                    $this->idExterno($equipamento, $p['credencial_id']),
+                )),
             };
+        } catch (RegraIntegracaoViolada $e) {
+            // Foto substituída, de outra pessoa ou divergente: nada vai ao terminal.
+            return new ResultadoOperacao(ResultadoEquipamento::Recusado, $e->codigo, $e->getMessage());
         } catch (Throwable $e) {
             $mensagem = $this->sanitizador->texto($e->getMessage(), $this->contextos->segredosConhecidos($equipamento));
             Log::warning('integracao.excecao_adaptador', [
@@ -255,6 +283,7 @@ class ProcessadorOperacoes
             OperacaoIntegracao::ConsultarSincronizacao => $this->efeitoSincronizacao($operacao, $equipamento, $resultado),
             OperacaoIntegracao::ColetarEventos => $this->efeitoEventos($operacao, $equipamento, $resultado),
             OperacaoIntegracao::ConsultarResultadoComando => $this->efeitoReconciliacaoComando($operacao, $resultado),
+            OperacaoIntegracao::EnviarFotoFacial => $this->efeitoFotoFacial($operacao, $equipamento, $resultado),
             OperacaoIntegracao::AberturaRemota => null,
         };
 
@@ -395,12 +424,43 @@ class ProcessadorOperacoes
             $this->registrarReferenciaExterna($equipamento, $credencialId, $resultado->idExterno);
         }
         if ($novoEstado === EstadoSincronizacao::Removido) {
+            // A face pertence ao usuário removido (FPID = employeeNo); sem usuário ela não
+            // identifica ninguém. A remoção específica da face é conferida na bancada (docs/021 §10).
+            FotoFacialSincronizacao::query()
+                ->where('equipamento_id', $equipamento->id)
+                ->where('credencial_id', $credencialId)
+                ->update(['estado' => EstadoSincronizacao::Removido->value, 'removido_em' => now(), 'erro_sanitizado' => null]);
             ReferenciaExterna::query()
                 ->where('equipamento_id', $equipamento->id)
                 ->where('entidade_id', $credencialId)
                 ->whereNull('substituida_em')
                 ->update(['substituida_em' => now()]);
         }
+    }
+
+    /**
+     * Estado da foto no terminal. Só a versão pedida é atualizada: se outra
+     * foto foi registrada depois, este resultado não a marca como enviada.
+     */
+    private function efeitoFotoFacial(Operacao $operacao, Equipamento $equipamento, ResultadoOperacao $resultado): void
+    {
+        $registro = FotoFacialSincronizacao::query()->lockForUpdate()
+            ->where('equipamento_id', $equipamento->id)
+            ->where('credencial_id', $operacao->payload['credencial_id'])
+            ->first();
+        if ($registro === null || $registro->versao_foto !== ($operacao->payload['versao_arquivo'] ?? null)) {
+            return;
+        }
+
+        $novoEstado = $this->estadoAposEnvio($resultado, $this->vaiRepetir($operacao, $resultado), EstadoSincronizacao::Sincronizado);
+        $registro->forceFill([
+            'estado' => $novoEstado,
+            'ultima_operacao_id' => $operacao->id,
+            'ultima_tentativa_em' => now(),
+            'erro_sanitizado' => $resultado->resultado === ResultadoEquipamento::Confirmado ? null : $this->mensagem($resultado),
+            'sincronizado_em' => $novoEstado === EstadoSincronizacao::Sincronizado ? now() : $registro->sincronizado_em,
+            'versao' => $registro->versao + 1,
+        ])->save();
     }
 
     private function estadoAposEnvio(ResultadoOperacao $resultado, bool $vaiRepetir, EstadoSincronizacao $sucesso): EstadoSincronizacao

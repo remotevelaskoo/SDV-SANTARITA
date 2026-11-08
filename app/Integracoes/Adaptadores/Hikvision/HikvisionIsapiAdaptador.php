@@ -7,6 +7,7 @@ use App\Integracoes\Dominio\Dados\CapacidadesDeclaradas;
 use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
+use App\Integracoes\Dominio\Dados\FotoFacialParaEnviar;
 use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
@@ -35,6 +36,17 @@ use SimpleXMLElement;
  * Os quatro últimos foram validados em bancada em 25/10/2026 (AJ-006, docs/020
  * §9) com usuário fictício, sem foto: gravar, alterar, consultar e remover,
  * com o período de validade devolvido igual ao enviado.
+ *
+ * Foto da pessoa (AJ-010, ADR-013 1.1.0), implementada e AINDA NÃO validada
+ * em bancada:
+ * - PUT  /ISAPI/Intelligent/FDLib/FDSetUp?format=json   aplica (cria ou troca) a
+ *   face do usuário na biblioteca facial, multipart com `FaceDataRecord`
+ *   (faceLibType, FDID, FPID = employeeNo) e a imagem JPEG.
+ * O caminho consta do guia oficial ISAPI "Access Control on Person"
+ * (tpp.hikvision.com). Os nomes das partes do multipart e a remoção da face
+ * junto com o usuário precisam ser confirmados no guia do firmware V3.18.0 e
+ * em bancada; até lá `credencial_facial` fica `bloqueada` no perfil e esta
+ * operação devolve `capacidade_ausente` sem tocar o terminal.
  *
  * Matriz de homologação: cada capacidade tem um estado por firmware
  * (`integracoes.hikvision.perfis_homologados`). Só executa o que está
@@ -71,6 +83,14 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
 
     public const CAMINHO_USUARIO_REMOVER = '/ISAPI/AccessControl/UserInfo/Delete?format=json';
 
+    public const CAMINHO_FACE_APLICAR = '/ISAPI/Intelligent/FDLib/FDSetUp?format=json';
+
+    /** Biblioteca facial padrão do terminal de controle de acesso (lista de permitidos). */
+    private const BIBLIOTECA_FACIAL = ['faceLibType' => 'blackFD', 'FDID' => '1'];
+
+    /** Limite conservador para a foto enviada ao terminal (confirmar na homologação). */
+    public const TAMANHO_MAXIMO_FOTO_BYTES = 200 * 1024;
+
     /** Maior data aceita pelo terminal em Valid (UserInfo/capabilities). */
     private const VALIDADE_MAXIMA = '2037-12-31T23:59:59';
 
@@ -85,6 +105,8 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         Capacidade::RevogarCredencial,
         Capacidade::ConsultarSincronizacao,
         Capacidade::ValidadeNativa,
+        // Só executa quando o perfil do firmware deixar de marcá-la como bloqueada.
+        Capacidade::CredencialFacial,
     ];
 
     /** Indicador em AccessControl/capabilities que o terminal usa para cada capacidade. */
@@ -281,6 +303,37 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
         return $this->statusJson($resposta, $employeeNo, 'Cadastro gravado no terminal com o período de validade.');
     }
 
+    /**
+     * Associa a foto ao usuário já gravado (FPID = employeeNo). O terminal
+     * extrai o modelo facial; o SDV não gera nem guarda template. Resposta sem
+     * statusCode 1 não é sucesso; timeout fica como confirmação desconhecida.
+     */
+    public function enviarFotoFacial(ContextoEquipamento $equipamento, FotoFacialParaEnviar $foto): ResultadoOperacao
+    {
+        if (($motivo = $this->ausencia(Capacidade::CredencialFacial, $equipamento)) !== null) {
+            return ResultadoOperacao::capacidadeAusente(Capacidade::CredencialFacial, $motivo);
+        }
+        if ($foto->tipoMime !== 'image/jpeg' || ! str_starts_with($foto->conteudo(), self::TIPOS_IMAGEM['image/jpeg'])) {
+            return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'foto_formato_invalido', 'O terminal recebe somente foto JPEG.');
+        }
+        if ($foto->tamanhoBytes() > self::TAMANHO_MAXIMO_FOTO_BYTES) {
+            return new ResultadoOperacao(ResultadoEquipamento::Recusado, 'foto_grande_demais', 'A foto passa do tamanho aceito pelo terminal.');
+        }
+
+        $employeeNo = $foto->idExternoAtual ?? $this->employeeNo($foto->credencialId);
+
+        try {
+            $resposta = $this->cliente->json($this->cliente->putMultipart($equipamento, self::CAMINHO_FACE_APLICAR, [
+                'FaceDataRecord' => [json_encode([...self::BIBLIOTECA_FACIAL, 'FPID' => $employeeNo], JSON_THROW_ON_ERROR), null, 'application/json'],
+                'img' => [$foto->conteudo(), 'face.jpg', 'image/jpeg'],
+            ]));
+        } catch (FalhaIsapi $e) {
+            return $e->comoResultado();
+        }
+
+        return $this->statusJson($resposta, $employeeNo, 'Foto associada ao cadastro no terminal.');
+    }
+
     public function revogarCredencial(ContextoEquipamento $equipamento, string $credencialId, ?string $idExterno): ResultadoOperacao
     {
         if (($motivo = $this->ausencia(Capacidade::RevogarCredencial, $equipamento)) !== null) {
@@ -329,6 +382,8 @@ class HikvisionIsapiAdaptador implements PortaEquipamentoAcesso
             'presente' => $presente,
             'validade_inicio' => $this->texto((string) ($usuario['Valid']['beginTime'] ?? '')),
             'validade_fim' => $this->texto((string) ($usuario['Valid']['endTime'] ?? '')),
+            // Quantidade de faces associadas, quando o terminal informa (UserInfo.numOfFace).
+            'faces' => isset($usuario['numOfFace']) && is_numeric($usuario['numOfFace']) ? (int) $usuario['numOfFace'] : null,
         ], fn ($v) => $v !== null));
     }
 

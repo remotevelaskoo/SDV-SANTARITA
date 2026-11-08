@@ -25,6 +25,7 @@ export function camerasDoPosto({ implantacaoId, postoId, modo = 'captura' }) {
         ativa: false,
         stream: null,
         capturas: { frente: null, verso: null },
+        enviando: false,
 
         async init() {
             await this.carregar();
@@ -34,7 +35,18 @@ export function camerasDoPosto({ implantacaoId, postoId, modo = 'captura' }) {
         },
 
         destroy() {
+            this.encerrar();
+        },
+
+        /** Cancelar, salvar ou novo atendimento: fecha a câmera e descarta as prévias. */
+        encerrar() {
             this.fechar();
+            Object.keys(this.capturas).forEach((lado) => {
+                if (this.capturas[lado]) {
+                    URL.revokeObjectURL(this.capturas[lado]);
+                }
+                this.capturas[lado] = null;
+            });
         },
 
         async carregar() {
@@ -52,6 +64,18 @@ export function camerasDoPosto({ implantacaoId, postoId, modo = 'captura' }) {
         },
 
         /** Pede permissão de câmera (somente vídeo) para liberar a lista com nomes. */
+        /** Botão "Fotografar documento" na abertura do cadastro rápido (docs/021 §13). */
+        async fotografarDocumento() {
+            if (!this.ativa) {
+                if (this.escolhas.documentos) {
+                    await this.abrir();
+                } else {
+                    await this.autorizar();
+                }
+            }
+            this.$refs.camera?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+        },
+
         async autorizar() {
             try {
                 const teste = await navigator.mediaDevices.getUserMedia(restricoesVideo(null));
@@ -108,8 +132,18 @@ export function camerasDoPosto({ implantacaoId, postoId, modo = 'captura' }) {
             canvas.getContext('2d').drawImage(video, 0, 0);
             canvas.toBlob((blob) => {
                 const arquivo = new File([blob], `${lado}.jpg`, { type: 'image/jpeg' });
+                if (this.capturas[lado]) {
+                    URL.revokeObjectURL(this.capturas[lado]);
+                }
                 this.capturas[lado] = URL.createObjectURL(blob);
-                this.$wire.upload(lado === 'verso' ? 'capturaVerso' : 'capturaFrente', arquivo);
+                // A leitura começa sozinha no servidor quando a captura confirmada chega.
+                this.enviando = true;
+                this.$wire.upload(
+                    lado === 'verso' ? 'capturaVerso' : 'capturaFrente',
+                    arquivo,
+                    () => { this.enviando = false; },
+                    () => { this.enviando = false; this.aviso = 'Não foi possível enviar a captura. Tente novamente.'; },
+                );
             }, 'image/jpeg', 0.92);
         },
 

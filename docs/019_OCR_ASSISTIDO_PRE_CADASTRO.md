@@ -205,3 +205,7 @@ A chave `SDV_PRE_CADASTRO_ETAPA_DOCUMENTO` foi removida; nenhuma configuração 
 - o envio sempre fica em `aguardando`; o OCR não aprova, não cria autorização nem credencial.
 
 As melhorias de selfie do commit `a41bac6` (envio ao tirar a foto e Continuar desabilitado durante o envio) foram mantidas. Cobertura em `tests/Feature/PreCadastroDocumentoObrigatorioTest.php`, somente com dados e imagens sintéticos. A regra do verso por tipo de documento aguarda confirmação do Product Owner na homologação.
+
+## 13. Uso no cadastro rápido (AJ-010)
+
+O cadastro rápido da Validação de Entrada usa o mesmo leitor (`CadastroAssistidoDocumento` → `OcrServicoDocumento`) do formulário público, sem motor novo. A leitura começa sozinha após a captura; RG/CIN exige o verso. O número do documento passa a ser preenchido no campo próprio (nunca convertido em CPF). As imagens do documento continuam temporárias e não são guardadas. Ver [SDV-OPE-021](021_CADASTRO_RAPIDO_FOTO_OCR_E_FACIAL.md).

@@ -6,7 +6,8 @@
  * posto. Funções puras, testadas em tests/js.
  */
 
-export const FINALIDADES = ['documentos', 'placas'];
+/** documentos e placas (SDV-OPE-018) e rosto: foto atual da pessoa (AJ-010). */
+export const FINALIDADES = ['documentos', 'placas', 'rosto'];
 
 export function chavePreferencia(implantacaoId, postoId) {
     return `sdv.cameras.${implantacaoId || 'sem-implantacao'}.${postoId || 'sem-posto'}`;
@@ -55,6 +56,16 @@ export function resolverDispositivo(dispositivos, preferencia) {
 }
 
 /** Somente vídeo: o microfone nunca é solicitado. */
+/** Câmera do rosto: a escolhida para o posto ou, sem ela, a frontal do dispositivo. */
+export function restricoesRosto(deviceId) {
+    return {
+        audio: false,
+        video: deviceId
+            ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 960 } }
+            : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+    };
+}
+
 export function restricoesVideo(deviceId) {
     return {
         audio: false,

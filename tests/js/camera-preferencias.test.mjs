@@ -70,3 +70,20 @@ test('finalidade inválida é recusada e preferência corrompida não quebra', (
     armazenamento.setItem('k', '{inválido');
     assert.deepEqual(lerPreferencias(armazenamento, 'k'), {});
 });
+
+test('AJ-010: câmera do rosto é finalidade própria, só vídeo e frontal sem preferência', async () => {
+    const { restricoesRosto } = await import('../../resources/js/camera-preferencias.js');
+    const armazenamento = navegador();
+    const chave = chavePreferencia('imp-1', 'principal');
+    salvarPreferencia(armazenamento, chave, 'documentos', camera('cam-doc', 'Documentos'));
+    salvarPreferencia(armazenamento, chave, 'rosto', camera('cam-rosto', 'Rosto'));
+
+    const preferencias = lerPreferencias(armazenamento, chave);
+    assert.equal(preferencias.documentos.deviceId, 'cam-doc');
+    assert.equal(preferencias.rosto.deviceId, 'cam-rosto');
+
+    assert.deepEqual(restricoesRosto(null).video.facingMode, 'user');
+    assert.equal(restricoesRosto(null).audio, false);
+    assert.deepEqual(restricoesRosto('cam-rosto').video.deviceId, { exact: 'cam-rosto' });
+    assert.equal(restricoesRosto('cam-rosto').audio, false);
+});
