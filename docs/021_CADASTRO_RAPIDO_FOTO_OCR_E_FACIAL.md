@@ -249,3 +249,48 @@ Puxar a atualização de `codex/aj010-cadastro-rapido-foto-ocr` e ler este docum
   - `tests/Feature/Aj010/NomePorVozTest.php` (7 testes): escopo do microfone, preenchimento sem salvar/enviar/autorizar, vazio preserva, validação, OCR posterior respeita o nome, etapa Foto/atendimento encerrado/permissão, visitante sem imóvel continua sem autorização;
   - navegador (Playwright, Chromium com reconhecimento simulado), computador 1366×900 e celular Pixel 7: teclado, mensagem de escuta, cancelamento, erro, nova tentativa, digitação durante a escuta, sem rolagem horizontal e sem erro de JavaScript; navegador sem a API mostra só o aviso.
 - **Pendente:** teste manual com microfone real (permissão inicial, ruído da portaria, convivência com a câmera) nos computadores e celulares usados na portaria.
+
+
+## 13. Cadastro manual em destaque — complemento aprovado pelo PO em 07/11/2026
+
+**Situação:** implementado na branch `codex/aj010-destaque-cadastro-manual` em 08/11/2026, aguardando revisão e merge (§13.4). O PO havia identificado dificuldade para encontrar a entrada manual.
+
+### 13.1 Resultado esperado
+
+Ao abrir o cadastro rápido, o porteiro deve encontrar imediatamente duas ações claras: **Fotografar documento** e **Cadastrar manualmente**. A entrada manual deve ser um botão de destaque no topo da etapa Documento, antes da câmera e das instruções, visível sem expandir menus ou rolar a tela em computador e celular. Não deixar essa opção apenas como link discreto, dentro de detalhes ou como alternativa apresentada somente após erro do OCR.
+
+Usar botões com legibilidade e área de toque adequadas ao Design System. Em telas largas podem ficar lado a lado; em telas pequenas, empilhados. Não alterar o cadastro completo nem adicionar novos caminhos ou formulários duplicados.
+
+### 13.2 Comportamento
+
+- **Cadastrar manualmente** abre diretamente a etapa Conferência e coloca o foco no Nome completo, reutilizando o fluxo manual existente e suas validações.
+- O operador pode digitar ou usar o microfone do nome. Não exigir tentativa de fotografia documental, OCR ou permissão de câmera/microfone para iniciar a digitação.
+- A escolha não salva automaticamente, não cria pessoa, vínculo ou autorização e não envia nada ao terminal.
+- Preservar dados já digitados/conferidos e não apagar o atendimento ao alternar para entrada manual; encerrar qualquer captura/reconhecimento pendente para impedir retorno tardio sobrescrevendo campos.
+- Manter a etapa Foto da pessoa, as ações finais e suas regras já existentes. Entrar manualmente não dispensa a fotografia nem muda sua regra vigente.
+- Preservar telefone e imóvel opcionais (§10.1.1), microfone somente no Nome completo do cadastro rápido (§12), permissões, vigência e autorização exigidas para a facial.
+
+### 13.3 Critérios de aceite e orientação ao Claude
+
+1. A ação **Cadastrar manualmente** aparece com destaque no primeiro bloco do cadastro rápido, antes da câmera, sem abrir menu, em computador e celular.
+2. Clique ou ativação por teclado abre Conferência, com foco no nome e sem iniciar câmera, microfone ou OCR.
+3. Digitação, nome por voz e continuação para Foto funcionam pelo mesmo fluxo existente; nenhuma gravação ou integração é disparada pela escolha do modo.
+4. Dados preenchidos são preservados; processamento atrasado não sobrescreve correções ao trocar para manual.
+5. Cadastro e fotografia continuam salvando sem telefone, sem imóvel e sem ambos; ausência de imóvel não gera vínculo fictício ou autorização automática.
+6. Validar visualmente computador e celular, foco visível, contraste, área de toque e ausência de rolagem horizontal. Registrar verificações efetivamente realizadas.
+
+Claude: partir da main atual, implementar somente este ajuste visual/de navegação e reaproveitar a ação manual existente. Incluir testes pertinentes de abertura da etapa manual e preservação das regras; atualizar esta seção e o acompanhamento do documento 013 com os resultados reais. Não registrar como implementado antes da entrega. Não fazer merge nem implantação automaticamente.
+
+### 13.4 Implementação (08/11/2026)
+
+- **Abertura:** o topo da etapa Documento (`partials/captura-documento.blade.php`) tem dois botões grandes (48 px de altura): **Fotografar documento** (primário) e **Cadastrar manualmente** (secundário). Ficam lado a lado a partir de 640 px e empilhados no celular. O bloco rola para a área visível ao abrir o cadastro rápido. O título do bloco da câmera passou a “Foto do documento” para não repetir o nome do botão.
+- **Sem caminho duplicado:** o antigo link “Digitar os dados manualmente”, no fim do bloco, foi substituído pelo novo botão; os dois chamam o mesmo `digitarManualmente`. O cadastro completo não mudou.
+- **Fotografar documento:** abre a câmera já escolhida para o posto ou pede a autorização, e leva a tela até a câmera.
+- **Cadastrar manualmente:** fecha a câmera do documento no navegador, descarta capturas temporárias, abre a Conferência e põe o foco no Nome completo (evento `cadastro-rapido-foco-nome`). Não inicia câmera, microfone nem OCR, e não grava pessoa, vínculo, autorização ou operação de terminal. Os dados já digitados e o atendimento são preservados. Exige `validacao.registrar` e `pessoas.gerenciar`.
+- **Retorno atrasado:** upload ou leitura de documento que chegue depois de o operador sair da etapa Documento é descartado e não sobrescreve o que foi digitado.
+- **Regras mantidas:** etapa Foto, ações finais, telefone e imóvel opcionais (§10.1.1), voz só no Nome completo (§12), permissões e regras de autorização da facial.
+- **Testes executados:**
+  - `tests/Feature/Aj010/CadastroManualDestaqueTest.php` (5 testes): botões antes da câmera e fora de menus, um único caminho manual; abertura da Conferência com foco sem gravar nada e preservando dados; leitura atrasada descartada; fluxo manual até a Foto, salvando sem telefone e sem imóvel e sem vínculo ou autorização; permissão.
+  - Suíte completa `php artisan test`: 487 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
+  - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: os dois botões visíveis sem rolar depois de abrir o cadastro rápido e acima da câmera; ativação por teclado (Enter) abre a Conferência com foco no Nome completo; nenhuma chamada de câmera ou de voz ao escolher a entrada manual; digitação funciona; sem rolagem horizontal e sem erro de JavaScript. Contraste seguiu as cores dos botões do Design System; não foi medido com ferramenta.
+- **Não verificado:** dispositivos reais da portaria, Safari e Firefox.

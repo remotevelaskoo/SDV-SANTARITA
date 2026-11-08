@@ -609,6 +609,7 @@ trait CadastroRapidoAtendimento
     /** Leitura útil leva direto à conferência (chamado pela captura do documento). */
     protected function avancarParaConferencia(): void
     {
+        $this->exigirPermissoesCadastro();
         $this->quickEtapa = 'conferencia';
     }
 

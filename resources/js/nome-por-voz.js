@@ -146,6 +146,16 @@ export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor } = {}
             this.mensagem = '';
         },
 
+        /** "Cadastrar manualmente" leva o foco direto ao Nome completo (docs/021 §13). */
+        focarNome() {
+            const focar = () => this.$el?.querySelector?.('#quick-name')?.focus();
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(focar);
+            } else {
+                focar();
+            }
+        },
+
         /** Digitação durante a escuta vence a transcrição pendente. */
         digitou() {
             if (this.ouvindo) {

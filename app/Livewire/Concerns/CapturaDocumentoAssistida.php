@@ -69,6 +69,9 @@ trait CapturaDocumentoAssistida
     /** Leitura automática ao receber a captura confirmada (sem botão "analisar"). */
     public function updatedCapturaFrente(): void
     {
+        if ($this->capturaForaDaEtapaDocumento()) {
+            return;
+        }
         $this->resetErrorBag(['capturaFrente', 'capturaVerso']);
         if ($this->capturaFrente !== null && (! $this->versoObrigatorio() || $this->capturaVerso !== null)) {
             $this->analisarDocumento(app(CadastroAssistidoDocumento::class));
@@ -77,6 +80,9 @@ trait CapturaDocumentoAssistida
 
     public function updatedCapturaVerso(): void
     {
+        if ($this->capturaForaDaEtapaDocumento()) {
+            return;
+        }
         $this->resetErrorBag(['capturaFrente', 'capturaVerso']);
         if ($this->capturaFrente !== null && $this->capturaVerso !== null) {
             $this->analisarDocumento(app(CadastroAssistidoDocumento::class));
@@ -90,6 +96,9 @@ trait CapturaDocumentoAssistida
 
     public function analisarDocumento(CadastroAssistidoDocumento $assistente): void
     {
+        if ($this->capturaForaDaEtapaDocumento()) {
+            return;
+        }
         if (! $this->podeCapturarDocumento()) {
             $this->descartarArquivosTemporarios();
             $this->addError('capturaFrente', 'Você não tem permissão para capturar documentos.');
@@ -209,6 +218,24 @@ trait CapturaDocumentoAssistida
         $this->camposConferencia = [];
         $this->avisoLeitura = null;
         $this->avancarParaConferencia();
+        // Foco no Nome completo; a câmera do documento já foi fechada no navegador.
+        $this->dispatch('cadastro-rapido-foco-nome');
+    }
+
+    /**
+     * Upload ou leitura que chega depois de o operador sair da etapa Documento
+     * (por exemplo, ao escolher "Cadastrar manualmente") é descartado e não
+     * sobrescreve o que já foi digitado.
+     */
+    private function capturaForaDaEtapaDocumento(): bool
+    {
+        // Sem permissão de captura, o caminho normal já recusa com a mensagem própria.
+        if (! property_exists($this, 'quickEtapa') || $this->quickEtapa === 'documento' || ! $this->podeCapturarDocumento()) {
+            return false;
+        }
+        $this->descartarArquivosTemporarios();
+
+        return true;
     }
 
     public function podeCapturarDocumento(): bool
