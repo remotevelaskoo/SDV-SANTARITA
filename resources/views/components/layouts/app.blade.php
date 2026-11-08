@@ -15,7 +15,7 @@
         <script>(function(){var d=document.documentElement,k=d.getAttribute('data-nav-key');try{if(k&&window.localStorage.getItem(k)==='compact'){d.setAttribute('data-sidebar','compact');}}catch(e){}})();</script>
         <meta name="description" content="Indicadores de acesso, movimentações recentes e alertas críticos do controle de acesso do condomínio Santa Rita.">
 
-        <title>{{ $title ?? config('app.name') }} — SDV Access Santa Rita</title>
+        <title>{{ $title ?? config('app.name') }} — SDV One · Santa Rita</title>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
@@ -26,12 +26,8 @@
         <div class="app-shell">
             <aside class="sidebar" id="barra-lateral" aria-label="Navegação principal" @if ($navKey) data-nav-key="{{ $navKey }}" @endif>
                 <div class="sidebar__brand-row">
-                    <a class="brand" href="{{ route('home') }}" aria-label="SDV Access Santa Rita — Início">
-                        <span class="brand__mark" aria-hidden="true">SDV</span>
-                        <span>
-                            <strong>SDV Access</strong>
-                            <small>Santa Rita</small>
-                        </span>
+                    <a class="brand" href="{{ route('home') }}" aria-label="SDV One — Início">
+                        <x-sdv-one-logo />
                     </a>
                 </div>
 
@@ -90,8 +86,11 @@
                         </button>
 
                         <div class="operational-header__title">
-                            <h1>{{ $heading ?? $title ?? config('app.name') }}</h1>
-                            <p>{{ $headingDescription ?? 'Operador de portaria · Portaria Principal' }}</p>
+                            <span class="operational-header__title-icon" aria-hidden="true"><x-icon name="building" /></span>
+                            <div class="operational-header__title-copy">
+                                <h1>{{ $heading ?? $title ?? config('app.name') }}</h1>
+                                <p>{{ $headingDescription ?? 'Operador de portaria · Portaria Principal' }}</p>
+                            </div>
                         </div>
 
                         <div class="operational-header__actions">
@@ -181,8 +180,8 @@
             <div class="mobile-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="gaveta-navegacao-titulo" tabindex="-1">
                 <div class="mobile-drawer__header">
                     <div class="brand mobile-brand">
-                        <span class="brand__mark" aria-hidden="true">SDV</span>
-                        <span><strong id="gaveta-navegacao-titulo">SDV Access</strong><small>Santa Rita</small></span>
+                        <span id="gaveta-navegacao-titulo" class="sr-only">Menu SDV One</span>
+                        <x-sdv-one-logo />
                     </div>
                     <button class="mobile-drawer__close" type="button" aria-label="Fechar menu" data-drawer-close>
                         <x-icon name="x" />
