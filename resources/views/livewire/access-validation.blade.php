@@ -37,63 +37,222 @@
             </div>
             <div class="validation-person-actions">
                 <time datetime="{{ now()->toAtomString() }}">{{ now()->format('d/m/Y · H:i') }}</time>
-                <x-ui.button variant="warning" size="sm" wire:click="openQuickRegistration">
-                    Pessoa não encontrada? Cadastro rápido
-                </x-ui.button>
+                @if (auth()->user()?->hasPermission('pessoas.gerenciar'))
+                    <x-ui.button variant="warning" size="sm" wire:click="openQuickRegistration">
+                        Pessoa não encontrada? Cadastro rápido
+                    </x-ui.button>
+                @endif
             </div>
         </header>
 
         @if ($quickRegistrationOpen)
+            @php
+                $etapas = [
+                    'documento' => ['label' => 'Documento', 'description' => 'Fotografar e ler'],
+                    'conferencia' => ['label' => 'Conferência', 'description' => 'Conferir e corrigir'],
+                    'foto' => ['label' => 'Foto', 'description' => 'Foto atual da pessoa'],
+                ];
+                $indiceEtapa = array_search($quickEtapa, array_keys($etapas), true) + 1;
+                $existente = $this->cadastroExistenteResumo();
+                $terminaisRapido = $this->terminaisCadastroRapido();
+                $conferirBadge = fn (string $campo) => in_array($campo, $camposConferencia, true);
+            @endphp
             <section class="quick-registration" aria-labelledby="quick-registration-title">
                 <header>
                     <div>
                         <span><x-icon name="users" /></span>
-                        <div><h3 id="quick-registration-title">Cadastro rápido no atendimento</h3><p>Registre somente os dados mínimos sem perder a validação em andamento.</p></div>
+                        <div><h3 id="quick-registration-title">Cadastro rápido no atendimento</h3><p>Documento, conferência e foto sem sair da validação em andamento.</p></div>
                     </div>
                     <x-ui.badge variant="warning">Cadastro provisório</x-ui.badge>
                 </header>
+
+                <x-ui.stepper class="quick-registration__etapas" :steps="array_values($etapas)" :current="$indiceEtapa" />
 
                 <x-ui.alert variant="warning" title="Cadastro não significa entrada liberada">
                     Depois de salvar, o porteiro retorna a este atendimento. A autorização continua pendente e deve ser conferida separadamente.
                 </x-ui.alert>
 
-                @if ($this->podeCapturarDocumento())
-                    @include('livewire.partials.captura-documento')
+                @if ($quickEtapa === 'documento' && $this->podeCapturarDocumento())
+                    <div class="quick-registration__etapa">
+                        @include('livewire.partials.captura-documento')
+                    </div>
                 @endif
 
+                @unless ($quickEtapa === 'documento' && $this->podeCapturarDocumento())
                 <form wire:submit="saveQuickRegistration">
-                    <div class="quick-registration__fields">
-                        <div><x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />@if (in_array('quickName', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickName')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
-                        <div><x-ui.field id="quick-document" label="CPF ou documento" wire:model.blur="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />@if (in_array('quickDocument', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocument')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
-                        <div><x-ui.field id="quick-birth" label="Data de nascimento" type="date" wire:model.blur="quickBirthDate" :error="$errors->first('quickBirthDate')" />@if (in_array('quickBirthDate', $camposConferencia, true))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickBirthDate')"><span class="ui-button__content">Confirmar</span></button></span>@endif</div>
-                        <x-ui.field id="quick-phone" label="Telefone" wire:model="quickPhone" :error="$errors->first('quickPhone')" required />
-                        <x-ui.select id="quick-access-type" label="Tipo de acesso" wire:model.live="quickAccessType" :error="$errors->first('quickAccessType')" required>
-                            <option value="visitante">Visitante</option>
-                            <option value="prestador">Prestador</option>
-                            <option value="morador">Morador</option>
-                            <option value="outro">Outro</option>
-                        </x-ui.select>
-                        <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante ou prestador." :error="$errors->first('quickResponsible')" />
-                        <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" help="Obrigatório — o vínculo desta pessoa precisa de um imóvel." :error="$errors->first('quickPropertyCode')" required />
-                    </div>
+                    @if ($quickEtapa !== 'foto')
+                        @if (($analiseDocumento['status'] ?? null) === 'sugestao')
+                            <x-ui.alert variant="info" title="Dados sugeridos pela leitura">
+                                Confira os campos preenchidos. Os marcados com "Requer conferência" precisam da sua confirmação. A leitura não aprova cadastro nem libera acesso.
+                                @if (! empty($analiseDocumento['extras']['validade']['valor']))<br>Validade do documento: {{ $analiseDocumento['extras']['validade']['valor'] }}@endif
+                            </x-ui.alert>
+                            @if ($analiseDocumento['duplicidade'])
+                                <x-ui.alert variant="danger" title="Possível duplicidade">Já existe pessoa com este CPF. Use o cadastro existente em vez de criar outro.</x-ui.alert>
+                            @endif
+                        @endif
+                        @if ($avisoLeitura)
+                            <x-ui.alert variant="warning" title="Suas correções foram mantidas">{{ $avisoLeitura }}</x-ui.alert>
+                        @endif
 
-                    @if ($quickDuplicateFound)
-                        <x-ui.alert variant="danger" title="Pessoa já cadastrada">
-                            Não criaremos outro registro com este documento. Localize a pessoa existente e vincule-a ao atendimento.
-                        </x-ui.alert>
+                        <div class="quick-registration__fields">
+                            <div class="nome-por-voz" x-data="nomePorVoz()" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()">
+                                <x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />
+                                {{-- Voz só neste campo (docs/021 §12): começa no clique, não salva nem envia nada. --}}
+                                <div class="nome-por-voz__acoes">
+                                    <template x-if="suportado">
+                                        <span class="nome-por-voz__botoes">
+                                            <button type="button" class="ui-button ui-button--secondary ui-button--sm nome-por-voz__microfone" x-on:click="alternar()" :aria-pressed="ouvindo.toString()" :aria-label="ouvindo ? 'Cancelar' : 'Preencher por voz'" :title="ouvindo ? 'Cancelar o preenchimento por voz' : 'Preencher por voz'">
+                                                <span class="ui-button__content">
+                                                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/></svg>
+                                                    <span x-text="ouvindo ? 'Cancelar' : 'Preencher por voz'"></span>
+                                                </span>
+                                            </button>
+                                        </span>
+                                    </template>
+                                    <small class="nome-por-voz__mensagem" role="status" aria-live="polite" x-text="suportado ? mensagem : textoSemSuporte"></small>
+                                </div>
+                                @if ($conferirBadge('quickName'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickName')"><span class="ui-button__content">Confirmar</span></button></span>@endif
+                            </div>
+                            <div>
+                                <x-ui.field id="quick-document" label="CPF" wire:model.blur="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />
+                                @if ($conferirBadge('quickDocument'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocument')"><span class="ui-button__content">Confirmar</span></button></span>@endif
+                            </div>
+                            <div>
+                                <x-ui.field id="quick-birth" label="Data de nascimento" type="date" wire:model.blur="quickBirthDate" :error="$errors->first('quickBirthDate')" />
+                                @if ($conferirBadge('quickBirthDate'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickBirthDate')"><span class="ui-button__content">Confirmar</span></button></span>@endif
+                            </div>
+                            <div>
+                                <x-ui.field id="quick-doc-numero" :label="$capturaTipoDocumento === 'rg_cin' ? 'Número do RG/CIN' : 'Número da CNH'" wire:model.blur="quickDocNumero" help="Guardado como documento próprio; não substitui o CPF." :error="$errors->first('quickDocNumero')" />
+                                @if ($conferirBadge('quickDocNumero'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocNumero')"><span class="ui-button__content">Confirmar</span></button></span>@endif
+                            </div>
+                            <x-ui.field id="quick-phone" label="Telefone (opcional)" wire:model="quickPhone" placeholder="(35) 99999-0000" help="Se informado, use DDD e número." :error="$errors->first('quickPhone')" />
+                            <x-ui.select id="quick-access-type" label="Tipo de acesso" wire:model.live="quickAccessType" :error="$errors->first('quickAccessType')" required>
+                                <option value="visitante">Visitante</option>
+                                <option value="prestador">Prestador</option>
+                                <option value="morador">Morador</option>
+                                <option value="turista">Turista</option>
+                                <option value="outro">Outro</option>
+                            </x-ui.select>
+                            <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante, prestador ou turista." :error="$errors->first('quickResponsible')" />
+                            <x-ui.field id="quick-property" label="Código do imóvel (opcional)" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="$quickAccessType === 'turista' ? 'Turista não ganha vínculo com imóvel.' : 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.'" :error="$errors->first('quickPropertyCode')" />
+                        </div>
+
+                        @if ($quickDuplicateFound)
+                            <x-ui.alert variant="danger" title="Pessoa já cadastrada">
+                                Não criaremos outro registro com este documento.
+                                @if ($existente)
+                                    Cadastro encontrado: <strong>{{ $existente['nome'] }}</strong> ({{ $existente['documento'] }}).
+                                @endif
+                                <x-slot:action>
+                                    <x-ui.button type="button" variant="secondary" size="sm" wire:click="usarCadastroExistente">Usar este cadastro</x-ui.button>
+                                </x-slot:action>
+                            </x-ui.alert>
+                        @elseif ($quickPessoaExistenteId)
+                            <x-ui.alert variant="info" title="Usando o cadastro existente">
+                                Identidade, contato e foto atuais não serão sobrescritos. O atendimento será vinculado a esta pessoa.
+                            </x-ui.alert>
+                        @endif
+
+                        <label class="quick-registration__notes" for="quick-notes">
+                            <span>Observação do cadastro rápido</span>
+                            <textarea id="quick-notes" wire:model="quickNotes" maxlength="200" rows="3" placeholder="Exemplo: documento será complementado pela administração…"></textarea>
+                            <small>{{ mb_strlen($quickNotes) }}/200 caracteres</small>
+                        </label>
+
+                        <footer>
+                            <x-ui.button type="button" variant="secondary" wire:click="cancelQuickRegistration">Cancelar e voltar</x-ui.button>
+                            @if ($this->podeCapturarDocumento())
+                                <x-ui.button type="button" variant="ghost" wire:click="irParaEtapa('documento')">Fotografar documento de novo</x-ui.button>
+                            @endif
+                            <x-ui.button type="button" variant="primary" wire:click="irParaEtapa('foto')" wire:loading.attr="disabled">Dados conferidos: fotografar pessoa</x-ui.button>
+                        </footer>
+                    @else
+                        @php($cameras = $this->contextoCameras())
+                        <div class="foto-pessoa" x-data="fotoPessoaCamera({ implantacaoId: @js($cameras['implantacao']), postoId: @js($cameras['posto']) })" x-on:cadastro-rapido-encerrado.window="encerrar()">
+                            <div class="foto-pessoa__resumo">
+                                <strong>{{ $quickName }}</strong>
+                                <small>CPF {{ \App\Support\NormalizadorBusca::mascararDocumento($quickDocument) }} · {{ ucfirst($quickAccessType) }}{{ $quickPropertyCode ? ' · '.$quickPropertyCode : '' }}</small>
+                                <button type="button" class="sensitive-reveal" wire:click="irParaEtapa('conferencia')">Corrigir dados</button>
+                            </div>
+
+                            <p class="foto-pessoa__aviso">Foto atual do rosto, separada do documento. Não é prova de vida nem reconhecimento facial.</p>
+                            <p class="equipamento-management-aviso" x-show="aviso" x-text="aviso"></p>
+
+                            <label class="ui-field" x-show="cameras.length > 1">
+                                <span class="ui-field__label">Câmera do rosto</span>
+                                <span class="ui-select-control">
+                                    <select class="ui-field__control ui-field__select" x-model="cameraId" x-on:change="escolher($event.target.value)">
+                                        <option value="">Câmera frontal do dispositivo</option>
+                                        <template x-for="camera in cameras" :key="camera.deviceId">
+                                            <option :value="camera.deviceId" x-text="camera.label || 'Câmera sem nome'"></option>
+                                        </template>
+                                    </select>
+                                </span>
+                            </label>
+
+                            <div class="foto-pessoa__visor" x-show="ativa">
+                                <video x-ref="video" autoplay playsinline muted></video>
+                                <span class="foto-pessoa__moldura" aria-hidden="true"></span>
+                            </div>
+                            <figure class="foto-pessoa__previa" x-show="previa && !ativa">
+                                <img :src="previa" alt="Prévia da foto da pessoa">
+                                <figcaption x-text="enviando ? 'Enviando foto…' : 'Prévia da foto'"></figcaption>
+                            </figure>
+
+                            <input type="file" accept="image/*" capture="user" class="sr-only" x-ref="nativa" x-on:change="recebidaDaCameraNativa($event)" tabindex="-1" aria-hidden="true">
+
+                            <div class="equipamento-management-acoes">
+                                <button type="button" class="ui-button ui-button--secondary ui-button--sm" x-show="!ativa && !previa" x-on:click="abrir()" :disabled="abrindo"><span class="ui-button__content">Abrir câmera</span></button>
+                                <button type="button" class="ui-button ui-button--primary ui-button--sm" x-show="ativa" x-on:click="fotografar()"><span class="ui-button__content">Fotografar</span></button>
+                                <button type="button" class="ui-button ui-button--ghost ui-button--sm" x-show="previa" x-on:click="refazer()" :disabled="enviando"><span class="ui-button__content">Refazer foto</span></button>
+                            </div>
+                            @error('fotoPessoa')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
+
+                            @if ($quickPessoaExistenteId && ($existente['tem_foto'] ?? false))
+                                <x-ui.checkbox id="quick-substituir-foto" label="Substituir a foto atual do cadastro" description="Sem marcar, a foto existente é mantida e esta captura é descartada. A anterior fica no histórico." wire:model="quickSubstituirFoto" />
+                            @endif
+                        </div>
+
+                        @if ($terminaisRapido->isNotEmpty())
+                            <div class="quick-registration__terminal">
+                                <x-ui.select id="quick-terminal" label="Terminal facial de destino" wire:model.live="quickTerminalId" :error="$errors->first('quickTerminalId')">
+                                    <option value="">Selecione o terminal</option>
+                                    @foreach ($terminaisRapido as $terminal)
+                                        <option value="{{ $terminal['id'] }}">{{ $terminal['nome'] }} — {{ $terminal['ponto'] }}{{ $terminal['do_posto'] ? ' (seu posto)' : '' }}{{ $terminal['simulador'] ? ' [SIMULADOR]' : '' }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                <x-ui.checkbox id="quick-terminal-confirmado" label="Confirmo o terminal escolhido" description="Envia o cadastro (e a foto, quando habilitado) ao terminal. Não abre cancela nem catraca." wire:model.live="quickTerminalConfirmado" />
+                                @error('quickTerminalConfirmado') <small class="ui-field__error" role="alert">{{ $message }}</small> @enderror
+                            </div>
+                        @endif
+
+                        <footer>
+                            <x-ui.button type="button" variant="secondary" wire:click="cancelQuickRegistration">Cancelar</x-ui.button>
+                            <x-ui.button type="submit" variant="success" wire:loading.attr="disabled" wire:target="saveQuickRegistration,saveQuickRegistrationAndSend,fotoPessoa">Salvar cadastro</x-ui.button>
+                            @if ($terminaisRapido->isNotEmpty())
+                                <x-ui.button type="button" variant="primary" wire:click="saveQuickRegistrationAndSend" wire:loading.attr="disabled" wire:target="saveQuickRegistration,saveQuickRegistrationAndSend,fotoPessoa">Salvar e enviar para a facial</x-ui.button>
+                            @endif
+                        </footer>
                     @endif
-
-                    <label class="quick-registration__notes" for="quick-notes">
-                        <span>Observação do cadastro rápido</span>
-                        <textarea id="quick-notes" wire:model="quickNotes" maxlength="200" rows="3" placeholder="Exemplo: documento será complementado pela administração…"></textarea>
-                        <small>{{ mb_strlen($quickNotes) }}/200 caracteres</small>
-                    </label>
-
-                    <footer>
-                        <x-ui.button type="button" variant="secondary" wire:click="cancelQuickRegistration">Cancelar e voltar</x-ui.button>
-                        <x-ui.button type="submit" variant="success">Salvar e voltar à validação</x-ui.button>
-                    </footer>
                 </form>
+                @endunless
+            </section>
+        @endif
+
+        @if ($quickResultado && ! $quickRegistrationOpen)
+            <section class="quick-resultado" aria-label="Resultado do cadastro rápido">
+                @foreach (['cadastro' => 'Cadastro no SDV', 'foto' => 'Foto da pessoa'] as $chave => $rotulo)
+                    <x-ui.alert :variant="$quickResultado[$chave]['variant']" :title="$rotulo.': '.$quickResultado[$chave]['title']">{{ $quickResultado[$chave]['message'] }}</x-ui.alert>
+                @endforeach
+                @if ($quickResultado['facial'])
+                    <x-ui.alert :variant="$quickResultado['facial']['variant']" :title="'Terminal facial — cadastro: '.$quickResultado['facial']['title']">
+                        {{ $quickResultado['facial']['message'] }}
+                        @foreach ($quickResultado['facial']['avisos'] ?? [] as $aviso)<br>{{ $aviso }}@endforeach
+                    </x-ui.alert>
+                    @if ($quickResultado['facial']['foto'] ?? null)
+                        <x-ui.alert :variant="$quickResultado['facial']['foto']['variant']" :title="'Terminal facial — foto: '.$quickResultado['facial']['foto']['title']">{{ $quickResultado['facial']['foto']['message'] }}</x-ui.alert>
+                    @endif
+                @endif
             </section>
         @endif
 

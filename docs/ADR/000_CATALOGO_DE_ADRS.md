@@ -2,7 +2,7 @@
 ## Registro e governança de decisões arquiteturais
 
 **Documento:** SDV-ADR-CAT-000
-**Versão:** 1.0.30
+**Versão:** 1.0.31
 **Status:** Aprovado
 **Produto:** SDV Access — Implantação Santa Rita
 **Empresa proprietária:** Soluções do Vale Tecnologia
@@ -46,6 +46,7 @@
 | 1.0.28 | 15/10/2026 | Lucas Pastorelli + Codex | Registro do recorte visual privado da foto impressa no documento, sem reconhecimento facial |
 | 1.0.29 | 16/10/2026 | Lucas Pastorelli + Codex | Criação e aprovação do ADR para operação híbrida (publicado na `main` como ADR-016; renumerado para ADR-018 na 1.0.30) |
 | 1.0.30 | 20/10/2026 | Product Owner | Integração da `main` ao PR dos terminais: colisão de número resolvida mantendo ADR-016 (terminais faciais) e ADR-017 (liberação manual) e renumerando a operação híbrida para ADR-018, sem alterar seu conteúdo aprovado |
+| 1.0.31 | 06/11/2026 | Soluções do Vale | ADR-013 revisado para 1.1.0 (Proposto, AJ-010): foto da pessoa no cadastro rápido e envio ao terminal implementados atrás de bandeira, capacidade e homologação; ativação ainda não autorizada |
 
 ---
 
@@ -268,7 +269,7 @@ Urgência operacional não autoriza apagar etapas; decisões emergenciais dever�
 | [ADR-010](ADR-010_OBSERVABILIDADE.md) | Observabilidade | P1 | Aprovado | 011 | homologação integrada |
 | [ADR-011](ADR-011_PYTHON_FASTAPI_PARA_OCR_OU_IA.md) | Python/FastAPI para OCR ou IA | P2 | Proposto | 006, 010, 011, 015 | RapidOCR/ONNX e recorte OpenCV internos escolhidos para prova; produção ainda não aprovada |
 | [ADR-012](ADR-012_ESTRATEGIA_DE_DEPLOY_E_ROLLBACK.md) | Estratégia de deploy e rollback | P1 | Aprovado | 011 | primeira implantação |
-| [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Adiado | 010 | reconhecimento facial |
+| [ADR-013](ADR-013_BIOMETRIA_E_REFERENCIAS_EXTERNAS.md) | Biometria e referências externas | P2 | Proposto (revisão AJ-010) | 010 | reconhecimento facial (v1.1.0: foto da pessoa e envio ao terminal implementados, desligados até homologação) |
 | [ADR-014](ADR-014_PARTICIONAMENTO_E_RETENCAO_DE_EVENTOS.md) | Particionamento e retenção de eventos | P2 | Adiado | 010, 011 | escala futura |
 | [ADR-015](ADR-015_INTEGRACAO_EXTERNA_CONSULTA_DE_CEP.md) | Integração externa: consulta de CEP (ViaCEP) | P2 | Aprovado | 006, 009 | autofill de endereço no P08 e P11 |
 | [ADR-016](ADR-016_INTEGRACAO_DIRETA_TERMINAL_FACIAL_E_PONTO_DE_ACESSO.md) | Integração direta entre terminal facial e ponto de acesso | P1 | Aprovado | ADR-007, ADR-008, ADR-013 | integração facial Santa Rita (v1.1.1: bancada homologada, operação real desligada) |

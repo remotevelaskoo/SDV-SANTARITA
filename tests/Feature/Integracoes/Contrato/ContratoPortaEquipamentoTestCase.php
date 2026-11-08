@@ -7,6 +7,7 @@ use App\Integracoes\Dominio\Dados\CapacidadesDeclaradas;
 use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
+use App\Integracoes\Dominio\Dados\FotoFacialParaEnviar;
 use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
@@ -76,6 +77,18 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
         );
     }
 
+    /** Foto sintética (sem pessoa real) para o contrato do envio de foto (AJ-010). */
+    protected function fotoSintetica(?string $credencialId = null): FotoFacialParaEnviar
+    {
+        $imagem = imagecreatetruecolor(320, 320);
+        imagefill($imagem, 0, 0, imagecolorallocate($imagem, 120, 140, 170));
+        ob_start();
+        imagejpeg($imagem, null, 85);
+        $jpeg = (string) ob_get_clean();
+
+        return new FotoFacialParaEnviar($credencialId ?? (string) Str::uuid7(), hash('sha256', $jpeg), $jpeg, 'image/jpeg');
+    }
+
     /** @return array<string, ResultadoOperacao|ResultadoColetaEventos|CapacidadesDeclaradas|ImagemCapturada> */
     protected function executarTodas(ContextoEquipamento $contexto): array
     {
@@ -87,6 +100,7 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
             'consultar_capacidades' => $porta->consultarCapacidades($contexto),
             'sincronizar_credencial' => $porta->sincronizarCredencial($contexto, $credencial),
             'consultar_sincronizacao' => $porta->consultarSincronizacao($contexto, $credencial->credencialId, null),
+            'enviar_foto_facial' => $porta->enviarFotoFacial($contexto, $this->fotoSintetica($credencial->credencialId)),
             'revogar_credencial' => $porta->revogarCredencial($contexto, $credencial->credencialId, null),
             'coletar_eventos' => $porta->coletarEventos($contexto, null),
             'abertura_remota' => $porta->solicitarAbertura($contexto, $this->comando($contexto)),
@@ -126,6 +140,7 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
             'abertura_remota' => Capacidade::AberturaRemota,
             'consultar_resultado_comando' => Capacidade::ConsultarResultadoComando,
             'capturar_imagem' => Capacidade::CapturarImagem,
+            'enviar_foto_facial' => Capacidade::CredencialFacial,
         ];
 
         foreach ($this->executarTodas($contexto) as $operacao => $resultado) {
@@ -161,6 +176,16 @@ abstract class ContratoPortaEquipamentoTestCase extends TestCase
                 $this->assertTrue($resultado->idExterno === null || is_string($resultado->idExterno));
             }
         }
+    }
+
+    public function test_foto_facial_nao_aparece_em_dump_nem_serializa(): void
+    {
+        $foto = $this->fotoSintetica();
+
+        $this->assertStringContainsString('[IMAGEM OMITIDA]', print_r($foto, true));
+        $this->assertStringNotContainsString($foto->conteudo(), print_r($foto, true));
+        $this->expectException(\LogicException::class);
+        serialize($foto);
     }
 
     public function test_segredo_tecnico_nao_se_converte_em_texto_nem_serializa(): void

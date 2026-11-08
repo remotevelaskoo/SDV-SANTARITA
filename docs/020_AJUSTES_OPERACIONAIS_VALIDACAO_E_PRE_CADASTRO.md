@@ -66,6 +66,7 @@ Tela **Cadastro de pessoa** (`/pessoas/nova`):
 - **Idempotência:** a chave é `envio-facial:{credencial}:{terminal}:{tentativa}`. Repetir com o mesmo conteúdo devolve o pedido existente ("já tinha sido pedido e não foi repetido"). Depois de uma falha, um novo envio gera um novo pedido.
 - **Sincronização facial não é abertura de relé.** O envio só cadastra a pessoa no terminal. Nenhuma operação de abertura é criada.
 - **Sem foto nem template:** a credencial enviada é do tipo `cadastro_pessoa`. A credencial facial continua bloqueada pelo ADR-013.
+- **Atualização AJ-010:** o resultado agora diz “Cadastro confirmado pelo terminal” (não mais “Pessoa cadastrada na facial”) e mostra a foto em linha separada. O envio da foto existe, mas fica desligado até a homologação (ADR-013 §21, `docs/021` §10).
 - **Permissão:** `facial.enviar`, concedida a Porteiro/Caixa, Gestor e Administrador.
 - **Auditoria:** registra `pessoa_cadastrada`, `pessoa_atualizada` (só os nomes dos campos), `facial_envio_solicitado` e `facial_envio_recusado` (com o código do motivo), sempre sem nome, documento ou imagem.
 
@@ -124,6 +125,7 @@ Todas são novas e compatíveis com PostgreSQL. Nenhuma migração publicada foi
 | `SDV_FUSO_OPERACIONAL` | Fuso da portaria (padrão `America/Sao_Paulo`) |
 | `SDV_TURISTA_VALIDADE_HORAS` | Validade da visita, com teto de 24 |
 | `SDV_REVOGACAO_REPETIR_MINUTOS` | Intervalo para repetir a revogação sem comunicação (padrão 15) |
+| `SDV_INTEGRACAO_FOTO_FACIAL` | Envio da foto da pessoa ao terminal (AJ-010); padrão `false`, ligar só após homologação |
 | Senha de câmera ou terminal | Só como referência `env:NOME` cadastrada na tela; a variável `NOME` é definida no ambiente de execução, fora do Git |
 
 ## 11. Testes

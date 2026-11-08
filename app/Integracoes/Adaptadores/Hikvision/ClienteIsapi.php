@@ -56,6 +56,23 @@ class ClienteIsapi
     }
 
     /**
+     * PUT multipart (foto do usuário). Cada parte: [conteúdo, nome do arquivo|null, tipo].
+     * O conteúdo binário só existe em memória durante a chamada.
+     *
+     * @param  array<string, array{0: string, 1: ?string, 2: string}>  $partes
+     */
+    public function putMultipart(ContextoEquipamento $equipamento, string $caminho, array $partes): Response
+    {
+        return $this->enviar($equipamento, function (PendingRequest $r) use ($caminho, $partes) {
+            foreach ($partes as $nome => [$conteudo, $arquivo, $tipo]) {
+                $r = $r->attach($nome, $conteudo, $arquivo, ['Content-Type' => $tipo]);
+            }
+
+            return $r->put($caminho);
+        });
+    }
+
+    /**
      * Lê o corpo JSON de uma resposta 2xx; fora do formato é `resposta_invalida`.
      *
      * @return array<string, mixed>

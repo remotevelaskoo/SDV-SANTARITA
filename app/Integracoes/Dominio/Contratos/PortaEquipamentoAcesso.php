@@ -6,6 +6,7 @@ use App\Integracoes\Dominio\Dados\CapacidadesDeclaradas;
 use App\Integracoes\Dominio\Dados\ComandoAbertura;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
+use App\Integracoes\Dominio\Dados\FotoFacialParaEnviar;
 use App\Integracoes\Dominio\Dados\ImagemCapturada;
 use App\Integracoes\Dominio\Dados\ResultadoColetaEventos;
 use App\Integracoes\Dominio\Dados\ResultadoOperacao;
@@ -33,6 +34,13 @@ interface PortaEquipamentoAcesso
     public function consultarCapacidades(ContextoEquipamento $equipamento): CapacidadesDeclaradas;
 
     public function sincronizarCredencial(ContextoEquipamento $equipamento, CredencialParaSincronizar $credencial): ResultadoOperacao;
+
+    /**
+     * Associa a foto atual da pessoa ao cadastro que já existe no terminal
+     * (AJ-010). Gravar o usuário não é gravar a face: só um resultado
+     * confirmado desta operação permite dizer que a foto chegou ao terminal.
+     */
+    public function enviarFotoFacial(ContextoEquipamento $equipamento, FotoFacialParaEnviar $foto): ResultadoOperacao;
 
     public function revogarCredencial(ContextoEquipamento $equipamento, string $credencialId, ?string $idExterno): ResultadoOperacao;
 

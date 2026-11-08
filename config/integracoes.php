@@ -40,6 +40,12 @@ return [
     // aprovação formal.
     'liberacao_operacional_habilitada' => (bool) env('SDV_INTEGRACAO_LIBERACAO_OPERACIONAL', false),
 
+    // Envio da foto atual da pessoa ao terminal facial (AJ-010, ADR-013 1.1.0).
+    // Desligado até a aprovação das condições do ADR-013 e a homologação do
+    // envio real em bancada (docs/021 §10). Com a flag desligada, a foto
+    // fica salva no SDV e o envio aparece como pendente de habilitação.
+    'foto_facial_habilitada' => (bool) env('SDV_INTEGRACAO_FOTO_FACIAL', false),
+
     // Liberação excepcional por checkbox (ADR-017 §3.6): a observação é
     // opcional; a administração pode torná-la obrigatória.
     'liberacao_excepcional_observacao_obrigatoria' => (bool) env('SDV_LIBERACAO_EXCEPCIONAL_OBSERVACAO_OBRIGATORIA', false),
@@ -129,7 +135,9 @@ return [
                 // Período gravado e devolvido igual; a recusa de acesso depois do fim
                 // ainda não foi observada (exige credencial de teste no terminal).
                 'validade_nativa' => 'em_homologacao',
-                // Biometria depende do ADR-013.
+                // Foto no terminal (AJ-010): implementada no adaptador, sem bancada.
+                // Só sai de "bloqueada" com ADR-013 1.1.0 aprovado e o roteiro
+                // do docs/021 §10 cumprido neste firmware.
                 'credencial_facial' => 'bloqueada',
             ],
         ],

@@ -5,6 +5,7 @@ namespace Tests\Feature\Integracoes\Contrato;
 use App\Integracoes\Adaptadores\Hikvision\HikvisionIsapiAdaptador;
 use App\Integracoes\Dominio\Contratos\PortaEquipamentoAcesso;
 use App\Integracoes\Dominio\Dados\ContextoEquipamento;
+use App\Integracoes\Dominio\Dados\FotoFacialParaEnviar;
 use App\Integracoes\Dominio\Dados\SegredoTecnico;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\Direcao;
@@ -319,5 +320,59 @@ class HikvisionContratoTest extends ContratoPortaEquipamentoTestCase
         $this->terminal(['*/ISAPI/AccessControl/UserInfo/SetUp*' => $this->falhaDeConexao('cURL error 28: Operation timed out after 2000 milliseconds')]);
         $timeout = $this->adaptador()->sincronizarCredencial($this->contexto(), $this->credencial());
         $this->assertSame(ResultadoEquipamento::ConfirmacaoDesconhecida, $timeout->resultado, 'Timeout nunca conta como sucesso.');
+    }
+
+    // ---- Foto da pessoa (AJ-010): implementada, bloqueada até a bancada -------------
+
+    public function test_foto_facial_bloqueada_no_perfil_nao_toca_o_terminal(): void
+    {
+        $resultado = $this->adaptador()->enviarFotoFacial($this->contexto(), $this->fotoSintetica());
+
+        $this->assertSame(ResultadoEquipamento::CapacidadeAusente, $resultado->resultado);
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/ISAPI/Intelligent/'));
+    }
+
+    public function test_foto_facial_vai_por_multipart_ao_usuario_do_terminal_quando_liberada(): void
+    {
+        $this->liberarFotoFacial();
+        $foto = $this->fotoSintetica();
+        $employeeNo = str_replace('-', '', $foto->credencialId);
+
+        $resultado = $this->adaptador()->enviarFotoFacial($this->contexto(), $foto);
+
+        $this->assertSame(ResultadoEquipamento::Confirmado, $resultado->resultado);
+        $this->assertSame($employeeNo, $resultado->idExterno);
+        Http::assertSent(function (Request $r) use ($employeeNo, $foto) {
+            if (! str_contains($r->url(), '/ISAPI/Intelligent/FDLib/FDSetUp?format=json') || $r->method() !== 'PUT' || ! $r->isMultipart()) {
+                return false;
+            }
+            $partes = collect($r->data())->keyBy('name');
+            $registro = json_decode((string) $partes['FaceDataRecord']['contents'], true);
+
+            return $registro === ['faceLibType' => 'blackFD', 'FDID' => '1', 'FPID' => $employeeNo]
+                && $partes['img']['contents'] === $foto->conteudo();
+        });
+    }
+
+    public function test_foto_facial_recusada_timeout_e_formato_invalido(): void
+    {
+        $this->liberarFotoFacial(['*/ISAPI/Intelligent/FDLib/FDSetUp*' => Http::response($this->jsonStatus(6, 'faceLibraryFull'), 200)]);
+        $recusa = $this->adaptador()->enviarFotoFacial($this->contexto(), $this->fotoSintetica());
+        $this->assertSame(ResultadoEquipamento::Recusado, $recusa->resultado);
+        $this->assertSame('faceLibraryFull', $recusa->dados['status_terminal']);
+
+        $this->liberarFotoFacial(['*/ISAPI/Intelligent/FDLib/FDSetUp*' => $this->falhaDeConexao('cURL error 28: Operation timed out after 2000 milliseconds')]);
+        $timeout = $this->adaptador()->enviarFotoFacial($this->contexto(), $this->fotoSintetica());
+        $this->assertSame(ResultadoEquipamento::ConfirmacaoDesconhecida, $timeout->resultado, 'Timeout nunca conta como sucesso.');
+
+        $png = new FotoFacialParaEnviar((string) Str::uuid7(), 'v', "\x89PNG".str_repeat('x', 32), 'image/png');
+        $this->assertSame('foto_formato_invalido', $this->adaptador()->enviarFotoFacial($this->contexto(), $png)->codigo);
+    }
+
+    /** @param  array<string, mixed>  $sobrescrever */
+    private function liberarFotoFacial(array $sobrescrever = []): void
+    {
+        config(['integracoes.hikvision.perfis_homologados.'.self::FIRMWARE.'.credencial_facial' => 'em_homologacao']);
+        $this->terminal(array_merge(['*/ISAPI/Intelligent/FDLib/FDSetUp*' => Http::response($this->jsonStatus(1), 200)], $sobrescrever));
     }
 }
