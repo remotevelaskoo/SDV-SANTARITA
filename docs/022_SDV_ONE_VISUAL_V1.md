@@ -56,3 +56,16 @@ Revisar as duas versões lado a lado antes de aprovar o PR. Para visualizar o c�
 - O campo de busca continua sem funcionalidade e é identificado como **em desenvolvimento**; não é possível confundi-lo com busca pronta.
 - `tests/Feature/SdvOneHeaderStateTest.php` cobre os dados do cabeçalho, permissões e isolamento de implantação.
 - PR de revisão: https://github.com/remotevelaskoo/SDV-SANTARITA/pull/78 (depende do PR #77).
+
+## Continuação v3 — Validação de Entrada e Pré-cadastros
+
+Branch `design/sdv-one-validacao-precadastros-v3`, derivada da v2.
+
+- A tela de Validação recebeu introdução operacional, etapas orientativas, contexto de atendimento e cards modernizados, sem alterar formulários, dados ou `wire:click`.
+- O indicador legado **"Integração conectada"**, que era fixo e potencialmente enganoso, foi substituído por **"Sem acionamento nesta tela"**. A página continua em modo de demonstração e não aciona hardware.
+- A fila de pré-cadastros recebeu painéis de status, pesquisa e abas com `aria-pressed` conforme o filtro ativo. Os filtros de tipo/período continuam desabilitados e identificados como indisponíveis.
+- A análise individual recebeu hierarquia visual para protocolo, conferência de documentos protegidos, pendências e decisões. As regras de visibilidade e permissões foram mantidas.
+- A aparência responsiva usa apenas CSS acrescentado ao arquivo existente: desktop, iPad e celular.
+- As rotas, classes Livewire, banco, APIs e contratos de integração não foram modificados.
+- Testes de regressão: `tests/Feature/SdvOneOperationalPagesTest.php`.
+- **Obrigatório antes de integrar:** revisão visual real no Windows, testes de clique e comparação com o fluxo original. Os testes automatizados não equivalem à homologação de usabilidade nem do hardware.
