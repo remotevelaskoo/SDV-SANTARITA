@@ -159,6 +159,21 @@ trait CadastroRapidoAtendimento
         $this->validateOnly('quickName', ['quickName' => ['required', 'string', 'min:3', 'max:120']], ['min' => 'Informe um valor válido.']);
     }
 
+    /** Ao trocar o tipo, o responsável só sobrevive para morador (docs/021 §14). */
+    public function updatedQuickAccessType(): void
+    {
+        $this->descartarResponsavelForaDeMorador();
+    }
+
+    /** Valor residual ou forjado para outro tipo é ignorado: nada de responsável fictício. */
+    private function descartarResponsavelForaDeMorador(): void
+    {
+        if ($this->quickAccessType !== 'morador') {
+            $this->quickResponsible = '';
+            $this->resetErrorBag('quickResponsible');
+        }
+    }
+
     public function checkQuickDocument(): void
     {
         $normalizado = $this->normalizeDocument($this->quickDocument);
@@ -352,6 +367,7 @@ trait CadastroRapidoAtendimento
     /** Conferência humana completa e sem duplicidade pendente. */
     private function dadosConferidos(): bool
     {
+        $this->descartarResponsavelForaDeMorador();
         $this->checkQuickDocument();
         if ($this->quickDuplicateFound) {
             return false;
@@ -373,7 +389,8 @@ trait CadastroRapidoAtendimento
             // Telefone e imóvel são opcionais no cadastro rápido (complemento do PO ao AJ-010); validados só quando informados.
             'quickPhone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9()+\-.\s]+$/'],
             'quickAccessType' => ['required', Rule::in(['visitante', 'prestador', 'morador', 'turista', 'outro'])],
-            'quickResponsible' => ['required_if:quickAccessType,visitante,prestador,turista', 'nullable', 'string', 'max:120'],
+            // Responsável só existe para morador e é opcional (docs/021 §14).
+            'quickResponsible' => ['nullable', 'string', 'max:120'],
             'quickPropertyCode' => ['nullable', 'string', 'max:40'],
             'quickNotes' => ['nullable', 'string', 'max:200'],
             'quickBirthDate' => ['nullable', 'date', 'before:today'],

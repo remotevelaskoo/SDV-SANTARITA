@@ -133,7 +133,10 @@
                                 <option value="turista">Turista</option>
                                 <option value="outro">Outro</option>
                             </x-ui.select>
-                            <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante, prestador ou turista." :error="$errors->first('quickResponsible')" />
+                            @if ($quickAccessType === 'morador')
+                                {{-- Responsável só para morador, opcional (docs/021 §14). --}}
+                                <x-ui.field id="quick-responsible" label="Responsável (opcional)" wire:model="quickResponsible" help="Só para morador. Deixe em branco se não houver." :error="$errors->first('quickResponsible')" />
+                            @endif
                             <x-ui.field id="quick-property" label="Código do imóvel (opcional)" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="$quickAccessType === 'turista' ? 'Turista não ganha vínculo com imóvel.' : 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.'" :error="$errors->first('quickPropertyCode')" />
                         </div>
 
