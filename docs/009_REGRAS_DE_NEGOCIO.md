@@ -219,6 +219,8 @@ O sistema deverá alertar quando houver vínculos incompatíveis ou sobrepostos 
 **RN-023 — Responsável pelo visitante**  
 Todo visitante autorizado deverá possuir um responsável identificado.
 
+> Nota (08/11/2026, AJ-010): no cadastro rápido da Validação de Entrada, o visitante exige imóvel e responsável; o turista entra por até 24 h sem responsável (`docs/021` §14).
+
 **RN-024 — Imóvel de destino**  
 Todo visitante deverá estar associado a um imóvel ou destino válido.
 

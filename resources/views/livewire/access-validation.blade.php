@@ -133,8 +133,13 @@
                                 <option value="turista">Turista</option>
                                 <option value="outro">Outro</option>
                             </x-ui.select>
-                            <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante, prestador ou turista." :error="$errors->first('quickResponsible')" />
-                            <x-ui.field id="quick-property" label="Código do imóvel (opcional)" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="$quickAccessType === 'turista' ? 'Turista não ganha vínculo com imóvel.' : 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.'" :error="$errors->first('quickPropertyCode')" />
+                            @if ($quickAccessType === 'visitante')
+                                {{-- Visitante: responsável obrigatório (docs/021 §14). --}}
+                                <x-ui.field id="quick-responsible" label="Responsável pelo visitante" wire:model="quickResponsible" help="Quem recebe o visitante no imóvel." :error="$errors->first('quickResponsible')" required />
+                            @elseif ($quickAccessType === 'morador')
+                                <x-ui.field id="quick-responsible" label="Responsável (opcional)" wire:model="quickResponsible" help="Deixe em branco se não houver." :error="$errors->first('quickResponsible')" />
+                            @endif
+                            <x-ui.field id="quick-property" :label="$quickAccessType === 'visitante' ? 'Código do imóvel' : 'Código do imóvel (opcional)'" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="match ($quickAccessType) { 'visitante' => 'Imóvel que o visitante vai visitar.', 'turista' => 'Turista não ganha vínculo com imóvel.', default => 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.' }" :error="$errors->first('quickPropertyCode')" :required="$quickAccessType === 'visitante'" />
                         </div>
 
                         @if ($quickDuplicateFound)
