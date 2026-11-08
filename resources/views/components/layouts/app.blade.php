@@ -99,25 +99,37 @@
                                     ? rescue(fn () => app(\App\Integracoes\Aplicacao\TurnosOperacionais::class)->turnoAtivo(auth()->user()), null, false)
                                     : null;
                             @endphp
+                            @php($headerState = \App\Support\OperationalHeaderState::forUser(auth()->user()))
                             @if ($turnoAtivo)
                                 <a class="cash-status posto-ativo" href="{{ route('posto.selecionar') }}" title="Trocar posto"><x-icon name="door" /> Posto: {{ $turnoAtivo->posto->nome }}</a>
                             @endif
-                            <span class="cash-status"><x-icon name="wallet" /> Caixa 01 aberto às 13:00</span>
+                            @if ($headerState['cash'] !== null)
+                                <span @class(['cash-status', 'cash-status--closed' => ! $headerState['cash']['open']]) data-sdv-cash-status><x-icon name="wallet" /> {{ $headerState['cash']['label'] }}</span>
+                            @endif
                             <time class="session-time" datetime="{{ now()->toIso8601String() }}">
                                 <x-icon name="clock" /> {{ now()->format('d/m/Y H:i') }}
                             </time>
 
                             <details class="header-popover notifications">
-                                <summary class="header-icon" aria-label="Notificações">
+                                <summary class="header-icon" aria-label="Notificações{{ ($headerState['pendingPreRegistrations'] ?? 0) > 0 ? ' — '.$headerState['pendingPreRegistrations'].' pré-cadastros aguardando análise' : '' }}">
                                     <x-icon name="bell" />
-                                    <span class="notification-dot" aria-hidden="true"></span>
+                                    @if (($headerState['pendingPreRegistrations'] ?? 0) > 0)
+                                        <span class="notification-dot" aria-hidden="true"></span>
+                                    @endif
                                 </summary>
                                 <div class="header-popover__panel notifications__panel">
                                     <strong>Notificações</strong>
                                     <ul>
-                                        <li><span>Pré-cadastro recebido<small>Visitante para Bloco B — Apto 304</small></span><time>15:57</time></li>
-                                        <li><span>Vínculo de inquilino encerrado<small>Bloco C — Apto 501</small></span><time>15:12</time></li>
-                                        <li class="is-read"><span>Caixa aberto<small>Guarita — Caixa 01</small></span><time>13:00</time></li>
+                                        @if (($headerState['pendingPreRegistrations'] ?? 0) > 0)
+                                            <li>
+                                                <a class="sdv-one-notification-link" href="{{ route('pre-registrations') }}">
+                                                    {{ $headerState['pendingPreRegistrations'] }} {{ $headerState['pendingPreRegistrations'] === 1 ? 'pré-cadastro aguardando análise' : 'pré-cadastros aguardando análise' }}
+                                                    <small>Abrir solicitações de visitantes e prestadores</small>
+                                                </a>
+                                            </li>
+                                        @else
+                                            <li class="is-read"><span>Nenhuma notificação pendente<small>Não há alertas disponíveis para este perfil.</small></span></li>
+                                        @endif
                                     </ul>
                                 </div>
                             </details>
@@ -130,8 +142,8 @@
                                     </summary>
                                     <div class="header-popover__panel user-menu__panel">
                                         <strong>{{ auth()->user()->name }}</strong>
-                                        <small>{{ auth()->user()->operationalRoleLabel() }} · Portaria Principal</small>
-                                        <span>Condomínio Santa Rita</span>
+                                        <small>{{ auth()->user()->operationalRoleLabel() }} · {{ $turnoAtivo?->posto?->nome ?? 'Sem posto ativo' }}</small>
+                                        <span>{{ rescue(fn () => \App\Support\ImplantacaoContext::current()->nome, 'Implantação não definida', false) }}</span>
                                         <a href="{{ route('sessions') }}" class="user-menu__link">
                                             <x-icon name="shield" />
                                             <span>Sessões ativas</span>
@@ -153,7 +165,8 @@
                         <label class="global-search">
                             <span class="sr-only">Busca global</span>
                             <x-icon name="search" />
-                            <input type="search" placeholder="Buscar pessoa, documento, imóvel, placa ou protocolo" disabled>
+                            <input type="search" placeholder="Busca global — em desenvolvimento" title="A busca global ainda não está disponível" aria-describedby="sdv-busca-indisponivel" disabled>
+                            <span class="sr-only" id="sdv-busca-indisponivel">A busca global está em desenvolvimento. Use os módulos do menu para consultar registros.</span>
                         </label>
                     </div>
                 </header>

@@ -2599,3 +2599,34 @@ body.has-drawer-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .sdv-one-shortcuts .shortcut-card { transition: none; }
 }
+
+
+/* SDV One v2: status reais e notificações navegáveis, sem dados demonstrativos. */
+.cash-status--closed {
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    color: #56657c;
+}
+.sdv-one-notification-link {
+    display: block;
+    color: var(--navy-900);
+    font-weight: 750;
+    line-height: 1.4;
+    text-decoration: none;
+}
+.sdv-one-notification-link small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--neutral-600);
+    font-size: 0.68rem;
+    font-weight: 400;
+    white-space: normal;
+}
+.sdv-one-notification-link:hover,
+.sdv-one-notification-link:focus-visible {
+    color: var(--blue-700);
+    text-decoration: underline;
+}
+.notifications__panel li:has(.sdv-one-notification-link) {
+    display: block;
+}
