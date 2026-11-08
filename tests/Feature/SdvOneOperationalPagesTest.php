@@ -65,7 +65,7 @@ class SdvOneOperationalPagesTest extends TestCase
             ->assertSee('Aguardando análise')
             ->assertSee('aria-pressed="true"', false)
             ->assertSee('href="'.route('pre-registrations.review', $registro->id).'"', false)
-            ->assertSee('Filtros de tipo e período', false);
+            ->assertSee('filtros de tipo e período', false);
 
         Livewire::actingAs($usuario)->test(PreRegistrationQueue::class)
             ->call('setStatusFilter', 'todos')
