@@ -1157,3 +1157,30 @@ Decisão do Product Owner: o Dashboard é exclusivo de direção e gestão. Subs
 - Migração ajusta os perfis padrão de instalações existentes sem rodar seeders demo. Perfis personalizados preservam a matriz configurada. Rollback não restaura automaticamente permissões retiradas.
 
 Implementação na branch `codex/menu-por-perfil`, aguardando validação e revisão. Cobertura em `tests/Feature/ProfileNavigationTest.php`.
+
+
+## Complemento AJ-009 — recolhimento moderno da navegação (PO, 07/11/2026)
+
+**Situação:** aprovado para implementar; este complemento ainda não foi implementado/testado. Integra a PR #70 e deve ser conciliado com a main atual e a compatibilidade da PR #71.
+
+### Comportamento e aparência
+
+- No computador, oferecer dois estados reais da barra lateral: **expandida**, com ícones e nomes, e **compacta**, como faixa estreita de ícones. Ao recolher, o conteúdo principal ocupa o espaço liberado, sem sobreposição ou saltos.
+- O controle deve ser um botão claramente delimitado no cabeçalho da barra, com ícone de painel e texto “Recolher menu” no modo expandido. No compacto, manter botão de expansão com nome acessível e tooltip “Expandir menu”. Não limitar a entrega a uma seta nem deixar os controles desabilitados.
+- Aplicar transição discreta de aproximadamente 180–240 ms, bordas suaves, estados de hover e foco, respeitando cores e tipografia do Design System. Desativar a animação quando `prefers-reduced-motion` estiver ativo.
+- Itens ativos têm fundo de destaque e indicador lateral perceptível; não depender somente de cor. Preservar `aria-current`.
+- Na faixa compacta, mostrar os ícones dos destinos autorizados e seus nomes em tooltip tanto no hover quanto no foco por teclado. Não tornar a expansão automática ao passar o mouse: o porteiro precisa de navegação estável.
+- No modo expandido, grupos continuam recolhíveis: cabeçalho inteiro clicável, título legível, indicador de estado e transição suave, com grupo da tela atual aberto inicialmente. A recolha de grupos e a compactação da barra são comportamentos distintos.
+- Manter a preferência expandida/compacta por usuário e implantação neste navegador, sem dados pessoais ou permissões no armazenamento local. Se o armazenamento estiver indisponível, o menu deve continuar funcionando.
+- No celular, usar gaveta lateral sobre fundo escurecido, com ação clara de fechar; fechar ao selecionar destino, clicar no fundo ou pressionar Escape, devolver foco ao acionador e impedir foco no conteúdo de fundo enquanto aberta. Não reduzir o celular a uma faixa permanente de ícones.
+- Navegação por teclado, foco visível, nomes acessíveis, `aria-expanded`/`aria-controls` nos controles e áreas de toque de ao menos 44 px. No compacto, nomes e ações continuam compreensíveis para tecnologia assistiva.
+
+### Permissões preservadas
+
+Expandir, recolher ou reabrir a gaveta nunca revela módulos não autorizados. Filtrar no servidor pelas permissões efetivas da implantação, ocultar grupos vazios e preservar os bloqueios de rota e Livewire. Porteiro não recebe Dashboard ou administração por causa da mudança visual; múltiplos perfis acumulam apenas as concessões válidas existentes.
+
+### Aceite e entrega ao Claude
+
+Implementar no contexto da PR #70, preservando alterações recentes da main e a compatibilidade de fechamentos da PR #71. Validar computador e celular: barra compacta/expandida, espaço recuperado pelo conteúdo, item ativo, tooltips por teclado, preferência após recarga, falha de armazenamento, grupos, gaveta, Escape, foco, movimento reduzido e ausência de rolagem horizontal.
+
+Testes de permissões devem comprovar que Porteiro/Caixa não vê módulos administrativos nem ganha acesso direto a páginas ou ações Livewire proibidas. Testes de interação devem cobrir os dois estados e a gaveta; não considerar somente presença de classes como comprovação de funcionamento. Executar suíte pertinente, Pint e build e registrar resultados reais e evidência visual na documentação/PR. Não fazer merge ou implantação automaticamente.
