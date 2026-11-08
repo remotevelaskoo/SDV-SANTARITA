@@ -44,7 +44,7 @@ class SdvOneLayoutTest extends TestCase
             ->assertSee('Entradas hoje')
             ->assertSee('Saídas hoje')
             ->assertSee('Últimas movimentações')
-            ->assertSee('Conferência visual protegida')
+            ->assertSee('Documentos protegidos dos atendimentos recentes')
             ->assertSee('href="'.route('validation').'"', false)
             ->assertSee('href="'.route('cash-register').'"', false);
     }
