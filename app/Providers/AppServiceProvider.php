@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Documentos\Dominio\PortaOcrDocumento;
 use App\Documentos\Infra\OcrSimulador;
+use App\Http\Middleware\EnsurePermission;
 use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Ações Livewire (POST de atualização) reaplicam a permissão da rota
+        // em que o componente foi aberto: revogar a permissão bloqueia também
+        // telas já abertas, não só o carregamento da página (AJ-009).
+        Livewire::addPersistentMiddleware([EnsurePermission::class]);
+
         foreach (AuditObserver::observedModels() as $model) {
             $model::observe(AuditObserver::class);
         }

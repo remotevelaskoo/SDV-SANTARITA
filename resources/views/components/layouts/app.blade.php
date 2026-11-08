@@ -1,8 +1,18 @@
+@php
+    // Preferência expandida/compacta por usuário e implantação neste navegador
+    // (AJ-009). A chave é um resumo irreversível: nenhum dado pessoal ou
+    // permissão vai para o localStorage.
+    $navKey = auth()->check()
+        ? 'sdv.menu.'.substr(hash_hmac('sha256', auth()->id().'|'.rescue(fn () => \App\Support\ImplantacaoContext::current()->id, '', false), (string) config('app.key')), 0, 20)
+        : null;
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-sidebar="expanded" @if ($navKey) data-nav-key="{{ $navKey }}" @endif>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{-- Aplica a preferência antes da primeira pintura, sem salto de layout. --}}
+        <script>(function(){var d=document.documentElement,k=d.getAttribute('data-nav-key');try{if(k&&window.localStorage.getItem(k)==='compact'){d.setAttribute('data-sidebar','compact');}}catch(e){}})();</script>
         <meta name="description" content="Indicadores de acesso, movimentações recentes e alertas críticos do controle de acesso do condomínio Santa Rita.">
 
         <title>{{ $title ?? config('app.name') }} — SDV Access Santa Rita</title>
@@ -14,7 +24,7 @@
         <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
 
         <div class="app-shell">
-            <aside class="sidebar" aria-label="Navegação principal">
+            <aside class="sidebar" id="barra-lateral" aria-label="Navegação principal" @if ($navKey) data-nav-key="{{ $navKey }}" @endif>
                 <div class="sidebar__brand-row">
                     <a class="brand" href="{{ route('home') }}" aria-label="SDV Access Santa Rita — Início">
                         <span class="brand__mark" aria-hidden="true">SDV</span>
@@ -23,12 +33,21 @@
                             <small>Santa Rita</small>
                         </span>
                     </a>
-                    <button class="sidebar__collapse" type="button" aria-label="Recolher navegação" disabled>
-                        <x-icon name="chevrons-left" />
-                    </button>
                 </div>
 
-                <x-navigation />
+                <button
+                    class="sidebar__toggle"
+                    type="button"
+                    aria-controls="barra-lateral"
+                    aria-expanded="true"
+                    aria-label="Recolher menu"
+                    data-sidebar-toggle
+                >
+                    <x-icon name="panel-left" />
+                    <span class="sidebar__toggle-text" aria-hidden="true">Recolher menu</span>
+                </button>
+
+                <x-navigation context="sidebar" />
 
                 <div class="sidebar__footer">
                     @auth
@@ -59,19 +78,15 @@
             <div class="workspace">
                 <header class="operational-header">
                     <div class="operational-header__main">
-                        <details class="mobile-navigation">
-                            <summary aria-label="Abrir navegação"><x-icon name="menu" /></summary>
-                            <div class="mobile-navigation__panel">
-                                <div class="brand mobile-brand">
-                                    <span class="brand__mark" aria-hidden="true">SDV</span>
-                                    <span><strong>SDV Access</strong><small>Santa Rita</small></span>
-                                </div>
-                                <x-navigation />
-                            </div>
-                        </details>
-
-                        <button class="header-icon header-icon--desktop" type="button" aria-label="Recolher ou abrir navegação" disabled>
-                            <x-icon name="panel-left" />
+                        <button
+                            class="header-icon mobile-drawer-trigger"
+                            type="button"
+                            aria-label="Abrir menu"
+                            aria-controls="gaveta-navegacao"
+                            aria-expanded="false"
+                            data-drawer-open
+                        >
+                            <x-icon name="menu" />
                         </button>
 
                         <div class="operational-header__title">
@@ -159,6 +174,25 @@
                 </main>
             </div>
         </div>
+
+        {{-- Gaveta do celular: fora do .app-shell para que o fundo fique inerte enquanto aberta. --}}
+        <div class="mobile-drawer" id="gaveta-navegacao" hidden data-drawer>
+            <div class="mobile-drawer__backdrop" data-drawer-close></div>
+            <div class="mobile-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="gaveta-navegacao-titulo" tabindex="-1">
+                <div class="mobile-drawer__header">
+                    <div class="brand mobile-brand">
+                        <span class="brand__mark" aria-hidden="true">SDV</span>
+                        <span><strong id="gaveta-navegacao-titulo">SDV Access</strong><small>Santa Rita</small></span>
+                    </div>
+                    <button class="mobile-drawer__close" type="button" aria-label="Fechar menu" data-drawer-close>
+                        <x-icon name="x" />
+                    </button>
+                </div>
+                <x-navigation context="drawer" />
+            </div>
+        </div>
+
+        <div class="navigation-tooltip" role="tooltip" id="navegacao-dica" hidden data-nav-tooltip></div>
 
         @livewireScripts
     </body>

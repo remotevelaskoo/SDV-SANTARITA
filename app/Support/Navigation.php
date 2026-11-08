@@ -20,6 +20,7 @@ class Navigation
                 ['label' => 'Pré-cadastros', 'icon' => 'badge-check', 'route' => 'pre-registrations'],
                 ['label' => 'Entradas e saídas', 'icon' => 'door', 'route' => 'access-history'],
                 ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
+                ['label' => 'Fechamentos de caixa', 'icon' => 'file', 'route' => 'cash-register.closings'],
                 ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ],
             'Cadastros' => [
@@ -84,6 +85,28 @@ class Navigation
         }
 
         return array_filter($groups);
+    }
+
+    /**
+     * Item do menu que representa a página atual. Vence a rota mais específica:
+     * em "Fechamentos de caixa" (cash-register.closings) só esse item fica
+     * ativo, não também "Caixa" (cash-register). Subpáginas sem item próprio,
+     * como a análise de um pré-cadastro, marcam o item pai.
+     *
+     * @param  array<string, list<array{label: string, icon: string, route: string}>>  $groups
+     */
+    public static function currentRoute(array $groups): ?string
+    {
+        $current = request()->route()?->getName();
+
+        if ($current === null) {
+            return null;
+        }
+
+        return collect($groups)->flatten(1)->pluck('route')
+            ->filter(fn (string $route): bool => $route === $current || str_starts_with($current, $route.'.'))
+            ->sortByDesc(fn (string $route): int => strlen($route))
+            ->first();
     }
 
     public static function homeRoute(User $user): string
