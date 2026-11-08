@@ -1,4 +1,16 @@
-<div class="pre-registration-queue">
+<div class="pre-registration-queue sdv-one-pre-registration-queue">
+    <section class="sdv-one-page-intro sdv-one-page-intro--queue" aria-labelledby="sdv-one-queue-heading">
+        <div class="sdv-one-page-intro__copy">
+            <span class="sdv-one-page-intro__eyebrow"><x-icon name="clipboard" /> Solicitações de acesso</span>
+            <h2 id="sdv-one-queue-heading">Pré-cadastros</h2>
+            <p>Organize a fila, consulte os registros e encaminhe cada solicitação para análise.</p>
+        </div>
+        <div class="sdv-one-page-intro__aside">
+            <span>Foco no atendimento</span>
+            <strong>Conferência humana</strong>
+            <small>Solicitações não liberam entrada automaticamente.</small>
+        </div>
+    </section>
     <section class="pre-registration-queue__summary" aria-label="Resumo dos pré-cadastros">
         @php
             $statusCounts = [
@@ -8,10 +20,10 @@
                 'correcao' => $records->where('status', 'correcao')->count(),
             ];
         @endphp
-        <article><span>Aguardando análise</span><strong>{{ $statusCounts['aguardando'] }}</strong><small>Mais antigas primeiro</small></article>
-        <article><span>Aprovados</span><strong>{{ $statusCounts['aprovado'] }}</strong><small>Ainda sujeitos à validação</small></article>
-        <article><span>Correção solicitada</span><strong>{{ $statusCounts['correcao'] }}</strong><small>Aguardando novo envio</small></article>
-        <article><span>Rejeitados</span><strong>{{ $statusCounts['rejeitado'] }}</strong><small>Registros preservados</small></article>
+        <article class="sdv-one-status-card sdv-one-status-card--waiting"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="clock" /></span><span>Aguardando análise</span><strong>{{ $statusCounts['aguardando'] }}</strong><small>Mais antigas primeiro</small></article>
+        <article class="sdv-one-status-card sdv-one-status-card--approved"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="check-circle" /></span><span>Aprovados</span><strong>{{ $statusCounts['aprovado'] }}</strong><small>Ainda sujeitos à validação</small></article>
+        <article class="sdv-one-status-card sdv-one-status-card--correction"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="alert" /></span><span>Correção solicitada</span><strong>{{ $statusCounts['correcao'] }}</strong><small>Aguardando novo envio</small></article>
+        <article class="sdv-one-status-card sdv-one-status-card--rejected"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="x" /></span><span>Rejeitados</span><strong>{{ $statusCounts['rejeitado'] }}</strong><small>Registros preservados</small></article>
     </section>
 
     <section class="pre-registration-queue__workspace" aria-labelledby="pre-registration-list-title">
@@ -26,14 +38,15 @@
         </header>
 
         <div class="pre-registration-status-tabs" role="group" aria-label="Filtrar por situação">
-            <button type="button" wire:click="setStatusFilter('aguardando')" @class(['is-active' => $statusFilter === 'aguardando'])>Aguardando <span>{{ $statusCounts['aguardando'] }}</span></button>
-            <button type="button" wire:click="setStatusFilter('aprovado')" @class(['is-active' => $statusFilter === 'aprovado'])>Aprovados <span>{{ $statusCounts['aprovado'] }}</span></button>
-            <button type="button" wire:click="setStatusFilter('correcao')" @class(['is-active' => $statusFilter === 'correcao'])>Correção <span>{{ $statusCounts['correcao'] }}</span></button>
-            <button type="button" wire:click="setStatusFilter('rejeitado')" @class(['is-active' => $statusFilter === 'rejeitado'])>Rejeitados <span>{{ $statusCounts['rejeitado'] }}</span></button>
-            <button type="button" wire:click="setStatusFilter('todos')" @class(['is-active' => $statusFilter === 'todos'])>Todos <span>{{ $records->count() }}</span></button>
+            <button type="button" wire:click="setStatusFilter('aguardando')" aria-pressed="{{ $statusFilter === 'aguardando' ? 'true' : 'false' }}" @class(['is-active' => $statusFilter === 'aguardando'])>Aguardando <span>{{ $statusCounts['aguardando'] }}</span></button>
+            <button type="button" wire:click="setStatusFilter('aprovado')" aria-pressed="{{ $statusFilter === 'aprovado' ? 'true' : 'false' }}" @class(['is-active' => $statusFilter === 'aprovado'])>Aprovados <span>{{ $statusCounts['aprovado'] }}</span></button>
+            <button type="button" wire:click="setStatusFilter('correcao')" aria-pressed="{{ $statusFilter === 'correcao' ? 'true' : 'false' }}" @class(['is-active' => $statusFilter === 'correcao'])>Correção <span>{{ $statusCounts['correcao'] }}</span></button>
+            <button type="button" wire:click="setStatusFilter('rejeitado')" aria-pressed="{{ $statusFilter === 'rejeitado' ? 'true' : 'false' }}" @class(['is-active' => $statusFilter === 'rejeitado'])>Rejeitados <span>{{ $statusCounts['rejeitado'] }}</span></button>
+            <button type="button" wire:click="setStatusFilter('todos')" aria-pressed="{{ $statusFilter === 'todos' ? 'true' : 'false' }}" @class(['is-active' => $statusFilter === 'todos'])>Todos <span>{{ $records->count() }}</span></button>
         </div>
 
         <div class="pre-registration-filters">
+            <p class="sdv-one-filter-hint"><x-icon name="info" /> Pesquise por nome, protocolo, placa ou destino. Os filtros de tipo e período ainda não estão disponíveis.</p>
             <label class="pre-registration-search">
                 <span class="sr-only">Buscar pré-cadastros</span>
                 <x-icon name="search" />
