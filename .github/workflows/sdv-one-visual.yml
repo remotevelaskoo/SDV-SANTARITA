@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - design/sdv-one-interface-v1
+      - preview/ipad-sdv-one
   pull_request:
   workflow_dispatch:
 
@@ -78,4 +79,4 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
-        run: php artisan migrate:fresh --force
+        run: php artisan migrate:fresh --seed --force
