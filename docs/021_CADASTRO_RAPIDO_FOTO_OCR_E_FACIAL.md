@@ -135,10 +135,21 @@ Atualizar documentos 018, 019 e 020 conforme a implementação, além do ADR-013
 - **Foto da pessoa:** câmera própria de finalidade `rosto` (pode ser diferente da câmera de documentos), apenas vídeo, prévia e “Refazer foto”. O servidor valida tipo (JPEG/PNG), tamanho (até 5 MB), lado mínimo de 320 px e brilho. Se a pessoa já tem foto, ela é mantida, a menos que o operador marque “Substituir a foto atual”.
 - **Duplicidade:** o CPF é consultado na implantação ativa; se existir, o operador escolhe “Usar este cadastro” (auditoria `cadastro_rapido_reutilizou_pessoa`). Identidade e contato do cadastro existente não são sobrescritos. A criação usa transação com `lockForUpdate` e trata violação do índice único. Se o número do RG/CNH já pertence a outra pessoa, o salvamento volta para a conferência com o erro no campo do número. Qualquer erro de conferência encontrado ao salvar também leva de volta à etapa Conferência.
 - **Salvar / Salvar e enviar:** um bloqueio por atendimento (`Cache::lock`) e o token do formulário impedem duplo clique. O resultado mostra quatro linhas separadas: cadastro, foto, terminal (cadastro do usuário) e terminal (foto). Terminal fora do ar não desfaz o cadastro nem a foto.
-- **Autorização:** salvar não cria autorização. Ao enviar para a facial, visitante e turista recebem a visita de até 24 h do AJ-006 (turista sem vínculo com imóvel); morador, prestador e outro usam a autorização do vínculo. **Decisão a confirmar pelo PO:** visitante usar a mesma visita de 24 h do turista.
+- **Autorização:** salvar não cria autorização. Ao enviar para a facial, turista e visitante com imóvel recebem a visita de até 24 h do AJ-006 (turista sem vínculo com imóvel); morador, prestador e outro usam a autorização do vínculo. Ver §10.1.1. **Decisão a confirmar pelo PO:** visitante usar a mesma visita de 24 h do turista.
 - **Permissões:** toda ação do cadastro rápido exige `validacao.registrar` e `pessoas.gerenciar`; o envio exige também `facial.enviar`. As permissões são conferidas a cada requisição Livewire.
 - **Limpeza:** cancelar, iniciar outro atendimento ou concluir o cadastro descarta capturas, prévias e temporários e fecha as câmeras (evento `cadastro-rapido-encerrado`).
 - **Envio da foto:** depois do pedido `cadastro_pessoa`, o `EnvioFacial` registra, quando permitido, um pedido `enviar_foto_facial` na outbox com chave `foto-facial:{credencial}:{terminal}:{checksum}:{tentativa}`. O payload leva apenas identificadores e a versão (checksum) da foto. O worker só envia depois que o usuário estiver sincronizado no terminal (senão repete), relê e confere a foto, reduz em memória para JPEG de até 640 px e chama o adaptador. Foto nova marca a anterior como “não enviada” em todos os terminais; revogação confirmada marca a face como removida. Estado em `foto_facial_sincronizacoes`.
+
+### 10.1.1 Telefone e imóvel opcionais (complemento do PO, 08/11/2026)
+
+No cadastro rápido, **telefone** e **código do imóvel** não são obrigatórios, para nenhum tipo de acesso.
+
+- A interface marca os dois como “(opcional)”, e o backend não os exige.
+- **Telefone:** quando informado, só aceita números, espaços, parênteses, `+`, `-` e `.`, com 10 a 13 dígitos (DDD obrigatório). Em branco, nenhum contato é criado.
+- **Imóvel:** quando informado, precisa existir na implantação; se não existir, o salvamento volta à Conferência com o erro no campo. Em branco, nenhum imóvel ou vínculo é criado.
+- A ausência dos dois não impede salvar o cadastro e a foto.
+- **Envio à facial:** continua exigindo uma autorização vigente. Visitante só recebe a visita de 24 h quando há imóvel informado. Sem imóvel, nenhuma autorização é criada automaticamente, e o envio é recusado com “sem autorização vigente” se a pessoa não tiver outra. Turista mantém a visita de 24 h do AJ-006, que por definição não tem imóvel. Morador, prestador e outro dependem do vínculo; sem imóvel, o envio é recusado da mesma forma.
+- Testes: `CadastroRapidoFotoTest` (salvar sem telefone, sem imóvel e sem os dois, para visitante, morador, prestador e outro; telefone e imóvel inválidos recusados; telefone válido gravado) e `FotoFacialEnvioTest` (visitante sem imóvel não ganha autorização automática).
 
 ### 10.2 Pendências para ativar o envio da foto
 
