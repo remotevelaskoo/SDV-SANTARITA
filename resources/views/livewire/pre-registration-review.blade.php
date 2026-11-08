@@ -7,10 +7,23 @@
 @endphp
 
 {{-- SDV-OPE-020 §13: cabeçalho, pendências, conferência, divergências, decisão e detalhes recolhidos. --}}
-<div class="pre-cadastro-analise">
+<div class="pre-cadastro-analise sdv-one-pre-registration-review">
     <nav class="pre-cadastro-analise__voltar" aria-label="Navegação da análise">
         <a href="{{ route('pre-registrations') }}">← Voltar à fila de pré-cadastros</a>
     </nav>
+
+    <section class="sdv-one-page-intro sdv-one-page-intro--review" aria-labelledby="sdv-one-review-heading">
+        <div class="sdv-one-page-intro__copy">
+            <span class="sdv-one-page-intro__eyebrow"><x-icon name="badge-check" /> Conferência e decisão</span>
+            <h2 id="sdv-one-review-heading">Análise de pré-cadastro</h2>
+            <p>Confira os documentos protegidos e os dados enviados antes de tomar uma decisão.</p>
+        </div>
+        <div class="sdv-one-page-intro__aside">
+            <span>Protocolo</span>
+            <strong>{{ $record->protocol }}</strong>
+            <small>Aprovação não significa liberação de entrada.</small>
+        </div>
+    </section>
 
     @if ($feedback)
         <x-ui.toast :variant="$feedback['variant']" :title="$feedback['title']" :dismissible="false">
