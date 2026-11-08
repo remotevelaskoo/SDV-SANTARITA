@@ -145,6 +145,8 @@ Atualizar documentos 018, 019 e 020 conforme a implementação, além do ADR-013
 
 No cadastro rápido, **telefone** e **código do imóvel** não são obrigatórios, para nenhum tipo de acesso.
 
+> **Revisão de 08/11/2026 (§14):** o imóvel passou a ser obrigatório para **visitante**. Para os demais tipos, telefone e imóvel continuam opcionais; o telefone continua opcional para todos.
+
 - A interface marca os dois como “(opcional)”, e o backend não os exige.
 - **Telefone:** quando informado, só aceita números, espaços, parênteses, `+`, `-` e `.`, com 10 a 13 dígitos (DDD obrigatório). Em branco, nenhum contato é criado.
 - **Imóvel:** quando informado, precisa existir na implantação; se não existir, o salvamento volta à Conferência com o erro no campo. Em branco, nenhum imóvel ou vínculo é criado.
@@ -294,3 +296,56 @@ Claude: partir da main atual, implementar somente este ajuste visual/de navegaç
   - Suíte completa `php artisan test`: 487 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
   - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: os dois botões visíveis sem rolar depois de abrir o cadastro rápido e acima da câmera; ativação por teclado (Enter) abre a Conferência com foco no Nome completo; nenhuma chamada de câmera ou de voz ao escolher a entrada manual; digitação funciona; sem rolagem horizontal e sem erro de JavaScript. Contraste seguiu as cores dos botões do Design System; não foi medido com ferramenta.
 - **Não verificado:** dispositivos reais da portaria, Safari e Firefox.
+
+
+## 14. Responsável somente para morador — decisão do PO em 07/11/2026
+
+**Situação:** implementado na branch `codex/aj010-visitante-sem-responsavel` em 08/11/2026, aguardando revisão e merge (§14.5).
+
+> **Revisão do PO em 08/11/2026 — prevalece sobre §14.1 a §14.4 onde houver conflito:** o **turista** tem entrada de até 24 h **sem responsável** (e sem imóvel). O **visitante** fica **atrelado a um imóvel e a um responsável**, ambos obrigatórios. Morador mantém o responsável opcional; prestador e outro não têm responsável. Isso também resolve o ponto da RN-023 (todo visitante autorizado tem responsável identificado).
+
+### 14.1 Regra aprovada e precedência
+
+- No cadastro da pessoa atendido pelo AJ-010, **visitante não precisa informar responsável**. Não exibir nem exigir esse campo para visitante, seja por entrada manual, OCR ou nome por voz.
+- O campo de responsável é aplicável **somente quando o tipo for morador**. Preservar a regra de preenchimento aplicável a morador; esta decisão não define uma nova relação de tutela nem autoriza inventar um responsável.
+- Corrigir a interface, textos de ajuda e validações do backend que ainda exigem responsável de visitante. Não basta ocultar um campo que continua obrigatório no servidor.
+- Nenhum tipo diferente de morador deve herdar a exigência de responsável deste formulário. A primeira entrega e sua homologação focam visitante; não remover outros tipos nem alterar suas regras de autorização por causa desta simplificação.
+- Ao mudar de morador para visitante, limpar o responsável do estado do formulário e ignorar valor residual/forjado no backend; não persistir responsável ou vínculo fictício para satisfazer validação. Preservar dados históricos existentes; não executar limpeza retroativa do banco.
+- Cadastro e fotografia de visitante devem salvar sem responsável, inclusive sem telefone, sem imóvel ou sem ambos, mantendo as demais validações de identidade/foto vigentes.
+
+Esta decisão substitui, para o campo de responsável deste cadastro, exigências anteriores incompatíveis. Não elimina o responsável operacional por aprovação, a autoria/auditoria do porteiro, autorizações de acesso ou relações de domínio existentes fora deste formulário.
+
+### 14.2 Cadastro não equivale a autorização
+
+Ausência de responsável não deve impedir salvar pessoa e foto. O envio à facial continua exigindo permissão, autorização válida e vigência. Não criar autorização, responsável ou vínculo fictício para contornar a ausência. Preservar a regra de visitante sem imóvel do §10.1.1 e não alterar implicitamente o processo de aprovação/validação de entrada.
+
+### 14.3 Critérios de aceite e testes
+
+1. Visitante: campo e indicação de obrigatoriedade de responsável ausentes; backend aceita responsável ausente nas ações de salvamento.
+2. Visitante cadastrado manualmente ou após OCR: salva pessoa e fotografia sem responsável, também nas combinações sem telefone, sem imóvel e sem ambos.
+3. Morador: campo de responsável visível e comportamento vigente desse tipo preservado; demais tipos não recebem a antiga exigência deste formulário.
+4. Troca de morador para visitante não mantém responsável residual; valor forjado enviado para visitante é ignorado, sem gerar relação fictícia. Cadastro existente não tem histórico apagado.
+5. Sem autorização vigente, o envio facial permanece impedido; salvar sem responsável não gera autorização automática.
+6. Preservar isolamento por implantação, permissões, autoria/auditoria, proteção da fotografia e demais validações existentes.
+
+### 14.4 Orientação ao Claude
+
+Partir da main atual e implementar esta seção, verificando onde o campo é apresentado e validado (inclusive `AccessValidation`, serviços de cadastro e views). Conciliar as especificações dependentes de cadastro/regras de negócio que ainda digam que visitante deve preencher este campo. Não ampliar a alteração para dispensar aprovação ou autorização de acesso. Executar testes pertinentes e atualizar esta seção e o documento 013 com os resultados reais, sem marcar como implementado antecipadamente. Não fazer merge nem implantação automaticamente.
+
+### 14.5 Implementação (08/11/2026, com a revisão do PO)
+
+| Tipo | Responsável | Imóvel | Envio à facial |
+|---|---|---|---|
+| Visitante | **obrigatório** (“Responsável pelo visitante”) | **obrigatório** | visita de até 24 h ao imóvel, com o responsável informado |
+| Turista | não existe | opcional, sem vínculo | entrada de até 24 h sem imóvel nem responsável (AJ-006) |
+| Morador | opcional | opcional | autorização do vínculo; sem imóvel, recusado |
+| Prestador, outro | não existe | opcional | autorização do vínculo; sem imóvel, recusado |
+
+- **Interface:** o campo de responsável aparece só para visitante (obrigatório, com asterisco) e morador (opcional). O imóvel aparece como obrigatório para visitante e “(opcional)” para os demais, com ajuda própria de cada tipo.
+- **Backend:** `quickResponsible` e `quickPropertyCode` são `required_if:quickAccessType,visitante`, com as mensagens “Informe o responsável pelo visitante.” e “Informe o imóvel que o visitante vai visitar.”. O erro aparece ao tentar avançar para a Foto e ao salvar. Ao trocar o tipo para um sem responsável, o valor é limpo; valor residual ou forjado para esses tipos é descartado antes de validar e gravar.
+- **Autorização:** salvar continua sem criar autorização. A visita automática do visitante passa a levar sempre o responsável informado; a do turista fica sem responsável. Sem autorização vigente (por exemplo, prestador sem imóvel), o envio continua recusado. Dados históricos não foram alterados.
+- **Testes executados:**
+  - `tests/Feature/Aj010/ResponsavelEImovelPorTipoTest.php` (9 testes): campos por tipo; visitante sem imóvel ou sem responsável não avança nem salva; visitante com os dois salva pessoa e foto, telefone opcional, sem autorização ao salvar; visitante enviado à facial ganha visita de até 24 h com o responsável e o imóvel; turista entra por até 24 h sem imóvel nem responsável e valor forjado é ignorado; visitante após OCR pede os dois campos; responsável residual descartado; morador opcional, prestador e outro sem responsável; sem autorização vigente o envio é recusado.
+  - Testes anteriores ajustados à nova regra: `CadastroRapidoFotoTest` (combinações sem imóvel usam turista no lugar de visitante), `FotoFacialEnvioTest`, `NomePorVozTest` e `CadastroManualDestaqueTest`.
+  - Suíte completa `php artisan test`: 496 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
+  - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: campos corretos para visitante, turista, morador e prestador; visitante sem os dois campos mostra os dois erros ao avançar; sem rolagem horizontal e sem erro de JavaScript.

@@ -59,7 +59,8 @@ class NomePorVozTest extends TestCase
             ->call('digitarManualmente')
             ->set('quickDocument', '529.982.247-25')
             ->set('quickPhone', '(12) 99999-1234')
-            ->set('quickAccessType', 'visitante');
+            ->set('quickAccessType', 'visitante')
+            ->set('quickPropertyCode', 'SRA-A-102');
     }
 
     public function test_microfone_aparece_somente_no_nome_completo_do_cadastro_rapido(): void
@@ -164,8 +165,9 @@ class NomePorVozTest extends TestCase
 
         $this->conferencia()
             ->set('quickPhone', '')
-            ->set('quickResponsible', 'Responsável')
-            ->call('preencherNomePorVoz', 'Visitante Sem Imovel')
+            ->set('quickAccessType', 'prestador')
+            ->set('quickPropertyCode', '')
+            ->call('preencherNomePorVoz', 'Prestador Sem Imovel')
             ->call('irParaEtapa', 'foto')
             ->set('quickTerminalId', $terminal->id)
             ->set('quickTerminalConfirmado', true)
@@ -173,7 +175,7 @@ class NomePorVozTest extends TestCase
             ->assertSet('quickResultado.cadastro.title', 'Cadastro salvo')
             ->assertSet('quickResultado.facial.variant', 'danger');
 
-        $this->assertSame('Visitante Sem Imovel', Pessoa::query()->sole()->nome);
+        $this->assertSame('Prestador Sem Imovel', Pessoa::query()->sole()->nome);
         $this->assertSame(0, AutorizacaoAcesso::query()->count());
         $this->assertSame(0, $this->simulador()->totalAberturasFisicas($terminal->id));
     }
