@@ -90,6 +90,23 @@ class Portaria extends Component
         ];
     }
 
+    /**
+     * Indicadores reais do dia, sem dados fictícios no Modo Portaria.
+     * As consultas respeitam o escopo de implantação dos modelos.
+     *
+     * @return array{entradas: int, saidas: int, pendentes: int}
+     */
+    public function dailySummary(): array
+    {
+        $hoje = now()->toDateString();
+
+        return [
+            'entradas' => HistoricoAcesso::query()->where('tipo', 'entrada')->whereDate('occurred_at', $hoje)->count(),
+            'saidas' => HistoricoAcesso::query()->where('tipo', 'saida')->whereDate('occurred_at', $hoje)->count(),
+            'pendentes' => PreRegistration::query()->where('status', 'aguardando')->count(),
+        ];
+    }
+
     /** @return list<array{time: string, name: string, relation: string, subject: string, result: string, protectedFiles: array{document: ?PreRegistrationArquivo, document_back: ?PreRegistrationArquivo, document_portrait: ?PreRegistrationArquivo, selfie: ?PreRegistrationArquivo, pre_registration_id: ?string}}> */
     public function recentAttendances(): array
     {
@@ -178,6 +195,7 @@ class Portaria extends Component
             'alerts' => $this->alerts(),
             'cashRegister' => $this->cashRegister(),
             'recentAttendances' => $this->recentAttendances(),
+            'dailySummary' => $this->dailySummary(),
         ])->layout('components.layouts.app', [
             'title' => 'Modo Portaria',
             'heading' => 'Modo Portaria',
