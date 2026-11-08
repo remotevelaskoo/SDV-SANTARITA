@@ -111,7 +111,7 @@
                                 <x-ui.field id="quick-doc-numero" :label="$capturaTipoDocumento === 'rg_cin' ? 'Número do RG/CIN' : 'Número da CNH'" wire:model.blur="quickDocNumero" help="Guardado como documento próprio; não substitui o CPF." :error="$errors->first('quickDocNumero')" />
                                 @if ($conferirBadge('quickDocNumero'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocNumero')"><span class="ui-button__content">Confirmar</span></button></span>@endif
                             </div>
-                            <x-ui.field id="quick-phone" label="Telefone" wire:model="quickPhone" :error="$errors->first('quickPhone')" :required="$quickPessoaExistenteId === null" />
+                            <x-ui.field id="quick-phone" label="Telefone (opcional)" wire:model="quickPhone" placeholder="(35) 99999-0000" help="Se informado, use DDD e número." :error="$errors->first('quickPhone')" />
                             <x-ui.select id="quick-access-type" label="Tipo de acesso" wire:model.live="quickAccessType" :error="$errors->first('quickAccessType')" required>
                                 <option value="visitante">Visitante</option>
                                 <option value="prestador">Prestador</option>
@@ -120,7 +120,7 @@
                                 <option value="outro">Outro</option>
                             </x-ui.select>
                             <x-ui.field id="quick-responsible" label="Responsável pelo acesso" wire:model="quickResponsible" help="Obrigatório para visitante, prestador ou turista." :error="$errors->first('quickResponsible')" />
-                            <x-ui.field id="quick-property" label="Código do imóvel" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="$quickAccessType === 'turista' ? 'Opcional para turista: não cria vínculo com imóvel.' : 'Obrigatório — o vínculo desta pessoa precisa de um imóvel.'" :error="$errors->first('quickPropertyCode')" :required="$quickAccessType !== 'turista'" />
+                            <x-ui.field id="quick-property" label="Código do imóvel (opcional)" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="$quickAccessType === 'turista' ? 'Turista não ganha vínculo com imóvel.' : 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.'" :error="$errors->first('quickPropertyCode')" />
                         </div>
 
                         @if ($quickDuplicateFound)

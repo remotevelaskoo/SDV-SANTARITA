@@ -10,6 +10,7 @@ use App\Models\Imovel;
 use App\Models\OperacaoIntegracao as Operacao;
 use App\Models\Pessoa;
 use App\Models\PessoaArquivo;
+use App\Models\PessoaContato;
 use App\Models\PessoaDocumento;
 use App\Models\User;
 use App\Models\Vinculo;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\Integracoes\Concerns\MontaCenarioIntegracao;
 use Tests\Support\ImagensDocumentoSinteticas;
 use Tests\Support\ImagensPessoaSinteticas;
@@ -311,6 +313,97 @@ class CadastroRapidoFotoTest extends TestCase
             ->assertSet('quickEtapa', 'conferencia')
             ->assertSet('quickPersonRegistered', false);
         $this->assertSame(1, Pessoa::query()->count());
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function camposOpcionaisAusentes(): array
+    {
+        return [
+            'sem telefone' => ['', 'SRA-A-102'],
+            'sem imóvel' => ['(12) 99999-1234', ''],
+            'sem telefone e sem imóvel' => ['', ''],
+        ];
+    }
+
+    #[DataProvider('camposOpcionaisAusentes')]
+    public function test_salva_cadastro_e_foto_sem_telefone_ou_sem_imovel(string $telefone, string $imovel): void
+    {
+        foreach (['visitante', 'morador', 'prestador', 'outro'] as $i => $tipo) {
+            $cpf = ['529.982.247-25', '111.444.777-35', '935.411.347-80', '286.255.878-87'][$i];
+            $this->atendimento()->call('openQuickRegistration')->call('digitarManualmente')
+                ->set('quickName', 'Pessoa Opcional '.$tipo)
+                ->set('quickDocument', $cpf)
+                ->set('quickPhone', $telefone)
+                ->set('quickAccessType', $tipo)
+                ->set('quickResponsible', 'Responsável Sintético')
+                ->set('quickPropertyCode', $imovel)
+                ->call('irParaEtapa', 'foto')
+                ->assertHasNoErrors()
+                ->assertSet('quickEtapa', 'foto')
+                ->set('fotoPessoa', $this->imagem(ImagensPessoaSinteticas::boa(), 'pessoa.jpg'))
+                ->call('saveQuickRegistration')
+                ->assertHasNoErrors()
+                ->assertSet('quickPersonRegistered', true)
+                ->assertSet('quickResultado.cadastro.title', 'Cadastro salvo')
+                ->assertSet('quickResultado.foto.title', 'Foto salva');
+        }
+
+        $this->assertSame(4, Pessoa::query()->count());
+        $this->assertSame(4, PessoaArquivo::query()->where('is_current', true)->count());
+        // Nada de contato vazio nem vínculo fictício.
+        $this->assertSame($telefone === '' ? 0 : 4, PessoaContato::query()->count());
+        $this->assertSame(0, PessoaContato::query()->where('valor', '')->count());
+        $this->assertSame($imovel === '' ? 0 : 4, Vinculo::query()->count());
+        // Salvar nunca cria autorização.
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+    }
+
+    /** @return array<string, array{string, string, string}> */
+    public static function valoresInvalidos(): array
+    {
+        return [
+            'telefone com letras' => ['quickPhone', 'abc-telefone', 'SRA-A-102'],
+            'telefone curto' => ['quickPhone', '9999-1234', 'SRA-A-102'],
+            'telefone longo' => ['quickPhone', '+55 (12) 99999-1234-5678', 'SRA-A-102'],
+            'imóvel inexistente' => ['quickPropertyCode', '(12) 99999-1234', 'SRA-Z-999'],
+        ];
+    }
+
+    #[DataProvider('valoresInvalidos')]
+    public function test_telefone_e_imovel_sao_validados_quando_informados(string $campo, string $telefone, string $imovel): void
+    {
+        $tela = $this->atendimento()->call('openQuickRegistration')->call('digitarManualmente')
+            ->set('quickName', 'Pessoa Invalida')
+            ->set('quickDocument', self::CPF)
+            ->set('quickPhone', $telefone)
+            ->set('quickAccessType', 'visitante')
+            ->set('quickResponsible', 'Responsável Sintético')
+            ->set('quickPropertyCode', $imovel);
+
+        if ($campo === 'quickPhone') {
+            $tela->call('irParaEtapa', 'foto')->assertHasErrors('quickPhone')->assertSet('quickEtapa', 'conferencia');
+        }
+
+        $tela->call('saveQuickRegistration')
+            ->assertHasErrors($campo)
+            ->assertSet('quickEtapa', 'conferencia')
+            ->assertSet('quickPersonRegistered', false);
+        $this->assertSame(0, Pessoa::query()->count());
+    }
+
+    public function test_telefone_valido_informado_vira_contato(): void
+    {
+        $this->atendimento()->call('openQuickRegistration')->call('digitarManualmente')
+            ->set('quickName', 'Pessoa Com Telefone')
+            ->set('quickDocument', self::CPF)
+            ->set('quickPhone', '+55 (12) 99999-1234')
+            ->set('quickAccessType', 'turista')
+            ->set('quickResponsible', 'Recepção')
+            ->call('saveQuickRegistration')
+            ->assertHasNoErrors()
+            ->assertSet('quickPersonRegistered', true);
+
+        $this->assertSame('+55 (12) 99999-1234', PessoaContato::query()->sole()->valor);
     }
 
     public function test_clique_duplo_nao_cria_duas_pessoas(): void

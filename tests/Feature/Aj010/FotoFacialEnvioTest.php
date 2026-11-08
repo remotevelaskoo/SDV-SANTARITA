@@ -143,6 +143,19 @@ class FotoFacialEnvioTest extends TestCase
         $this->assertLessThanOrEqual(24 * 3600, $autorizacao->inicio->diffInSeconds($autorizacao->fim));
     }
 
+    public function test_visitante_sem_imovel_nao_ganha_autorizacao_automatica_no_envio(): void
+    {
+        $this->salvarEEnviar($this->cadastroRapido('visitante')->set('quickPropertyCode', '')->set('quickPhone', ''))
+            ->assertSet('quickResultado.cadastro.title', 'Cadastro salvo')
+            ->assertSet('quickResultado.foto.title', 'Foto salva')
+            ->assertSet('quickResultado.facial.variant', 'danger');
+
+        // Sem imóvel nem autorização vigente: nada é criado para contornar a ausência.
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+        $this->assertSame(0, Operacao::query()->whereIn('operacao', [OperacaoIntegracao::SincronizarCredencial->value, OperacaoIntegracao::EnviarFotoFacial->value])->count());
+        $this->assertSame(1, PessoaArquivo::query()->count());
+    }
+
     public function test_repetir_o_envio_da_mesma_foto_nao_duplica_o_pedido(): void
     {
         config(['integracoes.foto_facial_habilitada' => true]);

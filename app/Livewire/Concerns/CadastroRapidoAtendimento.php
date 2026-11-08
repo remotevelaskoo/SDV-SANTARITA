@@ -48,8 +48,6 @@ trait CadastroRapidoAtendimento
     public const ETAPAS_CADASTRO = ['documento', 'conferencia', 'foto'];
 
     /** Tipos com visita de até 24 horas no envio à facial (modelo do AJ-006). */
-    private const TIPOS_VISITA = ['visitante', 'turista'];
-
     public bool $quickRegistrationOpen = false;
 
     public bool $quickPersonRegistered = false;
@@ -349,17 +347,26 @@ trait CadastroRapidoAtendimento
             'quickName' => ['required', 'string', 'min:3', 'max:120'],
             'quickDocument' => ['required', 'string', 'min:11', 'max:20'],
             'quickDocNumero' => ['nullable', 'string', 'max:30'],
-            'quickPhone' => [$this->quickPessoaExistenteId === null ? 'required' : 'nullable', 'string', 'min:8', 'max:20'],
+            // Telefone e imóvel são opcionais no cadastro rápido (complemento do PO ao AJ-010); validados só quando informados.
+            'quickPhone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9()+\-.\s]+$/'],
             'quickAccessType' => ['required', Rule::in(['visitante', 'prestador', 'morador', 'turista', 'outro'])],
             'quickResponsible' => ['required_if:quickAccessType,visitante,prestador,turista', 'nullable', 'string', 'max:120'],
-            'quickPropertyCode' => [$this->quickAccessType === 'turista' ? 'nullable' : 'required', 'string', 'max:40'],
+            'quickPropertyCode' => ['nullable', 'string', 'max:40'],
             'quickNotes' => ['nullable', 'string', 'max:200'],
             'quickBirthDate' => ['nullable', 'date', 'before:today'],
         ], [
             'required' => 'Preencha este campo para continuar.',
             'required_if' => 'Preencha este campo para o tipo de acesso selecionado.',
             'min' => 'Informe um valor válido.',
+            'quickPhone.regex' => 'Use só números, espaços, parênteses, + ou -.',
         ]);
+
+        $digitosTelefone = strlen(preg_replace('/\D/', '', $this->quickPhone) ?? '');
+        if (trim($this->quickPhone) !== '' && ($digitosTelefone < 10 || $digitosTelefone > 13)) {
+            $this->addError('quickPhone', 'Informe o telefone com DDD (10 a 13 dígitos) ou deixe em branco.');
+
+            return false;
+        }
 
         if (strlen($this->normalizeDocument($this->quickDocument)) !== 11) {
             $this->addError('quickDocument', 'Informe o CPF com 11 dígitos. O número do RG ou da CNH vai no campo próprio.');
@@ -430,14 +437,17 @@ trait CadastroRapidoAtendimento
                     ]);
                 }
 
-                PessoaContato::query()->create([
-                    'pessoa_id' => $pessoa->id,
-                    'tipo' => 'telefone',
-                    'valor' => $this->quickPhone,
-                    'principal' => true,
-                    'verificado' => false,
-                    'started_at' => now(),
-                ]);
+                if (trim($this->quickPhone) !== '') {
+                    // Sem telefone informado, nenhum contato vazio é criado.
+                    PessoaContato::query()->create([
+                        'pessoa_id' => $pessoa->id,
+                        'tipo' => 'telefone',
+                        'valor' => trim($this->quickPhone),
+                        'principal' => true,
+                        'verificado' => false,
+                        'started_at' => now(),
+                    ]);
+                }
 
                 $this->vincularSeNecessario($pessoa, $imovel);
 
@@ -526,8 +536,10 @@ trait CadastroRapidoAtendimento
     private function enviarParaFacial(Pessoa $pessoa, ?Imovel $imovel, User $usuario): array
     {
         $autorizacao = null;
-        if (in_array($this->quickAccessType, self::TIPOS_VISITA, true)) {
-            // Visitante e turista: visita própria de no máximo 24 horas (AJ-006).
+        // Visitante e turista: visita própria de no máximo 24 horas (AJ-006). Visitante sem imóvel
+        // não ganha visita automática: o envio segue a autorização vigente que já existir.
+        $criaVisita = $this->quickAccessType === 'turista' || ($this->quickAccessType === 'visitante' && $imovel !== null);
+        if ($criaVisita) {
             $autorizacoes = app(AutorizacoesAcesso::class);
             $autorizacao = $autorizacoes->vigentePara($pessoa);
             if ($autorizacao === null || $autorizacao->tipo !== AutorizacaoAcesso::TIPO_TURISTA) {
