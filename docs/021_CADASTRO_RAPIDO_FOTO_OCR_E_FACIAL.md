@@ -4,6 +4,7 @@
 **Data:** 06/11/2026
 **Origem:** solicitação do Product Owner: aplicar ao cadastro rápido o modelo de extração por foto do formulário público, com captura da foto da pessoa para envio ao terminal facial.
 **Situação:** implementado no PR #74 (entrega 1 completa; entrega 2 com contrato simulado e adaptador prontos, **sem homologação de bancada e desligada**). Ver §10 e §11.
+**Complemento aprovado em 07/11/2026:** preenchimento por voz somente do nome completo no cadastro rápido (§12), pendente de implementação e testes.
 **Branch documental:** `codex/aj010-cadastro-rapido-foto-ocr`
 
 ## 1. Resultado esperado
@@ -172,3 +173,65 @@ Pré-requisitos: terminal de bancada DS-K1T673DX-BR V3.18.0 já homologado para 
 7. Imagem acima do limite ou PNG: recusa clara sem chamar o terminal.
 8. Revogar a autorização (ou deixar expirar): usuário e face removidos; `numOfFace` = 0; estado “removido”.
 9. Registrar resultados, respostas sanitizadas e versão do SDV no `docs/016`. Apagar a pessoa de teste do terminal ao final.
+
+
+## 12. Nome completo por voz — complemento aprovado pelo PO em 07/11/2026
+
+**Situação:** especificação aprovada; implementação e execução dos testes pendentes. Este registro não comprova entrega do recurso.
+
+### 12.1 Objetivo e escopo
+
+Facilitar o atendimento por operadores com pouca familiaridade com informática. Adicionar preenchimento por voz **exclusivamente no campo Nome completo do cadastro rápido**, na etapa Conferência. Não incluir microfone no cadastro completo, formulário público, análise do pré-cadastro ou demais telas/campos.
+
+Manter Blade/Livewire, os componentes e o Design System existentes. A digitação manual permanece disponível durante todo o fluxo. O recurso é assistivo: transcrição não verifica identidade e exige conferência humana.
+
+### 12.2 Interação aprovada
+
+1. Ao lado do Nome completo, apresentar botão de microfone fácil de identificar, com nome acessível **Preencher por voz**, foco visível e acionamento por teclado.
+2. Iniciar reconhecimento em português do Brasil (`pt-BR`) somente após o clique explícito. Solicitar permissão quando necessário e mostrar **Ouvindo… fale o nome completo.** O botão de microfone não submete o formulário.
+3. Oferecer cancelamento visível. Reconhecimento e captura devem terminar ao concluir, cancelar, sair da tela, mudar de etapa/pessoa ou encerrar o atendimento. Impedir sessões simultâneas e descartar resultados atrasados de um atendimento anterior.
+4. Preencher o campo somente com o resultado final não vazio. Exemplo: “Vinícius Velasco”. Não substituir o conteúdo com resultados parciais.
+5. Se já houver nome, preservar o texto até uma transcrição bem-sucedida. Falha, resultado vazio ou cancelamento não apagam o nome. Se o operador editar o texto enquanto o reconhecimento estiver ativo, cancelar/ignorar a transcrição pendente para não sobrescrever a edição.
+6. O texto transcrito deve atualizar o estado Livewire correto e seguir as validações existentes de nome. Permitir corrigir digitando ou iniciar nova gravação. A transcrição deve contar como edição manual para a proteção contra sobrescrita pelo OCR.
+7. Não salvar cadastro, capturar fotografia, conceder autorização ou enviar à facial automaticamente. As ações de conferência e salvamento existentes permanecem explícitas.
+
+### 12.3 Falhas, compatibilidade e privacidade
+
+- Não entendeu a fala: **Não consegui entender. Toque no microfone e tente novamente ou digite.**
+- Permissão negada ou dispositivo indisponível: explicar de forma simples e manter digitação, foto e salvamento disponíveis; não repetir pedidos de permissão em loop.
+- Navegador sem suporte: apresentar indicação discreta de indisponibilidade e manter o fluxo manual funcional, sem botão que falha silenciosamente. Documentar os navegadores efetivamente verificados.
+- Detectar suporte antes da ativação e tratar erros de rede/serviço, interrupção e ausência de fala sem perder o atendimento. Não presumir funcionamento offline.
+- Não armazenar áudio na aplicação nem registrar áudio ou transcrições em logs, auditoria técnica ou armazenamento local do navegador. O nome confirmado continua seguindo a persistência normal do cadastro.
+- Se o mecanismo enviar áudio a serviço externo, documentar provedor/dependência, necessidade de rede e tratamento dos dados; não afirmar processamento exclusivamente local sem comprovação. Não adicionar serviço pago ou novas credenciais silenciosamente; registrar a decisão técnica necessária.
+- A câmera de documento e de rosto continua solicitando **somente vídeo**, conforme §5 e documento 018. O microfone desta melhoria é uma ação separada, explícita e temporária; não ampliar a permissão da câmera para áudio.
+
+### 12.4 Regras do AJ-010 preservadas
+
+Telefone e código do imóvel continuam opcionais na interface e no backend para todos os tipos de acesso (§10.1.1), com validação somente quando informados. A ausência não bloqueia cadastro nem foto e não gera contato vazio, imóvel ou vínculo fictício.
+
+Envio à facial continua sujeito às permissões, autorização e vigência aplicáveis. O reconhecimento de voz não cria autorização, vínculo, credencial ou liberação física, nem contorna a ausência de imóvel. Preservar as regras já documentadas para turista e visitante.
+
+### 12.5 Critérios de aceite e testes exigidos ao implementador
+
+Usar reconhecimento simulado nos testes automatizados, sem áudio ou pessoas reais e sem chamadas externas. Separar testes de interação no navegador dos testes Livewire/backend; testes de presença de marcação sozinhos não comprovam reconhecimento funcional.
+
+| Cenário | Resultado esperado |
+|---|---|
+| Fala reconhecida em `pt-BR` | Resultado final preenche Nome completo e seu estado Livewire; demais campos inalterados |
+| Resultado parcial ou vazio | Não substitui o nome existente |
+| Correção manual e nova tentativa | Correção disponível; nova transcrição concluída substitui o nome sem submissão automática |
+| Digitação durante reconhecimento ou OCR posterior | Resultado pendente não sobrescreve a digitação; OCR respeita nome conferido/editado |
+| Cancelamento, erro ou falta de fala | Preserva nome anterior e permite nova tentativa ou digitação |
+| Permissão negada, microfone ausente, serviço indisponível ou navegador sem suporte | Mensagem simples; cadastro manual, captura de foto e salvamento seguem disponíveis |
+| Cliques repetidos, mudança de etapa/pessoa ou saída da tela | Uma sessão por vez; captura encerrada e callbacks antigos ignorados |
+| Escopo | Microfone somente no Nome completo do cadastro rápido; ausente nas demais telas/campos |
+| Transcrição concluída | Não salva, fotografa, autoriza, envia à facial ou abre relé automaticamente |
+| Sem telefone, sem imóvel e sem ambos | Cadastro e fotografia salvos, sem contato vazio nem imóvel/vínculo fictício |
+| Telefone e imóvel preenchidos | Valores válidos aceitos e inválidos recusados conforme §10.1.1 |
+| Pessoa sem autorização ou com autorização vencida | Voz não cria autorização; envio facial continua impedido pelas regras vigentes |
+
+Verificar manualmente computador e celular usados pela portaria, incluindo permissão inicial, cancelamento, nova tentativa, foco/teclado e convivência com a câmera. Executar testes pertinentes, Pint e build conforme os padrões do projeto, registrando comandos e resultados reais.
+
+### 12.6 Orientação ao Claude
+
+Puxar a atualização de `codex/aj010-cadastro-rapido-foto-ocr` e ler este documento, principalmente §10.1.1 e §12, antes de implementar. Manter a entrega restrita a este complemento e preservar o trabalho do AJ-010 em andamento. Atualizar a situação desta seção e o acompanhamento do documento 013 somente após implementação e testes, distinguindo simulação, verificação manual e limitações de compatibilidade. Esta entrega documental não autoriza merge nem implantação.
