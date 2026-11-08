@@ -20,6 +20,7 @@ class Navigation
                 ['label' => 'Pré-cadastros', 'icon' => 'badge-check', 'route' => 'pre-registrations'],
                 ['label' => 'Entradas e saídas', 'icon' => 'door', 'route' => 'access-history'],
                 ['label' => 'Caixa', 'icon' => 'clipboard', 'route' => 'cash-register'],
+                ['label' => 'Fechamentos de caixa', 'icon' => 'file', 'route' => 'cash-register.closings'],
                 ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ],
             'Cadastros' => [
