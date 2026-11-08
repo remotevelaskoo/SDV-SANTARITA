@@ -294,3 +294,36 @@ Claude: partir da main atual, implementar somente este ajuste visual/de navegaç
   - Suíte completa `php artisan test`: 487 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
   - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: os dois botões visíveis sem rolar depois de abrir o cadastro rápido e acima da câmera; ativação por teclado (Enter) abre a Conferência com foco no Nome completo; nenhuma chamada de câmera ou de voz ao escolher a entrada manual; digitação funciona; sem rolagem horizontal e sem erro de JavaScript. Contraste seguiu as cores dos botões do Design System; não foi medido com ferramenta.
 - **Não verificado:** dispositivos reais da portaria, Safari e Firefox.
+
+
+## 14. Responsável somente para morador — decisão do PO em 07/11/2026
+
+**Situação:** aprovado para implementação; código e testes ainda pendentes. Nesta primeira fase a operação trabalhará com visitantes. O campo atual “Responsável pelo acesso”, cuja ajuda exige preenchimento para visitante, prestador ou turista, não corresponde à nova decisão.
+
+### 14.1 Regra aprovada e precedência
+
+- No cadastro da pessoa atendido pelo AJ-010, **visitante não precisa informar responsável**. Não exibir nem exigir esse campo para visitante, seja por entrada manual, OCR ou nome por voz.
+- O campo de responsável é aplicável **somente quando o tipo for morador**. Preservar a regra de preenchimento aplicável a morador; esta decisão não define uma nova relação de tutela nem autoriza inventar um responsável.
+- Corrigir a interface, textos de ajuda e validações do backend que ainda exigem responsável de visitante. Não basta ocultar um campo que continua obrigatório no servidor.
+- Nenhum tipo diferente de morador deve herdar a exigência de responsável deste formulário. A primeira entrega e sua homologação focam visitante; não remover outros tipos nem alterar suas regras de autorização por causa desta simplificação.
+- Ao mudar de morador para visitante, limpar o responsável do estado do formulário e ignorar valor residual/forjado no backend; não persistir responsável ou vínculo fictício para satisfazer validação. Preservar dados históricos existentes; não executar limpeza retroativa do banco.
+- Cadastro e fotografia de visitante devem salvar sem responsável, inclusive sem telefone, sem imóvel ou sem ambos, mantendo as demais validações de identidade/foto vigentes.
+
+Esta decisão substitui, para o campo de responsável deste cadastro, exigências anteriores incompatíveis. Não elimina o responsável operacional por aprovação, a autoria/auditoria do porteiro, autorizações de acesso ou relações de domínio existentes fora deste formulário.
+
+### 14.2 Cadastro não equivale a autorização
+
+Ausência de responsável não deve impedir salvar pessoa e foto. O envio à facial continua exigindo permissão, autorização válida e vigência. Não criar autorização, responsável ou vínculo fictício para contornar a ausência. Preservar a regra de visitante sem imóvel do §10.1.1 e não alterar implicitamente o processo de aprovação/validação de entrada.
+
+### 14.3 Critérios de aceite e testes
+
+1. Visitante: campo e indicação de obrigatoriedade de responsável ausentes; backend aceita responsável ausente nas ações de salvamento.
+2. Visitante cadastrado manualmente ou após OCR: salva pessoa e fotografia sem responsável, também nas combinações sem telefone, sem imóvel e sem ambos.
+3. Morador: campo de responsável visível e comportamento vigente desse tipo preservado; demais tipos não recebem a antiga exigência deste formulário.
+4. Troca de morador para visitante não mantém responsável residual; valor forjado enviado para visitante é ignorado, sem gerar relação fictícia. Cadastro existente não tem histórico apagado.
+5. Sem autorização vigente, o envio facial permanece impedido; salvar sem responsável não gera autorização automática.
+6. Preservar isolamento por implantação, permissões, autoria/auditoria, proteção da fotografia e demais validações existentes.
+
+### 14.4 Orientação ao Claude
+
+Partir da main atual e implementar esta seção, verificando onde o campo é apresentado e validado (inclusive `AccessValidation`, serviços de cadastro e views). Conciliar as especificações dependentes de cadastro/regras de negócio que ainda digam que visitante deve preencher este campo. Não ampliar a alteração para dispensar aprovação ou autorização de acesso. Executar testes pertinentes e atualizar esta seção e o documento 013 com os resultados reais, sem marcar como implementado antecipadamente. Não fazer merge nem implantação automaticamente.
