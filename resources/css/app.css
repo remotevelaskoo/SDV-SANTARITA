@@ -3082,9 +3082,18 @@ body.has-drawer-open { overflow: hidden; }
         linear-gradient(160deg, #04132e 5%, #061a3a 55%, #092b64 100%);
 }
 .login-kicker { color: #2687ff; }
-.sdv-one-logo--login .sdv-one-logo__symbol { width: 4.4rem; height: 3.9rem; }
-.sdv-one-logo--login .sdv-one-logo__type > strong { font-size: 1.55rem; }
-.sdv-one-logo--login .sdv-one-logo__type > small { font-size: 0.75rem; }
+.sdv-one-logo--login { gap: 0.5rem; }
+.sdv-one-logo--login .sdv-one-logo__symbol { width: 5.8rem; height: 5.1rem; }
+.sdv-one-logo--login .sdv-one-logo__type > strong { font-size: 2.15rem; }
+.sdv-one-logo--login .sdv-one-logo__type > small { font-size: 0.85rem; }
+.login-brand--mobile .sdv-one-logo__symbol { width: 4.4rem; height: 3.9rem; }
+.login-brand--mobile .sdv-one-logo__type > strong { font-size: 1.6rem; }
+.login-maker {
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+    margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--neutral-200);
+}
+.login-maker > span { color: var(--neutral-400); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.login-maker > img { display: block; width: 9.5rem; height: auto; }
 .sdv-one-logo--on-light .sdv-one-logo__base { fill: #061a3a; }
 .sdv-one-logo--on-light .sdv-one-logo__type > strong { color: #061a3a; }
 .sdv-one-logo--on-light .sdv-one-logo__type > strong > span { color: #126bff; }
