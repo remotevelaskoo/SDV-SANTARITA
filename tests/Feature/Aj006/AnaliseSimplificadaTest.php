@@ -63,7 +63,7 @@ class AnaliseSimplificadaTest extends TestCase
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
             ->assertSee('Pendências para conferir')
             ->assertSee('Aviso sintético de teste')
-            ->assertSee('Sem selfie')
+            ->assertSee('Sem foto')
             ->assertSee('Documento não enviado')
             ->html();
 

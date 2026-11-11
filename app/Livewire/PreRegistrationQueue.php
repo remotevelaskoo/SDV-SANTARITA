@@ -6,6 +6,7 @@ use App\Models\PreRegistration;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 /**
@@ -51,15 +52,45 @@ class PreRegistrationQueue extends Component
     public function filteredRecords(): Collection
     {
         return $this->baseQuery()
+            ->with('fileLinks.file')
             ->when($this->statusFilter !== 'todos', fn (Builder $query) => $query->where('status', $this->statusFilter))
             ->get();
     }
 
+    /**
+     * Foto de cada linha: a selfie vigente (do solicitante ou tirada pela
+     * portaria). Sem a permissão de imagens sensíveis, nenhuma URL é gerada.
+     *
+     * @param  Collection<int, PreRegistration>  $records
+     * @return array<string, array{tem: bool, url: ?string}>
+     */
+    private function fotos(Collection $records): array
+    {
+        $podeVer = (bool) Auth::user()?->hasPermission('arquivos.sensiveis.visualizar');
+        $fotos = [];
+
+        foreach ($records as $record) {
+            $arquivo = $record->currentFileLink('selfie')?->file;
+            $fotos[$record->id] = [
+                'tem' => $arquivo !== null,
+                'url' => $podeVer && $arquivo?->isAvailable()
+                    ? route('protected-files.show', ['arquivo' => $arquivo, 'contexto' => 'fila_pre_cadastro'])
+                    : null,
+            ];
+        }
+
+        return $fotos;
+    }
+
     public function render(): View
     {
+        $filteredRecords = $this->filteredRecords();
+
         return view('livewire.pre-registration-queue', [
             'records' => $this->allRecords(),
-            'filteredRecords' => $this->filteredRecords(),
+            'filteredRecords' => $filteredRecords,
+            'fotos' => $this->fotos($filteredRecords),
+            'podeTirarFoto' => (bool) Auth::user()?->hasPermission('pre-registro.editar'),
         ])->layout('components.layouts.app', [
             'title' => 'Pré-cadastros',
             'heading' => 'Pré-cadastros',

@@ -81,7 +81,26 @@
                 <tbody>
                     @foreach ($filteredRecords as $record)
                         <tr wire:key="row-{{ $record->id }}">
-                            <td><strong>{{ $record->name }}</strong><small>{{ $record->maskedDocument() }} · {{ $record->destination_label }}</small></td>
+                            <td>
+                                <div class="pre-registration-person">
+                                    @if ($fotos[$record->id]['url'])
+                                        <img class="pre-registration-photo" src="{{ $fotos[$record->id]['url'] }}" alt="Foto de {{ $record->name }}" loading="lazy" referrerpolicy="no-referrer">
+                                    @else
+                                        <span class="pre-registration-person-avatar" title="{{ $fotos[$record->id]['tem'] ? 'Foto protegida pelo seu perfil' : 'Sem foto' }}">{{ $record->initials() }}</span>
+                                    @endif
+                                    <div>
+                                        <strong>{{ $record->name }}</strong>
+                                        <small>{{ $record->maskedDocument() }} · {{ $record->destination_label }}</small>
+                                        @if (! $fotos[$record->id]['tem'])
+                                            @if ($podeTirarFoto && $record->status !== 'rejeitado')
+                                                <a class="pre-registration-photo-missing" href="{{ route('pre-registrations.review', $record->id) }}#tirar-foto"><x-icon name="alert" /> Sem foto · tirar agora</a>
+                                            @else
+                                                <span class="pre-registration-photo-missing"><x-icon name="alert" /> Sem foto</span>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
                             <td>{{ ucfirst($record->access_type) }}</td>
                             <td>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</td>
                             <td>{{ $record->vehicleLabel() }}</td>
@@ -103,7 +122,24 @@
                 <ul class="pre-registration-mobile-list">
                     @foreach ($filteredRecords as $record)
                         <li wire:key="card-{{ $record->id }}">
-                            <header><span class="pre-registration-person-avatar">{{ $record->initials() }}</span><div><strong>{{ $record->name }}</strong><small>{{ ucfirst($record->access_type) }} · {{ $record->destination_label }}</small></div></header>
+                            <header>
+                                @if ($fotos[$record->id]['url'])
+                                    <img class="pre-registration-photo" src="{{ $fotos[$record->id]['url'] }}" alt="Foto de {{ $record->name }}" loading="lazy" referrerpolicy="no-referrer">
+                                @else
+                                    <span class="pre-registration-person-avatar">{{ $record->initials() }}</span>
+                                @endif
+                                <div>
+                                    <strong>{{ $record->name }}</strong>
+                                    <small>{{ ucfirst($record->access_type) }} · {{ $record->destination_label }}</small>
+                                    @if (! $fotos[$record->id]['tem'])
+                                        @if ($podeTirarFoto && $record->status !== 'rejeitado')
+                                            <a class="pre-registration-photo-missing" href="{{ route('pre-registrations.review', $record->id) }}#tirar-foto"><x-icon name="alert" /> Sem foto · tirar agora</a>
+                                        @else
+                                            <span class="pre-registration-photo-missing"><x-icon name="alert" /> Sem foto</span>
+                                        @endif
+                                    @endif
+                                </div>
+                            </header>
                             <dl><div><dt>Enviado</dt><dd>{{ $record->submitted_at->format('d/m/Y \à\s H:i') }}</dd></div><div><dt>Protocolo</dt><dd>{{ $record->protocol }}</dd></div><div><dt>Veículo</dt><dd>{{ $record->vehicleLabel() }}</dd></div></dl>
                             <footer>
                                 <x-ui.badge :variant="match ($record->status) { 'aprovado' => 'success', 'rejeitado' => 'danger', 'correcao' => 'warning', default => 'info' }">

@@ -3098,3 +3098,16 @@ body.has-drawer-open { overflow: hidden; }
 .sdv-one-logo--on-light .sdv-one-logo__type > strong { color: #061a3a; }
 .sdv-one-logo--on-light .sdv-one-logo__type > strong > span { color: #126bff; }
 .sdv-one-logo--on-light .sdv-one-logo__type > small { color: var(--neutral-600); }
+
+/* Foto tirada pela portaria na análise do pré-cadastro (reaproveita .foto-pessoa do AJ-010). */
+.pre-cadastro-analise__tirar-foto { display: grid; gap: 0.5rem; margin-top: 0.75rem; padding: 0.85rem; border: 1px dashed #cdddf2; border-radius: 0.8rem; background: #f7fbff; }
+.pre-cadastro-analise__tirar-foto h4 { margin: 0; font-size: 0.8rem; }
+.pre-cadastro-analise__tirar-foto > p { margin: 0; color: var(--neutral-600); font-size: 0.7rem; }
+.pre-cadastro-analise__trocar-foto { margin-top: 0.6rem; }
+.pre-cadastro-analise__trocar-foto summary { cursor: pointer; color: var(--blue-700); font-size: 0.7rem; font-weight: 700; }
+.pre-cadastro-analise__trocar-foto[open] summary { margin-bottom: 0.5rem; }
+.pre-registration-photo { width: 2.4rem; height: 2.4rem; flex: 0 0 auto; border-radius: 999px; object-fit: cover; background: var(--neutral-100); }
+.pre-registration-person { display: flex; align-items: center; gap: 0.6rem; }
+.pre-registration-person > div { display: grid; min-width: 0; }
+.pre-registration-photo-missing { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.15rem; color: #9a5b00; font-size: 0.62rem; font-weight: 700; text-decoration: none; }
+.pre-registration-photo-missing:hover { text-decoration: underline; }

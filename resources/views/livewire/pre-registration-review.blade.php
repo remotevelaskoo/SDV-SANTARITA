@@ -77,7 +77,7 @@
             <header>
                 <div>
                     <h3 id="analise-imagens-titulo">Conferência visual protegida</h3>
-                    <p>A selfie carrega ao abrir a análise, e cada exibição é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada.</p>
+                    <p>A selfie carrega ao abrir a análise, e cada exibição é registrada na auditoria. Ver a selfie não cria credencial biométrica nem autoriza entrada. Sem selfie, a portaria pode fotografar a pessoa aqui.</p>
                 </div>
                 <x-ui.badge variant="warning">Dados sensíveis</x-ui.badge>
             </header>
@@ -114,6 +114,19 @@
                     </li>
                 @endforeach
             </ul>
+
+            @if (! $imagens[0]['arquivo'] && $podeTirarFoto)
+                <section class="pre-cadastro-analise__tirar-foto" aria-labelledby="analise-tirar-foto-titulo">
+                    <h4 id="analise-tirar-foto-titulo">Tirar a foto da pessoa</h4>
+                    <p>O solicitante não enviou selfie. Abra a câmera, fotografe o rosto e salve.</p>
+                    @include('livewire.partials.pre-cadastro-captura-foto')
+                </section>
+            @elseif ($podeTirarFoto)
+                <details class="pre-cadastro-analise__trocar-foto" x-on:foto-pre-cadastro-salva.window="$el.open = false">
+                    <summary>Foto ruim? Tirar nova foto</summary>
+                    @include('livewire.partials.pre-cadastro-captura-foto')
+                </details>
+            @endif
 
             <dialog x-ref="ampliar" class="protected-file-viewer" aria-labelledby="analise-ampliada-titulo" x-on:close="ampliada = null" @click.self="$el.close()">
                 <div class="protected-file-viewer__surface">
@@ -238,7 +251,7 @@
                 <div><dt>Veículo</dt><dd>{{ $record->vehicleLabel() }}@if ($record->vehicle_model) · {{ $record->vehicle_model }}@endif @if ($record->vehicle_color) · {{ $record->vehicle_color }}@endif</dd></div>
                 <div><dt>Tipo de documento</dt><dd>{{ $record->documentTypeLabel() }}</dd></div>
                 <div><dt>Situação do documento</dt><dd>{{ $record->currentFileLink('documento')?->file ? $record->document_status : 'Não enviado' }}</dd></div>
-                <div><dt>Situação da selfie</dt><dd>{{ $record->currentFileLink('selfie')?->file ? $record->selfie_status : 'Não enviada' }}</dd></div>
+                <div><dt>Situação da selfie</dt><dd>{{ match ($record->currentFileLink('selfie')?->file?->origin) { null => 'Não enviada', 'portaria_pre_cadastro' => 'Foto tirada pela portaria', default => $record->selfie_status } }}</dd></div>
                 @if ($leitura)
                     <div><dt>Leitura automática</dt><dd>{{ $leitura->engine }} · {{ $leitura->model_version }}</dd></div>
                 @endif
@@ -283,6 +296,8 @@
                 @foreach ($record->edits as $entry)
                     @if ($entry->action === 'situacao_alterada')
                         <li><span></span><div><strong>Situação alterada para "{{ $entry->new_value }}" por {{ $entry->operator_name }}</strong><small>{{ $entry->occurred_at->format('d/m/Y \à\s H:i') }} · {{ $entry->reason }}</small></div></li>
+                    @elseif ($entry->action === 'foto_adicionada')
+                        <li><span></span><div><strong>{{ $entry->reason }}: {{ $entry->operator_name }}</strong><small>{{ $entry->occurred_at->format('d/m/Y \à\s H:i') }}</small></div></li>
                     @elseif ($entry->action === 'revisao_sem_alteracao')
                         <li><span></span><div><strong>Dados revisados por {{ $entry->operator_name }}</strong><small>{{ $entry->occurred_at->format('d/m/Y \à\s H:i') }} · {{ $entry->reason }} · sem alteração de valor</small></div></li>
                     @else

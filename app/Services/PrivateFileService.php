@@ -30,10 +30,13 @@ class PrivateFileService
     public function __construct(private AuditService $audit) {}
 
     /**
+     * `$origin` distingue o envio do solicitante (formulário público) da foto
+     * tirada depois pela portaria na análise do pré-cadastro.
+     *
      * @param  array<'documento'|'documento_verso'|'documento_foto'|'selfie', UploadedFile>  $uploads
      * @return list<Arquivo>
      */
-    public function storePreRegistrationFiles(PreRegistration $preRegistration, array $uploads): array
+    public function storePreRegistrationFiles(PreRegistration $preRegistration, array $uploads, string $origin = 'pre_cadastro_publico'): array
     {
         $storedObjects = [];
         $prepared = [];
@@ -87,7 +90,7 @@ class PrivateFileService
                         'documento' => 'Frente do documento',
                         'documento_verso' => 'Verso do documento',
                         'documento_foto' => 'Foto localizada no documento',
-                        default => 'Selfie enviada',
+                        default => $origin === 'pre_cadastro_publico' ? 'Selfie enviada' : 'Foto tirada pela portaria',
                     },
                     'extension' => $extension,
                     'declared_mime' => $upload->getClientMimeType(),
@@ -97,7 +100,7 @@ class PrivateFileService
                 ];
             }
 
-            return DB::transaction(function () use ($preRegistration, $prepared): array {
+            return DB::transaction(function () use ($preRegistration, $prepared, $origin): array {
                 $files = [];
 
                 foreach ($prepared as $metadata) {
@@ -120,7 +123,7 @@ class PrivateFileService
                         'classification' => in_array($metadata['category'], ['selfie', 'documento_foto'], true) ? 'sensivel' : 'pessoal',
                         'purpose' => 'conferencia_pre_cadastro',
                         'status' => 'disponivel',
-                        'origin' => 'pre_cadastro_publico',
+                        'origin' => $origin,
                         'created_by' => Auth::id(),
                     ]);
 
@@ -144,6 +147,7 @@ class PrivateFileService
                     metadata: [
                         'categories' => array_column($prepared, 'category'),
                         'quantity' => count($prepared),
+                        'origin' => $origin,
                     ],
                 );
 
