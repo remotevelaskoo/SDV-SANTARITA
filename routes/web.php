@@ -27,6 +27,7 @@ use App\Livewire\PreRegistrationQueue;
 use App\Livewire\PreRegistrationReview;
 use App\Livewire\PropertyManagement;
 use App\Livewire\PublicPreRegistration;
+use App\Livewire\RelatorioFinalPortaria;
 use App\Livewire\Reports;
 use App\Livewire\ResetPassword;
 use App\Livewire\SelecaoPosto;
@@ -77,6 +78,7 @@ Route::get('/dashboard', Dashboard::class)->middleware(['auth', 'permissao:dashb
 Route::get('/selecionar-implantacao', ImplantacaoSelection::class)->middleware('auth')->name('implantacao.selecionar');
 Route::get('/selecionar-posto', SelecaoPosto::class)->middleware('auth')->name('posto.selecionar');
 Route::get('/portaria', Portaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria');
+Route::get('/portaria/relatorio-final', RelatorioFinalPortaria::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('portaria.relatorio-final');
 Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
 Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');
 Route::get('/pre-cadastros', PreRegistrationQueue::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations');
