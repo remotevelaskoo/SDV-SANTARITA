@@ -126,3 +126,59 @@ O seletor `input type=file` com `capture` é apenas uma indicação ao navegador
 - Falhas de permissão, dispositivo ausente ou câmera ocupada têm orientação simples. Sem suporte à prévia, permanece o seletor nativo de câmera/arquivo.
 - `Permissions-Policy` permite câmera da própria origem e bloqueia microfone; CSP permite mídia local/blob. Nenhuma mudança em autorização, facial, banco, chave Supabase ou modo de produção.
 - Testes do portal: **15 aprovados** (os dez anteriores e cinco para ciclo da câmera, cancelamento/permissão tardia, troca de stream, recusa e JPEG limitado). Webcam/celular físicos continuam dependendo da permissão no dispositivo do usuário.
+
+
+## 11. Revisão para homologação — 11/11/2026
+
+**Base revisada:** `codex/hibrido-vercel-supabase` em `5acc152` (PR #87), já sobre a main `fc0497a` (inclui PRs #82–#86). Revisão na branch `claude/project-thread-nwk4hb`, sem merge nem push na main.
+
+### 11.1 Integração com a main
+
+A branch do PR #87 já parte da main atual: **nenhum conflito** com foto no pré-cadastro, identificação com câmera/edição, CPF por voz, relatório final por turno e contribuição fixa do turista (#82–#86). O PR #87 só acrescenta arquivos, a migração `pre_cadastro_nuvem_recebimentos`, o agendamento desligado por padrão e as variáveis vazias do `.env.example`. Nenhum segredo, token ou chave foi encontrado no diff.
+
+### 11.2 Testes executados nesta revisão
+
+- `php artisan test` (PHP 8.4): **571 aprovados**, 3716 asserções, incluindo `tests/Feature/Hibrido/PreCadastroNuvemTest.php`.
+- `vendor/bin/pint --test`: aprovado (388 arquivos).
+- `pnpm build` aprovado; `pnpm test:js`: **22 aprovados**.
+- `npm test` no portal: **15 aprovados** (validação, transporte, câmera e PostgreSQL embarcado com RLS/ACK).
+- CI do GitHub no `5acc152`: testes PHP/JS/compilação e migrações aprovados.
+
+### 11.3 Fluxo completo de ponta a ponta (ambiente isolado, dados sintéticos)
+
+Harness local: handlers reais `api/portal.js` e `api/sync.js` servidos em HTTPS local, com o Supabase substituído por armazenamento em memória; Chromium com câmera simulada; Laravel em PHP 8.4 com SQLite separado e o comando real `pre-cadastro:sincronizar-nuvem`. Não usa nem altera o Supabase `sdv-santa-rita`, o projeto `certificados` ou o Vercel.
+
+| Verificação | Resultado |
+|---|---|
+| Abrir câmera → Tirar foto (frente do documento) | Prévia exibida; câmera encerrada após a foto (0 trilhas ativas) |
+| Abrir câmera → Cancelar | Foto anterior mantida; câmera encerrada |
+| Refazer | Nova captura substitui a prévia |
+| Escape no modal | Câmera encerrada |
+| Microfone | Todas as chamadas `getUserMedia` com `audio:false`; permissão de microfone negada pela política da página |
+| Selecionar imagem já salva (selfie) | Prévia exibida e enviada normalmente |
+| Envio | Protocolo `PRE-SRA-…`, recibo “Aguardando análise da portaria”, sem erros de JavaScript |
+| 1ª sincronização | 1 recebido, 1 confirmado; pré-cadastro `aguardando`, turista, destino “Praia do Santa Rita”, sem responsável; 2 arquivos privados (documento e selfie) |
+| 2ª sincronização | 0 recebidos; nenhum cadastro ou arquivo duplicado |
+| Decisão local `correcao` (versão 2) com a nuvem fora (503) | Comando falha com mensagem genérica; cadastro e arquivos locais preservados; ACK fica pendente |
+| Nuvem de volta | ACK pendente confirmado; nuvem `importado/correcao/v2`; recibo público mostra a nova situação |
+| Efeitos colaterais | 0 pessoas, 0 autorizações, 0 credenciais, 0 sincronizações faciais, 0 contribuições, 0 movimentações de caixa |
+| Sincronização sem credencial do nó | 401 |
+
+Capturas e o harness ficaram nos arquivos do projeto (`pre-cadastro-hibrido/`), fora do Git.
+
+### 11.4 Divergências para decisão do PO (não alteradas)
+
+1. **Prestador com responsável no formulário Laravel.** A revisão do PO de 08/11 (doc 021) diz que prestador não tem responsável, e o portal segue isso. O formulário público Laravel já existente (`PublicPreRegistration`) ainda grava o responsável do imóvel para prestador. Decidir se o formulário local deve ser alinhado.
+2. **Origem do catálogo de imóveis e responsáveis do portal.** Vem da variável `PORTAL_DESTINATIONS` no Vercel, digitada à parte, e não do cadastro de imóveis/vínculos do sistema local. Pode ficar desatualizada. Decidir quem mantém a lista e se ela deve vir do sistema local no futuro. Sem essa lista, visitante e prestador continuam recusados no portal.
+3. **Período do pré-cadastro.** Segue o formulário local: 24 h a partir do envio. Um visitante que se cadastra dias antes chega com o período vencido. Aprovação não autoriza entrada, mas o PO deve confirmar se o portal precisa perguntar a data da visita.
+
+### 11.5 Riscos técnicos encontrados
+
+- **Fila presa por solicitações inválidas.** A nuvem sempre devolve as 10 mais antigas em `enviado`. Se uma delas for recusada pela validação local (por exemplo, relógio da portaria atrasado ou mudança futura de regra), ela é reapresentada a cada ciclo; dez casos assim impedem novas importações. Hoje as validações dos dois lados coincidem, então o risco é baixo; recomenda-se, antes da produção, um estado de “recusado na importação” na nuvem (exige migração no Supabase do portal, não aplicada aqui).
+- **Relógio do computador da portaria.** `submitted_at` não pode estar no futuro em relação ao relógio local; manter NTP ativo.
+- **Lock de execução.** Usa `Cache::lock`; o `CACHE_STORE` do servidor deve suportar locks (`database`, `file` ou `redis`).
+- Mensagem “Foto capturada…” permanece na tela ao escolher depois uma imagem salva em outro campo (cosmético).
+
+### 11.6 Pendente — não concluído
+
+Configuração e homologação no computador da portaria, catálogo real, implantação real, aviso de privacidade definitivo, retenção, celulares/iPad reais e produção (`PORTAL_ENABLED=false` mantido). Nada disso foi feito nesta revisão.
