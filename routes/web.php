@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EquipamentoImagemController;
+use App\Http\Controllers\PreCadastroDivulgacaoController;
 use App\Http\Controllers\ProtectedFileController;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Livewire\AccessHistory;
@@ -82,6 +83,7 @@ Route::get('/portaria/relatorio-final', RelatorioFinalPortaria::class)->middlewa
 Route::get('/validacao', AccessValidation::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('validation');
 Route::get('/entradas-saidas', AccessHistory::class)->middleware(['auth', 'permissao:validacao.registrar'])->name('access-history');
 Route::get('/pre-cadastros', PreRegistrationQueue::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations');
+Route::get('/pre-cadastros/divulgacao', PreCadastroDivulgacaoController::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations.share');
 Route::get('/pre-cadastros/{preRegistration}/analise', PreRegistrationReview::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations.review');
 Route::get('/imoveis', PropertyManagement::class)->middleware(['auth', 'permissao:imoveis.consultar'])->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->middleware(['auth', 'permissao:veiculos.consultar'])->name('vehicles');

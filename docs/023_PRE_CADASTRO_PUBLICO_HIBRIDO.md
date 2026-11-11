@@ -231,3 +231,14 @@ Nada disso foi aplicado no Supabase ou no Vercel nesta revisão.
 ### 12.7 Continua pendente
 
 Configuração e homologação no computador da portaria, aplicação da migração no Supabase e publicação no Vercel, aviso de privacidade e retenção definitivos, dispositivos reais e produção (`PORTAL_ENABLED=false`).
+
+## 13. Pré-cadastro público divulgado a todos — decisão do PO em 11/11/2026
+
+O PO decidiu deixar o formulário aberto a todos e orientar visitantes, turistas e prestadores a se cadastrarem antes de chegar, para reduzir filas na portaria.
+
+- **Convite = link público.** O código do convite continua no fragmento do link (`https://portal/#convite=CÓDIGO`), mas passa a ser divulgado amplamente (cartaz com QR code, WhatsApp, site). Ele não identifica ninguém nem autoriza nada; só impede envios de quem não tem o link oficial.
+- **Risco aceito:** qualquer pessoa com o link pode enviar, inclusive cadastros falsos.
+- **Proteções que permanecem:** todo envio fica `aguardando` a análise humana; nada cria autorização, credencial ou envio à facial; limite de 120 tentativas por hora por endereço de rede; imagens e dados privados no Supabase. Se houver abuso, trocar `PORTAL_INVITE_SECRET` no portal e `SDV_PRE_CADASTRO_LINK_PUBLICO` no nó invalida o link e o QR antigos.
+- **Sistema local:** nova variável `SDV_PRE_CADASTRO_LINK_PUBLICO` (fora do Git). O botão **Abrir formulário público** da tela Pré-cadastros abre o portal; sem link válido configurado, o botão não aparece. O formulário Laravel de demonstração (`/pre-cadastro/convite-demonstracao`) continua existindo, mas deixou de ser o link da fila.
+- **Cartaz:** a tela **Link e QR code para divulgar** (`/pre-cadastros/divulgacao`, permissão `pre-registro.analisar`) mostra o QR code gerado no próprio servidor (biblioteca `bacon/bacon-qr-code`, sem serviço externo), as instruções e o botão **Imprimir cartaz**. Na impressão, o link em texto e a orientação técnica são ocultados.
+- Testes: `PreCadastroDivulgacaoTest` (5): botão abre o portal configurado; sem link não há botão quebrado; QR em SVG; link sem HTTPS ou sem convite válido não gera QR; página exige login e permissão. Suíte completa: 586 aprovados.

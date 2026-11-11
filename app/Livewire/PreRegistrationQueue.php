@@ -6,6 +6,7 @@ use App\Models\Implantacao;
 use App\Models\PreRegistration;
 use App\Services\AuditService;
 use App\Services\Hibrido\PreCadastroNuvem;
+use App\Services\PreCadastro\LinkPublico;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -148,6 +149,7 @@ class PreRegistrationQueue extends Component
             'podeTirarFoto' => (bool) Auth::user()?->hasPermission('pre-registro.editar'),
             'falhasPortal' => $this->falhasDoPortal(),
             'podeReabrir' => (bool) Auth::user()?->hasPermission('pre-registro.editar'),
+            'linkPublico' => app(LinkPublico::class)->url(),
         ])->layout('components.layouts.app', [
             'title' => 'Pré-cadastros',
             'heading' => 'Pré-cadastros',

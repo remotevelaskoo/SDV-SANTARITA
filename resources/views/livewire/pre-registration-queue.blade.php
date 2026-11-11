@@ -54,9 +54,16 @@
                 <h2 id="pre-registration-list-title">Solicitações</h2>
                 <p>Abra a análise para conferir imagens, dados e leitura automática antes de decidir.</p>
             </div>
-            <x-ui.button variant="secondary" href="{{ route('pre-registration.public') }}" target="_blank">
-                Abrir formulário público
-            </x-ui.button>
+            <div class="pre-registration-queue__share">
+                @if ($linkPublico)
+                    <x-ui.button variant="secondary" href="{{ $linkPublico }}" target="_blank" rel="noreferrer">
+                        Abrir formulário público
+                    </x-ui.button>
+                @endif
+                <x-ui.button variant="secondary" href="{{ route('pre-registrations.share') }}">
+                    Link e QR code para divulgar
+                </x-ui.button>
+            </div>
         </header>
 
         <div class="pre-registration-status-tabs" role="group" aria-label="Filtrar por situação">
