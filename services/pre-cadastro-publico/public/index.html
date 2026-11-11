@@ -107,24 +107,49 @@
                         </select></label
                     >
                     <div class="grid">
-                        <label class="file"
-                            >Frente do documento<input
-                                name="documento"
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                capture="environment"
-                                required /><img
-                                alt="Prévia da frente do documento"
-                                hidden /></label
-                        ><label class="file" id="verso" hidden
-                            >Verso do RG/CIN<input
-                                name="documento_verso"
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                capture="environment" /><img
-                                alt="Prévia do verso do documento"
-                                hidden
-                        /></label>
+                        <div class="file">
+                            <label
+                                >Frente do documento<input
+                                    name="documento"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    capture="environment"
+                                    required
+                            /></label>
+                            <button
+                                type="button"
+                                class="camera-open"
+                                data-camera="documento"
+                                aria-label="Abrir câmera: frente do documento"
+                            >
+                                Abrir câmera
+                            </button>
+                            <small
+                                >Ou selecione uma imagem já salva acima.</small
+                            >
+                            <img alt="Prévia: frente do documento" hidden />
+                        </div>
+                        <div class="file" id="verso" hidden>
+                            <label
+                                >Verso do RG/CIN<input
+                                    name="documento_verso"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    capture="environment"
+                            /></label>
+                            <button
+                                type="button"
+                                class="camera-open"
+                                data-camera="documento_verso"
+                                aria-label="Abrir câmera: verso do rg/cin"
+                            >
+                                Abrir câmera
+                            </button>
+                            <small
+                                >Ou selecione uma imagem já salva acima.</small
+                            >
+                            <img alt="Prévia: verso do rg/cin" hidden />
+                        </div>
                     </div>
                     <small
                         >JPG, PNG ou WebP, até 8 MB por imagem. Não envie
@@ -139,14 +164,26 @@
                         portaria; esta captura não comprova identidade nem prova
                         de vida.
                     </p>
-                    <label class="file"
-                        >Fotografe ou selecione uma selfie<input
-                            name="selfie"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            capture="user"
-                            required /><img alt="Prévia da selfie" hidden
-                    /></label>
+                    <div class="file">
+                        <label
+                            >Sua fotografia<input
+                                name="selfie"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                capture="user"
+                                required
+                        /></label>
+                        <button
+                            type="button"
+                            class="camera-open"
+                            data-camera="selfie"
+                            aria-label="Abrir câmera: sua fotografia"
+                        >
+                            Abrir câmera
+                        </button>
+                        <small>Ou selecione uma imagem já salva acima.</small>
+                        <img alt="Prévia: sua fotografia" hidden />
+                    </div>
                 </section>
                 <section>
                     <h2><span>04</span> Veículo</h2>
@@ -210,6 +247,27 @@
                 >
             </section>
         </main>
+        <dialog
+            id="camera-dialog"
+            aria-labelledby="camera-title"
+            aria-describedby="camera-status"
+        >
+            <h2 id="camera-title">Tirar fotografia</h2>
+            <video id="camera-video" autoplay muted playsinline></video>
+            <p id="camera-status" role="status" aria-live="polite"></p>
+            <div class="camera-actions">
+                <button type="button" id="camera-capture" disabled>
+                    Tirar foto
+                </button>
+                <button type="button" id="camera-cancel" class="secondary">
+                    Cancelar
+                </button>
+            </div>
+            <small
+                >A câmera será encerrada ao fotografar ou cancelar. Você poderá
+                conferir e refazer antes de enviar.</small
+            >
+        </dialog>
         <footer>
             SDV One · Soluções do Vale<br />Se precisar de ajuda, procure a
             administração do condomínio.

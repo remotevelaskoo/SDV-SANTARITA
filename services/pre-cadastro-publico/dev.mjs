@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import portal from "./api/portal.js";
 import sync from "./api/sync.js";
 const files = {
+    "/camera.js": ["camera.js", "text/javascript"],
     "/": ["index.html", "text/html"],
     "/portal.js": ["portal.js", "text/javascript"],
     "/portal.css": ["portal.css", "text/css"],

@@ -113,3 +113,16 @@ A exclusão do projeto Vercel antigo exige ação explícita no painel, pelo lin
 - O cliente PHP deste ambiente necessitou das configurações do proxy e de timeout de conexão maior no harness de teste. Isso não substitui verificar TLS, latência e conectividade no servidor físico. O segredo de proteção do Preview usado no harness também não pertence à configuração de produção do nó.
 
 A prova demonstra o transporte e a idempotência do pré-cadastro. Não representa homologação do funcionamento offline integral da portaria, de relógios, revogações, backup/restauração ou hardware.
+
+
+## 10. Captura direta pela câmera — complemento do PO em 11/11/2026
+
+O seletor `input type=file` com `capture` é apenas uma indicação ao navegador e não abria prévia de webcam no computador. Foram adicionados botões **Abrir câmera** separados para frente, verso e fotografia da pessoa, preservando a escolha de arquivos como alternativa.
+
+- O clique explícito solicita `getUserMedia` somente com vídeo (`audio=false`), preferindo câmera frontal para a pessoa e traseira para documentos.
+- Modal com vídeo, instrução de permissão, **Tirar foto** e **Cancelar**. Só captura depois de haver vídeo com dimensões válidas; usa JPEG de até 1600 px e mostra prévia no campo correto.
+- Foto capturada participa do mesmo upload privado e das validações existentes, sem exigir seleção adicional de arquivo. Cancelar ou negar permissão preserva a imagem anterior. Refazer substitui apenas após nova captura bem-sucedida.
+- A câmera é encerrada ao capturar, cancelar, fechar por Escape, sair da página, ocultar a aba ou iniciar o envio. Permissão respondida após cancelamento não deixa stream aberto.
+- Falhas de permissão, dispositivo ausente ou câmera ocupada têm orientação simples. Sem suporte à prévia, permanece o seletor nativo de câmera/arquivo.
+- `Permissions-Policy` permite câmera da própria origem e bloqueia microfone; CSP permite mídia local/blob. Nenhuma mudança em autorização, facial, banco, chave Supabase ou modo de produção.
+- Testes do portal: **15 aprovados** (os dez anteriores e cinco para ciclo da câmera, cancelamento/permissão tardia, troca de stream, recusa e JPEG limitado). Webcam/celular físicos continuam dependendo da permissão no dispositivo do usuário.
