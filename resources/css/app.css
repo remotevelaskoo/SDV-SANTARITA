@@ -3128,3 +3128,45 @@ body.has-drawer-open { overflow: hidden; }
 .validation-person-data dl div { display: grid; gap: 0.1rem; min-width: 0; }
 .validation-person-data dt { color: var(--neutral-600); font-size: 0.62rem; }
 .validation-person-data dd { margin: 0; font-size: 0.75rem; font-weight: 700; overflow-wrap: anywhere; }
+
+/* Relatório final do Modo Portaria (imprimível). */
+.relatorio-final { display: grid; gap: 1rem; }
+.relatorio-final__acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.relatorio-final__cabecalho { display: none; }
+.relatorio-final__resumo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.relatorio-final__resumo article { display: grid; gap: 0.2rem; padding: 0.85rem 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-1); }
+.relatorio-final__resumo small { color: var(--neutral-600); font-size: 0.62rem; font-weight: 700; }
+.relatorio-final__resumo strong { color: var(--navy-900); font-size: 1.1rem; }
+.relatorio-final__resumo .relatorio-final__total { grid-column: 1 / -1; border-color: var(--blue-700); }
+.relatorio-final__resumo .relatorio-final__total strong { color: var(--blue-700); font-size: 1.35rem; }
+.relatorio-final__rolagem { overflow-x: auto; }
+.relatorio-final__tabela { width: 100%; border-collapse: collapse; font-size: 0.66rem; }
+.relatorio-final__tabela th, .relatorio-final__tabela td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--neutral-200); text-align: left; vertical-align: top; }
+.relatorio-final__tabela thead th { color: var(--neutral-600); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.relatorio-final__tabela .numeric { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.relatorio-final__tabela tfoot th, .relatorio-final__tabela tfoot td { font-weight: 800; border-bottom: 0; }
+.relatorio-final__tabela--totais th { font-weight: 600; }
+.relatorio-final__subitem th { padding-left: 1.5rem; color: var(--neutral-600); font-weight: 500; }
+.relatorio-final__linha-total th, .relatorio-final__linha-total td { color: var(--navy-900); font-size: 0.8rem; font-weight: 800; border-top: 2px solid var(--navy-900); }
+.relatorio-final__tickets { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.relatorio-final__vazio { margin: 0; color: var(--neutral-600); font-size: 0.68rem; }
+.relatorio-final__assinatura { display: none; }
+@media (min-width: 900px) {
+    .relatorio-final__resumo { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media print {
+    @page { size: A4; margin: 12mm; }
+    body { background: #fff !important; }
+    .sidebar, .operational-header, .skip-link, .no-print, .mobile-drawer-trigger { display: none !important; }
+    .app-shell, .workspace { display: block !important; margin: 0 !important; padding: 0 !important; }
+    .relatorio-final { gap: 0.6rem; }
+    .relatorio-final__cabecalho { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; padding-bottom: 0.4rem; border-bottom: 2px solid #000; font-size: 9pt; }
+    .relatorio-final__cabecalho strong { width: 100%; font-size: 12pt; }
+    .relatorio-final__resumo { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.4rem; }
+    .relatorio-final__resumo article, .relatorio-final .ui-card { box-shadow: none !important; break-inside: avoid; }
+    .relatorio-final__rolagem { overflow: visible; }
+    .relatorio-final__tabela { font-size: 8pt; }
+    .relatorio-final__tabela tr { break-inside: avoid; }
+    .relatorio-final__assinatura { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; font-size: 9pt; }
+}

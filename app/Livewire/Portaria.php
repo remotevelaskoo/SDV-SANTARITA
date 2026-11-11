@@ -29,6 +29,7 @@ class Portaria extends Component
         ['label' => 'Pré-cadastros pendentes', 'description' => 'Analisar solicitações antecipadas de visitantes', 'icon' => 'badge-check', 'route' => 'pre-registrations'],
         ['label' => 'Cadastro rápido', 'description' => 'Criar cadastro mínimo durante o atendimento', 'icon' => 'users', 'route' => null],
         ['label' => 'Consultar caixa', 'description' => 'Ver movimentações e conferir o turno atual', 'icon' => 'wallet', 'route' => 'cash-register'],
+        ['label' => 'Relatório final', 'description' => 'Entradas, saídas, arrecadação e tickets do período, pronto para imprimir', 'icon' => 'file', 'route' => 'portaria.relatorio-final'],
     ];
 
     /**
