@@ -3,9 +3,12 @@
 namespace App\Livewire;
 
 use App\Exceptions\StalePreRegistrationException;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Services\AuditService;
+use App\Services\PrivateFileService;
+use App\Services\ValidadorFotoPessoa;
 use App\Support\ComparacaoOcrPreCadastro;
 use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
@@ -16,6 +19,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 /**
  * Análise de um pré-cadastro em página própria (AJ-006, fatia 3).
@@ -27,6 +32,8 @@ use Livewire\Component;
  */
 class PreRegistrationReview extends Component
 {
+    use WithFileUploads;
+
     #[Locked]
     public string $preRegistrationId;
 
@@ -75,6 +82,13 @@ class PreRegistrationReview extends Component
     public string $editVehicleColor = '';
 
     public string $editReason = '';
+
+    /**
+     * Foto tirada pela portaria quando o solicitante não enviou selfie (ou
+     * enviou uma ruim). Mesma captura do cadastro rápido do AJ-010; só vira
+     * arquivo protegido em "Salvar foto". Não é enviada à facial.
+     */
+    public ?TemporaryUploadedFile $fotoPessoa = null;
 
     public const REJECTION_REASONS = [
         'documento_incompleto' => 'Documento incompleto',
@@ -353,6 +367,104 @@ class PreRegistrationReview extends Component
         ];
     }
 
+    /** A foto pode ser tirada enquanto o pré-cadastro não foi rejeitado. */
+    public function podeTirarFoto(?PreRegistration $record = null): bool
+    {
+        $record ??= $this->record();
+
+        return (bool) Auth::user()?->hasPermission('pre-registro.editar') && $record->status !== 'rejeitado';
+    }
+
+    /** Conferência da foto logo após a captura; foto ruim é descartada para refazer. */
+    public function updatedFotoPessoa(ValidadorFotoPessoa $validador): void
+    {
+        if (! $this->podeTirarFoto()) {
+            $this->refazerFotoPessoa();
+            $this->addError('fotoPessoa', 'Você não pode tirar a foto deste pré-cadastro.');
+
+            return;
+        }
+
+        $this->resetErrorBag('fotoPessoa');
+        $this->validate(['fotoPessoa' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:'.ValidadorFotoPessoa::TAMANHO_MAXIMO_KB]], [
+            'fotoPessoa.required' => 'Fotografe a pessoa antes de salvar.',
+            'fotoPessoa.image' => 'Envie uma foto JPEG ou PNG.',
+            'fotoPessoa.mimes' => 'Envie uma foto JPEG ou PNG.',
+            'fotoPessoa.max' => 'A foto passa de 5 MB.',
+        ]);
+
+        $problema = $validador->problema((string) file_get_contents($this->fotoPessoa->getRealPath()));
+        if ($problema !== null) {
+            $this->refazerFotoPessoa();
+            $this->addError('fotoPessoa', $problema);
+        }
+    }
+
+    public function refazerFotoPessoa(): void
+    {
+        $this->fotoPessoa?->delete();
+        $this->fotoPessoa = null;
+        $this->resetErrorBag('fotoPessoa');
+    }
+
+    /**
+     * Grava a foto como a selfie vigente do pré-cadastro. A anterior, se
+     * houver, deixa de ser vigente e continua guardada. Fica no histórico.
+     */
+    public function salvarFotoPessoa(PrivateFileService $files, ValidadorFotoPessoa $validador): void
+    {
+        $record = $this->record();
+        abort_unless($this->podeTirarFoto($record), 403);
+
+        if ($this->fotoPessoa === null) {
+            $this->addError('fotoPessoa', 'Fotografe a pessoa antes de salvar.');
+
+            return;
+        }
+
+        $problema = $validador->problema((string) file_get_contents($this->fotoPessoa->getRealPath()));
+        if ($problema !== null) {
+            $this->refazerFotoPessoa();
+            $this->addError('fotoPessoa', $problema);
+
+            return;
+        }
+
+        $substituiu = $record->currentFileLink('selfie')?->file !== null;
+        $operator = Auth::user();
+
+        $files->storePreRegistrationFiles($record, ['selfie' => $this->fotoPessoa], 'portaria_pre_cadastro');
+
+        PreRegistrationEdit::query()->create([
+            'pre_registration_id' => $record->id,
+            'action' => 'foto_adicionada',
+            'field' => 'Foto',
+            'old_value' => null,
+            'new_value' => null,
+            'reason' => $substituiu ? 'Foto substituída pela portaria' : 'Foto tirada pela portaria',
+            'result' => 'sucesso',
+            'operator_id' => $operator?->id,
+            'operator_name' => $operator?->name ?? 'Operador não identificado',
+            'occurred_at' => now(),
+        ]);
+
+        $this->refazerFotoPessoa();
+        $this->dispatch('foto-pre-cadastro-salva');
+        $this->feedback = [
+            'variant' => 'success',
+            'title' => $substituiu ? 'Foto substituída' : 'Foto adicionada',
+            'message' => 'A foto ficou guardada de forma protegida neste pré-cadastro. Ela não é enviada ao terminal facial.',
+        ];
+    }
+
+    /** @return array{implantacao: string, posto: string} */
+    public function contextoCameras(): array
+    {
+        $turno = rescue(fn () => app(TurnosOperacionais::class)->turnoAtivo(Auth::user()), null, false);
+
+        return ['implantacao' => (string) ($turno?->implantacao_id ?? session('implantacao_atual_id', '')), 'posto' => (string) ($turno?->posto_id ?? 'sem-posto')];
+    }
+
     private function authorizeDecision(string $permission): void
     {
         abort_unless(Auth::user()?->hasPermission($permission), 403);
@@ -503,7 +615,7 @@ class PreRegistrationReview extends Component
             $alerts[] = ['variant' => 'warning', 'title' => 'Atenção', 'message' => $record->alert];
         }
         if (! $record->currentFileLink('selfie')?->file) {
-            $alerts[] = ['variant' => 'warning', 'title' => 'Sem selfie', 'message' => 'Confira a identidade presencialmente na portaria.'];
+            $alerts[] = ['variant' => 'warning', 'title' => 'Sem foto', 'message' => 'O solicitante não enviou selfie. Tire a foto aqui na análise ou confira a identidade presencialmente na portaria.'];
         }
         if (! $record->currentFileLink('documento')?->file) {
             // Só ocorre em fichas enviadas antes da correção que tornou a frente obrigatória.
@@ -552,6 +664,7 @@ class PreRegistrationReview extends Component
             'alerts' => $this->alerts($record, $divergencias),
             'imagens' => $imagens,
             'podeVerImagens' => (bool) $user?->hasPermission('arquivos.sensiveis.visualizar'),
+            'podeTirarFoto' => $this->podeTirarFoto($record),
             'podeRevelar' => (bool) $user?->hasPermission('dados-sensiveis.revelar'),
             'pode' => [
                 'editar' => (bool) $user?->hasPermission('pre-registro.editar'),

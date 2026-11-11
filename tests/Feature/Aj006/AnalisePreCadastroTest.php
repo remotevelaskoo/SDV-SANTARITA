@@ -199,7 +199,7 @@ class AnalisePreCadastroTest extends TestCase
         Livewire::actingAs($this->operador('pre-registro.analisar'))
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
             ->assertSee('Sem leitura automática')
-            ->assertSee('Sem selfie');
+            ->assertSee('Sem foto');
     }
 
     public function test_fila_leva_para_a_pagina_de_analise_sem_painel_lateral(): void
