@@ -30,6 +30,20 @@ class SdvOneLayoutTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_login_usa_identidade_sdv_one(): void
+    {
+        $this->withoutVite();
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('SDV One · Santa Rita', false)
+            ->assertSee('sdv-one-logo--login', false)
+            ->assertSee('sdv-one-logo--on-light', false)
+            ->assertSee('Soluções do Vale')
+            ->assertDontSee('SDV Access')
+            ->assertSee('Entrar no sistema');
+    }
+
     public function test_modo_portaria_mantem_fluxos_com_o_novo_layout(): void
     {
         $this->withoutVite();

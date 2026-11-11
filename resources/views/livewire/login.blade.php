@@ -1,11 +1,7 @@
 <div class="login-shell">
     <section class="login-presentation" aria-labelledby="presentation-title">
-        <a class="login-brand" href="{{ route('login') }}" aria-label="SDV Access Santa Rita — Entrar">
-            <span class="brand__mark" aria-hidden="true">SDV</span>
-            <span>
-                <strong>SDV Access</strong>
-                <small>Santa Rita</small>
-            </span>
+        <a class="login-brand" href="{{ route('login') }}" aria-label="SDV One · Santa Rita — Entrar">
+            <x-sdv-one-logo class="sdv-one-logo--login" />
         </a>
 
         <div class="login-presentation__content">
@@ -22,14 +18,13 @@
             </ul>
         </div>
 
-        <p class="login-presentation__footer">SDV Access · Condomínio Santa Rita</p>
+        <p class="login-presentation__footer">SDV One · Condomínio Santa Rita</p>
     </section>
 
     <section class="login-access" aria-labelledby="login-title">
         <div class="login-card">
             <div class="login-brand login-brand--mobile" aria-hidden="true">
-                <span class="brand__mark">SDV</span>
-                <span><strong>SDV Access</strong><small>Santa Rita</small></span>
+                <x-sdv-one-logo class="sdv-one-logo--on-light" />
             </div>
 
             <span class="demo-label">Ambiente de demonstração</span>

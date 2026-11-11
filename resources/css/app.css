@@ -3072,3 +3072,20 @@ body.has-drawer-open { overflow: hidden; }
     .sdv-one-pre-registration-queue .pre-registration-queue__summary { grid-template-columns: 1fr; }
     .sdv-one-validation .validation-context { grid-template-columns: 1fr; }
 }
+
+/* SDV One — página de login e telas de entrada (guest).
+   Mesma marca do menu lateral; no cartão claro a base do símbolo e o texto
+   ficam azul-marinho para manter contraste. */
+.login-presentation {
+    background:
+        radial-gradient(circle at 82% 12%, rgb(18 107 255 / 0.32), transparent 28rem),
+        linear-gradient(160deg, #04132e 5%, #061a3a 55%, #092b64 100%);
+}
+.login-kicker { color: #2687ff; }
+.sdv-one-logo--login .sdv-one-logo__symbol { width: 4.4rem; height: 3.9rem; }
+.sdv-one-logo--login .sdv-one-logo__type > strong { font-size: 1.55rem; }
+.sdv-one-logo--login .sdv-one-logo__type > small { font-size: 0.75rem; }
+.sdv-one-logo--on-light .sdv-one-logo__base { fill: #061a3a; }
+.sdv-one-logo--on-light .sdv-one-logo__type > strong { color: #061a3a; }
+.sdv-one-logo--on-light .sdv-one-logo__type > strong > span { color: #126bff; }
+.sdv-one-logo--on-light .sdv-one-logo__type > small { color: var(--neutral-600); }
