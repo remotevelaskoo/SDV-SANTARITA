@@ -13,3 +13,8 @@ Artisan::command('inspire', function () {
 // depende também de `integracoes:despachar`, que segue sem agendamento até
 // haver worker em produção (docs/015).
 Schedule::command('acessos:processar-vencimentos')->everyMinute()->withoutOverlapping();
+
+// ADR-018: somente conexões de saída. Desligado até configurar o portal isolado.
+Schedule::command('pre-cadastro:sincronizar-nuvem')
+    ->everyMinute()->withoutOverlapping(60)
+    ->when(fn () => (bool) config('pre_cadastro_nuvem.enabled'));
