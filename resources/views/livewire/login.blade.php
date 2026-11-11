@@ -95,6 +95,11 @@
 
             <a class="forgot-password" href="{{ route('password.request') }}">Esqueci minha senha</a>
             <p class="login-support">Problemas para acessar? Procure o administrador do sistema.</p>
+
+            <footer class="login-maker">
+                <span>Uma solução</span>
+                <img src="{{ asset('images/solucoes-do-vale.png') }}" alt="Soluções do Vale — Tecnologia, Soluções, Segurança" width="220" height="42" loading="lazy">
+            </footer>
         </div>
     </section>
 </div>

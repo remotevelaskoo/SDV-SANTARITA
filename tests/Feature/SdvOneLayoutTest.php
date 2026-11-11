@@ -40,6 +40,7 @@ class SdvOneLayoutTest extends TestCase
             ->assertSee('sdv-one-logo--login', false)
             ->assertSee('sdv-one-logo--on-light', false)
             ->assertSee('Soluções do Vale')
+            ->assertSee('images/solucoes-do-vale.png', false)
             ->assertDontSee('SDV Access')
             ->assertSee('Entrar no sistema');
     }
