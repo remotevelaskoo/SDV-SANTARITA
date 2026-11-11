@@ -162,6 +162,24 @@ trait CadastroRapidoAtendimento
         $this->validateOnly('quickName', ['quickName' => ['required', 'string', 'min:3', 'max:120']], ['min' => 'Informe um valor válido.']);
     }
 
+    /** CPF ditado no cadastro rápido: só aceita 11 dígitos e já confere duplicidade. */
+    public function preencherCpfPorVoz(string $texto): void
+    {
+        $this->exigirPermissoesCadastro();
+        if (! $this->quickRegistrationOpen || $this->quickEtapa === 'foto') {
+            return;
+        }
+
+        $digitos = NormalizadorBusca::digitos($texto);
+        if (strlen($digitos) !== 11) {
+            return; // fala incompleta não apaga o CPF atual
+        }
+
+        $this->quickDocument = substr($digitos, 0, 3).'.'.substr($digitos, 3, 3).'.'.substr($digitos, 6, 3).'-'.substr($digitos, 9, 2);
+        $this->marcarEditado('quickDocument');
+        $this->checkQuickDocument();
+    }
+
     /** Ao trocar o tipo, o responsável só sobrevive para visitante e morador (docs/021 §14). */
     public function updatedQuickAccessType(): void
     {

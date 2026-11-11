@@ -3111,3 +3111,20 @@ body.has-drawer-open { overflow: hidden; }
 .pre-registration-person > div { display: grid; min-width: 0; }
 .pre-registration-photo-missing { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.15rem; color: #9a5b00; font-size: 0.62rem; font-weight: 700; text-decoration: none; }
 .pre-registration-photo-missing:hover { text-decoration: underline; }
+
+/* Foto tirada na identificação da pessoa quando o cadastro não tem foto. */
+.validation-photo-capture { display: grid; gap: 0.6rem; margin-top: 0.75rem; padding: 0.85rem; border: 1px dashed #cdddf2; border-radius: 0.8rem; background: #f7fbff; }
+.validation-photo-capture header { display: grid; gap: 0.2rem; }
+.validation-photo-capture h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.8rem; }
+.validation-photo-capture h3 .app-icon { width: 1rem; height: 1rem; }
+.validation-photo-capture header p { margin: 0; color: var(--neutral-600); font-size: 0.7rem; }
+
+/* Dados da pessoa para conferência e correção na identificação. */
+.validation-person-data { display: grid; gap: 0.6rem; margin-top: 0.75rem; padding: 0.85rem; border: 1px solid #cdddf2; border-radius: 0.8rem; background: var(--white); }
+.validation-person-data > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.validation-person-data h3 { margin: 0; font-size: 0.8rem; }
+.validation-person-data header p { margin: 0.15rem 0 0; color: var(--neutral-600); font-size: 0.7rem; }
+.validation-person-data dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.5rem 1rem; margin: 0; }
+.validation-person-data dl div { display: grid; gap: 0.1rem; min-width: 0; }
+.validation-person-data dt { color: var(--neutral-600); font-size: 0.62rem; }
+.validation-person-data dd { margin: 0; font-size: 0.75rem; font-weight: 700; overflow-wrap: anywhere; }

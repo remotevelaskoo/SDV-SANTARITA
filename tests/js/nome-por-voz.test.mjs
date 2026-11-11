@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MENSAGENS_VOZ, nomePorVoz, transcricaoFinal } from '../../resources/js/nome-por-voz.js';
+import { MENSAGENS_VOZ, MENSAGENS_VOZ_CPF, cpfFalado, nomePorVoz, transcricaoFinal } from '../../resources/js/nome-por-voz.js';
 
 /** Reconhecimento simulado: sem áudio, sem rede. Guarda as instâncias criadas. */
 function simulador() {
@@ -132,4 +132,34 @@ test('transcricaoFinal junta só os finais', () => {
     const parcial = Object.assign([{ transcript: 'xx' }], { isFinal: false });
     assert.equal(transcricaoFinal({ results: [parcial] }), null);
     assert.equal(transcricaoFinal({ results: [final, parcial] }), 'Ana');
+});
+
+test('cpfFalado aceita algarismos, números falados um a um e ignora pontuação falada', () => {
+    assert.equal(cpfFalado('529 982 247 25'), '529.982.247-25');
+    assert.equal(cpfFalado('529.982.247-25'), '529.982.247-25');
+    assert.equal(cpfFalado('cinco dois nove ponto nove oito dois ponto dois quatro sete traço dois cinco'), '529.982.247-25');
+    assert.equal(cpfFalado('um um um quatro quatro quatro sete sete sete três meia'), '111.444.777-36');
+    assert.equal(cpfFalado('12345'), null);
+    assert.equal(cpfFalado('Maria da Silva'), null);
+    assert.equal(cpfFalado(''), null);
+});
+
+test('modo CPF envia o CPF formatado e não altera o campo quando não entende', () => {
+    const { Falso, instancias } = simulador();
+    const chamadas = [];
+    const c = nomePorVoz({ Reconhecedor: Falso, tipo: 'cpf', metodo: 'preencherCpfPorVoz' });
+    c.$wire = { preencherCpfPorVoz: (t) => chamadas.push(t) };
+    c.init();
+
+    c.alternar();
+    assert.equal(c.mensagem, MENSAGENS_VOZ_CPF.ouvindo);
+    instancias[0].resultado('529 982 247 25');
+    assert.deepEqual(chamadas, ['529.982.247-25']);
+    assert.equal(c.ouvindo, false);
+
+    c.alternar();
+    instancias[1].resultado('cinco dois nove');
+    assert.deepEqual(chamadas, ['529.982.247-25'], 'fala incompleta não chega ao servidor');
+    assert.equal(c.mensagem, MENSAGENS_VOZ_CPF.naoEntendeu);
+    assert.equal(c.textoSemSuporte, MENSAGENS_VOZ_CPF.semSuporte);
 });

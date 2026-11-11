@@ -109,7 +109,7 @@
                         <div class="quick-registration__fields">
                             <div class="nome-por-voz" x-data="nomePorVoz()" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()" x-on:cadastro-rapido-foco-nome.window="focarNome()">
                                 <x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />
-                                {{-- Voz só neste campo (docs/021 §12): começa no clique, não salva nem envia nada. --}}
+                                {{-- Voz no nome (docs/021 §12) e no CPF: começa no clique, não salva nem envia nada. --}}
                                 <div class="nome-por-voz__acoes">
                                     <template x-if="suportado">
                                         <span class="nome-por-voz__botoes">
@@ -125,8 +125,9 @@
                                 </div>
                                 @if ($conferirBadge('quickName'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickName')"><span class="ui-button__content">Confirmar</span></button></span>@endif
                             </div>
-                            <div>
+                            <div class="nome-por-voz" x-data="nomePorVoz({ tipo: 'cpf', metodo: 'preencherCpfPorVoz' })" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()">
                                 <x-ui.field id="quick-document" label="CPF" wire:model.blur="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />
+                                @include('livewire.partials.voz-botao', ['rotulo' => 'Ditar CPF'])
                                 @if ($conferirBadge('quickDocument'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocument')"><span class="ui-button__content">Confirmar</span></button></span>@endif
                             </div>
                             <div>
@@ -384,6 +385,113 @@
                 </ul>
             </article>
         </div>
+
+        @if ($fotoIdentificacaoSalva)
+            <x-ui.alert variant="success" title="Foto adicionada ao cadastro">
+                A foto ficou guardada de forma protegida no cadastro da pessoa. Ela não é enviada ao terminal facial.
+            </x-ui.alert>
+        @endif
+
+        @if ($currentPerson['can_take_photo'])
+            @php($camerasIdentificacao = $this->contextoCameras())
+            <section
+                id="identificacao-tirar-foto"
+                class="validation-photo-capture"
+                aria-labelledby="identificacao-tirar-foto-titulo"
+                wire:key="foto-identificacao-{{ $currentPessoaId }}"
+            >
+                <header>
+                    <h3 id="identificacao-tirar-foto-titulo"><x-icon name="users" /> Pessoa sem foto: tire a foto agora</h3>
+                    <p>Abra a câmera, fotografe o rosto e salve. A foto vai para o cadastro da pessoa e aparece nos próximos atendimentos.</p>
+                </header>
+                <div
+                    class="foto-pessoa"
+                    x-data="fotoPessoaCamera({ implantacaoId: @js($camerasIdentificacao['implantacao']), postoId: @js($camerasIdentificacao['posto']), propriedade: 'fotoIdentificacao', metodoRefazer: 'refazerFotoIdentificacao' })"
+                    x-on:foto-identificacao-encerrada.window="encerrar()"
+                >
+                    <p class="foto-pessoa__aviso">Foto atual do rosto, para conferência humana. Não é prova de vida, não é reconhecimento facial e não é enviada ao terminal.</p>
+                    <p class="equipamento-management-aviso" x-show="aviso" x-text="aviso"></p>
+
+                    <label class="ui-field" x-show="cameras.length > 1">
+                        <span class="ui-field__label">Câmera do rosto</span>
+                        <span class="ui-select-control">
+                            <select class="ui-field__control ui-field__select" x-model="cameraId" x-on:change="escolher($event.target.value)">
+                                <option value="">Câmera frontal do dispositivo</option>
+                                <template x-for="camera in cameras" :key="camera.deviceId">
+                                    <option :value="camera.deviceId" x-text="camera.label || 'Câmera sem nome'"></option>
+                                </template>
+                            </select>
+                        </span>
+                    </label>
+
+                    <div class="foto-pessoa__visor" x-show="ativa">
+                        <video x-ref="video" autoplay playsinline muted></video>
+                        <span class="foto-pessoa__moldura" aria-hidden="true"></span>
+                    </div>
+                    <figure class="foto-pessoa__previa" x-show="previa && !ativa">
+                        <img :src="previa" alt="Prévia da foto da pessoa">
+                        <figcaption x-text="enviando ? 'Enviando foto…' : 'Prévia da foto'"></figcaption>
+                    </figure>
+
+                    <input type="file" accept="image/*" capture="user" class="sr-only" x-ref="nativa" x-on:change="recebidaDaCameraNativa($event)" tabindex="-1" aria-hidden="true">
+
+                    <div class="equipamento-management-acoes">
+                        <button type="button" class="ui-button ui-button--primary ui-button--sm" x-show="!ativa && !previa" x-on:click="abrir()" :disabled="abrindo"><span class="ui-button__content">Abrir câmera</span></button>
+                        <button type="button" class="ui-button ui-button--primary ui-button--sm" x-show="ativa" x-on:click="fotografar()"><span class="ui-button__content">Fotografar</span></button>
+                        <button type="button" class="ui-button ui-button--ghost ui-button--sm" x-show="ativa" x-on:click="fechar()"><span class="ui-button__content">Fechar câmera</span></button>
+                        <button type="button" class="ui-button ui-button--ghost ui-button--sm" x-show="previa" x-on:click="refazer()" :disabled="enviando"><span class="ui-button__content">Refazer foto</span></button>
+                        <button type="button" class="ui-button ui-button--success ui-button--sm" x-show="previa" wire:click="salvarFotoIdentificacao" wire:loading.attr="disabled" wire:target="salvarFotoIdentificacao,fotoIdentificacao" :disabled="enviando"><span class="ui-button__content">Salvar foto</span></button>
+                    </div>
+                    @error('fotoIdentificacao')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
+                </div>
+            </section>
+        @endif
+
+        @php($dadosIdent = $this->dadosIdentificacao)
+        @if ($dadosIdent)
+            <section class="validation-person-data" aria-labelledby="identificacao-dados-titulo" wire:key="dados-identificacao-{{ $currentPessoaId }}">
+                <header>
+                    <div>
+                        <h3 id="identificacao-dados-titulo">Dados para conferência</h3>
+                        <p>Compare com o documento apresentado. Se algo estiver errado, corrija antes de decidir.</p>
+                    </div>
+                    @if (! $editandoIdentificacao && $this->podeEditarIdentificacao())
+                        <x-ui.button variant="secondary" size="sm" wire:click="editarIdentificacao">Editar dados</x-ui.button>
+                    @endif
+                </header>
+
+                @if ($dadosIdentificacaoSalvos)
+                    <x-ui.alert variant="success" title="Dados corrigidos">O cadastro da pessoa foi atualizado. Os valores anteriores ficam no histórico.</x-ui.alert>
+                @endif
+
+                @if ($editandoIdentificacao)
+                    <div class="registration-fields">
+                        <x-ui.field id="ident-nome" label="Nome completo" wire:model="identNome" :error="$errors->first('identNome')" required />
+                        <x-ui.field id="ident-nome-social" label="Nome social (opcional)" wire:model="identNomeSocial" :error="$errors->first('identNomeSocial')" />
+                        <x-ui.field id="ident-nascimento" type="date" label="Data de nascimento" wire:model="identNascimento" :error="$errors->first('identNascimento')" />
+                        <div class="nome-por-voz" x-data="nomePorVoz({ tipo: 'cpf', metodo: 'preencherCpfIdentificacaoPorVoz' })" x-on:input="digitou()">
+                            <x-ui.field id="ident-cpf" label="CPF" wire:model="identCpf" inputmode="numeric" :error="$errors->first('identCpf')" help="Corrija se estiver diferente do documento." />
+                            @include('livewire.partials.voz-botao', ['rotulo' => 'Ditar CPF'])
+                        </div>
+                        <x-ui.field id="ident-telefone" type="tel" label="Telefone" wire:model="identTelefone" :error="$errors->first('identTelefone')" help="Com DDD. Deixe em branco se não houver." />
+                        <x-ui.field id="ident-email" type="email" label="E-mail" wire:model="identEmail" :error="$errors->first('identEmail')" />
+                    </div>
+                    <div class="equipamento-management-acoes">
+                        <x-ui.button variant="ghost" size="sm" wire:click="cancelarEdicaoIdentificacao">Cancelar</x-ui.button>
+                        <x-ui.button variant="success" size="sm" wire:click="salvarIdentificacao" wire:loading.attr="disabled" wire:target="salvarIdentificacao">Salvar correção</x-ui.button>
+                    </div>
+                @else
+                    <dl>
+                        <div><dt>Nome completo</dt><dd>{{ $dadosIdent['nome'] }}</dd></div>
+                        @if ($dadosIdent['nome_social'])<div><dt>Nome social</dt><dd>{{ $dadosIdent['nome_social'] }}</dd></div>@endif
+                        <div><dt>Data de nascimento</dt><dd>{{ $dadosIdent['nascimento'] ?? 'Não informada' }}</dd></div>
+                        <div><dt>CPF</dt><dd>{{ $dadosIdent['cpf'] ? ($documentRevealed ? $dadosIdent['cpf'] : \App\Support\NormalizadorBusca::mascararDocumento($dadosIdent['cpf'])) : 'Não informado' }}</dd></div>
+                        <div><dt>Telefone</dt><dd>{{ $dadosIdent['telefone'] ?? 'Não informado' }}</dd></div>
+                        <div><dt>E-mail</dt><dd>{{ $dadosIdent['email'] ?? 'Não informado' }}</dd></div>
+                    </dl>
+                @endif
+            </section>
+        @endif
 
         @foreach ($currentPerson['alerts'] as $alerta)
             <x-ui.alert :variant="$alerta['tone']" title="Atenção">{{ $alerta['text'] }}</x-ui.alert>
