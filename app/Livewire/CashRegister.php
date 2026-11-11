@@ -181,6 +181,11 @@ class CashRegister extends Component
         return $this->currentTurno()?->incomeTotal() ?? 0.0;
     }
 
+    public function contribuicoesTotal(): float
+    {
+        return $this->currentTurno()?->contribuicoesTotal() ?? 0.0;
+    }
+
     public function outflowTotal(): float
     {
         return $this->currentTurno()?->outflowTotal() ?? 0.0;

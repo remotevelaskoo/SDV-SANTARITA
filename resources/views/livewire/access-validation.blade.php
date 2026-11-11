@@ -609,68 +609,74 @@
             <x-ui.badge :variant="$this->caixaAberto ? 'success' : 'warning'">{{ $this->caixaAberto ? 'Caixa aberto' : 'Caixa fechado para você' }}</x-ui.badge>
         </header>
 
-        <fieldset class="validation-contribution-options">
-            <legend class="sr-only">Selecione a situação da contribuição</legend>
-            <x-ui.radio id="contribution-yes" name="contribution" value="yes" label="Contribui" description="Entrada paga neste acesso" :checked="$contribution === 'yes'" wire:model.live="contribution" />
-            <x-ui.radio id="contribution-no" name="contribution" value="no" label="Não contribui" description="Entrada sem pagamento" :checked="$contribution === 'no'" wire:model.live="contribution" />
-            <x-ui.radio id="contribution-exempt" name="contribution" value="exempt" label="Isento" description="Pessoa isenta de contribuição" :checked="$contribution === 'exempt'" wire:model.live="contribution" />
-        </fieldset>
-
-        @php($valorContribuicao = \App\Services\ContribuicoesAtendimento::valorPadrao())
-        @php($valorFormatado = 'R$ '.number_format((float) $valorContribuicao, 2, ',', '.'))
-        @php($duplicado = $this->ticketDuplicado)
-
-        @if ($contribution === 'yes')
-            <div class="validation-contribution-details">
-                <div class="validation-contribution-fields">
-                    <x-ui.field id="contribution-value" label="Valor da contribuição" :value="$valorFormatado" readonly />
-                    <x-ui.select id="payment-method" label="Forma de pagamento" wire:model.live="paymentMethod" :error="$errors->first('paymentMethod')">
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="pix">PIX</option>
-                        <option value="cartao">Cartão</option>
-                    </x-ui.select>
-                    <x-ui.field id="received-from" label="Recebido de" :value="$currentPerson['selected'] ? $currentPerson['name'] : 'Selecione a pessoa atendida'" readonly />
-                </div>
-
-                <aside class="validation-payment-summary" aria-label="Resumo do pagamento">
-                    <span>Resumo do pagamento</span>
-                    <dl>
-                        <div><dt>Valor</dt><dd>{{ $valorFormatado }}</dd></div>
-                        <div><dt>Desconto</dt><dd>R$ 0,00</dd></div>
-                        <div class="is-total"><dt>Total</dt><dd>{{ $valorFormatado }}</dd></div>
-                    </dl>
-                    <small>Operador: {{ auth()->user()?->name ?? 'Operador identificado na sessão' }}</small>
-                </aside>
-            </div>
-        @elseif ($contribution === 'no')
-            <x-ui.alert variant="warning" title="Sem contribuição">
-                A decisão foi registrada sem pagamento. Isso não altera as condições de autorização acima.
+        @if (! $perfilAtual['turista'])
+            <x-ui.alert variant="info" title="{{ $currentPerson['selected'] ? 'Sem contribuição: '.$perfilAtual['perfil'] : 'Identifique a pessoa' }}">
+                Só turista contribui (R$ {{ number_format((float) \App\Services\ContribuicoesAtendimento::valorPadrao(), 2, ',', '.') }} com ticket). {{ $currentPerson['selected'] ? 'Este atendimento é registrado sem contribuição e sem ticket.' : 'A contribuição aparece aqui quando a pessoa atendida for turista.' }}
             </x-ui.alert>
         @else
-            <x-ui.alert variant="info" title="Isenção selecionada">
-                A isenção será registrada no atendimento e poderá ser consultada posteriormente.
-            </x-ui.alert>
-        @endif
+            <fieldset class="validation-contribution-options">
+                <legend class="sr-only">Selecione a situação da contribuição</legend>
+                <x-ui.radio id="contribution-yes" name="contribution" value="yes" label="Contribui" description="Entrada paga neste acesso" :checked="$contribution === 'yes'" wire:model.live="contribution" />
+                <x-ui.radio id="contribution-no" name="contribution" value="no" label="Não contribui" description="Entrada sem pagamento" :checked="$contribution === 'no'" wire:model.live="contribution" />
+                <x-ui.radio id="contribution-exempt" name="contribution" value="exempt" label="Isento" description="Pessoa isenta de contribuição" :checked="$contribution === 'exempt'" wire:model.live="contribution" />
+            </fieldset>
 
-        <div class="validation-ticket">
-            <x-ui.field
-                id="ticket-number"
-                label="Número do ticket de acesso"
-                wire:model.live.debounce.400ms="ticketNumero"
-                maxlength="30"
-                inputmode="text"
-                autocomplete="off"
-                :required="$contribution === 'yes'"
-                :help="$contribution === 'yes' ? 'Obrigatório para contribuição paga. Digite exatamente como no ticket, inclusive zeros à esquerda.' : 'Opcional para não contribuinte ou isento.'"
-                :error="$errors->first('ticketNumero')"
-            />
-            @if ($duplicado)
-                <x-ui.alert variant="warning" title="Ticket já registrado">
-                    Este número aparece em outro atendimento ({{ $duplicado['quando'] }}{{ $duplicado['protocolo'] ? ' · '.$duplicado['protocolo'] : '' }}). O SDV não valida série fiscal: confira o ticket físico.
-                    <label class="validation-ticket__confirm"><input type="checkbox" wire:model.live="ticketDuplicadoConfirmado"> Conferi e quero registrar mesmo assim</label>
+            @php($valorContribuicao = \App\Services\ContribuicoesAtendimento::valorPadrao())
+            @php($valorFormatado = 'R$ '.number_format((float) $valorContribuicao, 2, ',', '.'))
+            @php($duplicado = $this->ticketDuplicado)
+
+            @if ($contribution === 'yes')
+                <div class="validation-contribution-details">
+                    <div class="validation-contribution-fields">
+                        <x-ui.field id="contribution-value" label="Valor da contribuição" :value="$valorFormatado" readonly />
+                        <x-ui.select id="payment-method" label="Forma de pagamento" wire:model.live="paymentMethod" :error="$errors->first('paymentMethod')">
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="pix">PIX</option>
+                            <option value="cartao">Cartão</option>
+                        </x-ui.select>
+                        <x-ui.field id="received-from" label="Recebido de" :value="$currentPerson['selected'] ? $currentPerson['name'] : 'Selecione a pessoa atendida'" readonly />
+                    </div>
+
+                    <aside class="validation-payment-summary" aria-label="Resumo do pagamento">
+                        <span>Resumo do pagamento</span>
+                        <dl>
+                            <div><dt>Valor</dt><dd>{{ $valorFormatado }}</dd></div>
+                            <div><dt>Desconto</dt><dd>R$ 0,00</dd></div>
+                            <div class="is-total"><dt>Total</dt><dd>{{ $valorFormatado }}</dd></div>
+                        </dl>
+                        <small>Operador: {{ auth()->user()?->name ?? 'Operador identificado na sessão' }}</small>
+                    </aside>
+                </div>
+            @elseif ($contribution === 'no')
+                <x-ui.alert variant="warning" title="Sem contribuição">
+                    A decisão foi registrada sem pagamento. Isso não altera as condições de autorização acima.
+                </x-ui.alert>
+            @else
+                <x-ui.alert variant="info" title="Isenção selecionada">
+                    A isenção será registrada no atendimento e poderá ser consultada posteriormente.
                 </x-ui.alert>
             @endif
-        </div>
+
+            <div class="validation-ticket">
+                <x-ui.field
+                    id="ticket-number"
+                    label="Número do ticket de acesso"
+                    wire:model.live.debounce.400ms="ticketNumero"
+                    maxlength="30"
+                    inputmode="text"
+                    autocomplete="off"
+                    :required="$contribution === 'yes'"
+                    :help="$contribution === 'yes' ? 'Obrigatório para contribuição paga. Digite exatamente como no ticket, inclusive zeros à esquerda.' : 'Opcional para não contribuinte ou isento.'"
+                    :error="$errors->first('ticketNumero')"
+                />
+                @if ($duplicado)
+                    <x-ui.alert variant="warning" title="Ticket já registrado">
+                        Este número aparece em outro atendimento ({{ $duplicado['quando'] }}{{ $duplicado['protocolo'] ? ' · '.$duplicado['protocolo'] : '' }}). O SDV não valida série fiscal: confira o ticket físico.
+                        <label class="validation-ticket__confirm"><input type="checkbox" wire:model.live="ticketDuplicadoConfirmado"> Conferi e quero registrar mesmo assim</label>
+                    </x-ui.alert>
+                @endif
+            </div>
+        @endif
     </section>
 
     <section class="validation-section" aria-labelledby="validation-notes-title">

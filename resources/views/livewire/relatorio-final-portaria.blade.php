@@ -70,9 +70,9 @@
         <article><small>Entradas</small><strong>{{ $resumo['entradas'] }}</strong></article>
         <article><small>Saídas</small><strong>{{ $resumo['saidas'] }}</strong></article>
         <article><small>Pessoas identificadas</small><strong>{{ $resumo['pessoas'] }}</strong></article>
-        <article><small>Contribuíram</small><strong>{{ $resumo['pagos'] }}</strong></article>
-        <article><small>Não contribuíram</small><strong>{{ $resumo['naoContribui'] }}</strong></article>
-        <article><small>Isentos</small><strong>{{ $resumo['isentos'] }}</strong></article>
+        <article><small>Turistas que contribuíram</small><strong>{{ $resumo['pagos'] }}</strong></article>
+        <article><small>Turistas sem contribuição</small><strong>{{ $resumo['naoContribui'] }}</strong></article>
+        <article><small>Turistas isentos</small><strong>{{ $resumo['isentos'] }}</strong></article>
         @if ($canViewPayments)
             <article class="relatorio-final__total"><small>Total de arrecadação</small><strong>R$ {{ number_format($financeiro['totalArrecadado'], 2, ',', '.') }}</strong></article>
         @endif
@@ -168,7 +168,7 @@
                                 <td>{{ $perfis[$acesso->id]['local'] ?? '—' }}</td>
                                 <td class="relatorio-final__tickets">{{ \App\Livewire\RelatorioFinalPortaria::placa($acesso) ?? '—' }}</td>
                                 <td>{{ ucfirst($acesso->resultado) }}</td>
-                                <td>{{ $contribuicao ? \App\Models\Contribuicao::rotuloSituacao($contribuicao->situacao_pagamento) : '—' }}</td>
+                                <td>{{ $contribuicao ? \App\Models\Contribuicao::rotuloSituacao($contribuicao->situacao_pagamento) : (($perfis[$acesso->id]['turista'] ?? false) || $acesso->tipo === 'saida' ? '—' : 'Não se aplica') }}</td>
                                 <td class="relatorio-final__tickets">{{ $contribuicao?->ticket_numero ?? '—' }}</td>
                                 @if ($canViewPayments)
                                     <td class="numeric">{{ $contribuicao?->valor !== null ? 'R$ '.number_format((float) $contribuicao->valor, 2, ',', '.') : '—' }}</td>

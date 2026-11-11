@@ -2,14 +2,12 @@
 
 namespace App\Livewire;
 
-use App\Models\AutorizacaoAcesso;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
 use App\Models\User;
-use App\Models\Vinculo;
-use App\Services\BuscaPessoasValidacao;
+use App\Services\PerfilAtendimento;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -250,51 +248,20 @@ class RelatorioFinalPortaria extends Component
     }
 
     /**
-     * Perfil de cada atendimento (Turista, Visitante, Morador...) e o local de
-     * destino. Turista não tem imóvel: o destino é a praia.
-     *
-     * - visita de 24 h (AutorizacaoAcesso turista_24h) vigente no momento do
-     *   atendimento: sem imóvel = Turista; com imóvel = Visitante;
-     * - senão, o vínculo ativo da pessoa (Proprietário, Morador, Prestador...).
+     * Perfil de cada atendimento e o local (turista = Praia), via PerfilAtendimento.
      *
      * @param  Collection<int, HistoricoAcesso>  $acessos
-     * @return array<string, array{perfil: string, local: string}>
+     * @return array<string, array{perfil: string, local: string, turista: bool}>
      */
     private function perfis(Collection $acessos): array
     {
-        $pessoaIds = $acessos->pluck('pessoa_id')->filter()->unique()->values();
-        if ($pessoaIds->isEmpty()) {
-            return $acessos->mapWithKeys(fn (HistoricoAcesso $a) => [$a->id => ['perfil' => 'Sem vínculo', 'local' => $a->imovel?->label() ?? '—']])->all();
-        }
-
-        $vinculos = Vinculo::query()->with('imovel')->whereIn('pessoa_id', $pessoaIds)->whereNull('ended_at')
-            ->get()->groupBy('pessoa_id');
-        $visitas = AutorizacaoAcesso::query()->with('imovel')->whereIn('pessoa_id', $pessoaIds)
-            ->where('tipo', AutorizacaoAcesso::TIPO_TURISTA)->orderByDesc('inicio')
-            ->get()->groupBy('pessoa_id');
-
-        return $acessos->mapWithKeys(function (HistoricoAcesso $acesso) use ($vinculos, $visitas): array {
-            $momento = $acesso->occurred_at;
-            // Folga de 10 min: a visita pode ser gravada logo depois do atendimento.
-            $visita = ($visitas[$acesso->pessoa_id] ?? collect())->first(
-                fn (AutorizacaoAcesso $v) => $v->inicio->lte($momento->copy()->addMinutes(10)) && ($v->fim === null || $v->fim->gte($momento))
-            );
-            $vinculo = ($vinculos[$acesso->pessoa_id] ?? collect())->first();
-
-            if ($visita !== null) {
-                $turista = $visita->imovel_id === null && $acesso->imovel_id === null;
-
-                return [$acesso->id => [
-                    'perfil' => $turista ? 'Turista' : 'Visitante',
-                    'local' => $turista ? 'Praia' : ($acesso->imovel?->label() ?? $visita->imovel?->label() ?? '—'),
-                ]];
-            }
-
-            return [$acesso->id => [
-                'perfil' => $vinculo ? BuscaPessoasValidacao::rotuloVinculo($vinculo->tipo) : 'Sem vínculo',
-                'local' => $acesso->imovel?->label() ?? $vinculo?->imovel?->label() ?? '—',
-            ]];
-        })->all();
+        return app(PerfilAtendimento::class)->resolver($acessos->map(fn (HistoricoAcesso $a) => [
+            'chave' => $a->id,
+            'pessoa_id' => $a->pessoa_id,
+            'momento' => $a->occurred_at,
+            'imovel_id' => $a->imovel_id,
+            'imovel' => $a->imovel?->label(),
+        ]));
     }
 
     private function periodoRotulo(?CaixaTurno $turno, bool $semTurno): string

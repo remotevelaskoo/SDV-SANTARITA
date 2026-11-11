@@ -34,7 +34,7 @@
             >
                 <x-slot:actions>
                     <x-ui.modal id="close-register-modal" title="Fechar caixa" description="Confira o total antes de concluir o fechamento." trigger-label="Fechar caixa" trigger-variant="danger">
-                        <x-ui.alert variant="info" title="Saldo esperado">R$ {{ number_format($this->expectedBalance(), 2, ',', '.') }}, calculado a partir do saldo inicial e das movimentações registradas.</x-ui.alert>
+                        <x-ui.alert variant="info" title="Saldo esperado">R$ {{ number_format($this->expectedBalance(), 2, ',', '.') }}, calculado a partir do saldo inicial, das contribuições dos turistas (R$ {{ number_format($this->contribuicoesTotal(), 2, ',', '.') }}, entram sozinhas) e das movimentações registradas.</x-ui.alert>
                         <div class="cash-register-form-fields">
                             <x-ui.field id="informed-amount" label="Total conferido" wire:model="informedAmount" placeholder="0,00" :error="$errors->first('informedAmount')" required />
                         </div>

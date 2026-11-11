@@ -23,6 +23,7 @@ use App\Services\AuditService;
 use App\Services\BuscaPessoasValidacao;
 use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
+use App\Services\PerfilAtendimento;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\NormalizadorBusca;
@@ -586,9 +587,29 @@ class AccessValidation extends Component
         return CaixaTurno::query()->where('operator_id', Auth::id())->where('status', 'aberto')->exists();
     }
 
+    /**
+     * Perfil da pessoa atendida agora (Turista, Visitante, Morador...).
+     *
+     * @return array{perfil: string, local: string, turista: bool}
+     */
+    public function perfilAtual(): array
+    {
+        return app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+    }
+
+    /** Regra do PO (11/11/2026): só turista contribui; os demais não têm contribuição. */
+    private function contribuiNesteAtendimento(): bool
+    {
+        return $this->perfilAtual()['turista'];
+    }
+
     /** Atendimento e contribuição na mesma transação: ticket inválido não deixa atendimento órfão. */
     private function recordHistoricoComContribuicao(string $resultado): HistoricoAcesso
     {
+        if (! $this->contribuiNesteAtendimento()) {
+            return $this->recordHistorico($resultado);
+        }
+
         return DB::transaction(function () use ($resultado): HistoricoAcesso {
             $historico = $this->recordHistorico($resultado);
 
@@ -687,6 +708,12 @@ class AccessValidation extends Component
 
     private function validateCommonFields(): void
     {
+        if (! $this->contribuiNesteAtendimento()) {
+            $this->validate(['notes' => ['nullable', 'string', 'max:200']]);
+
+            return;
+        }
+
         $this->validate([
             'contribution' => ['required', Rule::in(['yes', 'no', 'exempt'])],
             'paymentMethod' => ['required_if:contribution,yes', Rule::in(['dinheiro', 'pix', 'cartao'])],
@@ -708,6 +735,7 @@ class AccessValidation extends Component
     {
         return view('livewire.access-validation', [
             'currentPerson' => $this->currentPerson(),
+            'perfilAtual' => $this->perfilAtual(),
             'denialReasonOptions' => $this->denialReasonOptions(),
         ])->layout('components.layouts.app', [
             'title' => 'Validação de entrada',
