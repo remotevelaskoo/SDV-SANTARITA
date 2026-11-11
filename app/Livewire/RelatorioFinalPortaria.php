@@ -2,11 +2,14 @@
 
 namespace App\Livewire;
 
+use App\Models\AutorizacaoAcesso;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
 use App\Models\User;
+use App\Models\Vinculo;
+use App\Services\BuscaPessoasValidacao;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -155,7 +158,7 @@ class RelatorioFinalPortaria extends Component
         }
 
         return Contribuicao::query()
-            ->with(['historicoAcesso.pessoa', 'historicoAcesso.imovel'])
+            ->with(['historicoAcesso.pessoa', 'historicoAcesso.imovel', 'historicoAcesso.veiculo'])
             ->where('situacao_pagamento', 'pago')
             ->tap(fn (Builder $q) => $turno
                 ? $q->where('caixa_turno_id', $turno->id)
@@ -215,18 +218,21 @@ class RelatorioFinalPortaria extends Component
      * @param  Collection<int, Contribuicao>  $contribuicoes
      * @return Collection<int, array{pessoa: string, imovel: string, quantidade: int, tickets: list<string>, formas: string, total: float}>
      */
-    private function contribuintes(Collection $contribuicoes): Collection
+    private function contribuintes(Collection $contribuicoes, array $perfis): Collection
     {
         return $contribuicoes
             ->groupBy(fn (Contribuicao $c) => $c->pessoa_id ?? 'atendimento:'.$c->historico_acesso_id)
-            ->map(function (Collection $grupo): array {
+            ->map(function (Collection $grupo) use ($perfis): array {
                 /** @var Contribuicao $primeira */
                 $primeira = $grupo->first();
                 $historico = $primeira->historicoAcesso;
+                $perfil = $perfis[$primeira->historico_acesso_id] ?? ['perfil' => 'Sem vínculo', 'local' => '—'];
 
                 return [
                     'pessoa' => $historico?->pessoa?->nomeExibicao() ?? 'Não identificado',
-                    'imovel' => $historico?->imovel?->label() ?? '—',
+                    'perfil' => $perfil['perfil'],
+                    'imovel' => $perfil['local'],
+                    'placas' => $grupo->map(fn (Contribuicao $c) => $c->historicoAcesso ? self::placa($c->historicoAcesso) : null)->filter()->unique()->values()->all(),
                     'quantidade' => $grupo->count(),
                     'tickets' => $grupo->pluck('ticket_numero')->filter()->values()->all(),
                     'formas' => $grupo->pluck('forma_pagamento')->filter()->unique()->map(fn ($f) => Contribuicao::rotuloForma($f))->implode(', ') ?: '—',
@@ -235,6 +241,60 @@ class RelatorioFinalPortaria extends Component
             })
             ->sortBy('pessoa', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
+    }
+
+    /** Placa do veículo cadastrado ou, sem cadastro, a placa informada/lida no atendimento. */
+    public static function placa(HistoricoAcesso $acesso): ?string
+    {
+        return $acesso->veiculo?->plate_display ?: ($acesso->placa_informada ?: null);
+    }
+
+    /**
+     * Perfil de cada atendimento (Turista, Visitante, Morador...) e o local de
+     * destino. Turista não tem imóvel: o destino é a praia.
+     *
+     * - visita de 24 h (AutorizacaoAcesso turista_24h) vigente no momento do
+     *   atendimento: sem imóvel = Turista; com imóvel = Visitante;
+     * - senão, o vínculo ativo da pessoa (Proprietário, Morador, Prestador...).
+     *
+     * @param  Collection<int, HistoricoAcesso>  $acessos
+     * @return array<string, array{perfil: string, local: string}>
+     */
+    private function perfis(Collection $acessos): array
+    {
+        $pessoaIds = $acessos->pluck('pessoa_id')->filter()->unique()->values();
+        if ($pessoaIds->isEmpty()) {
+            return $acessos->mapWithKeys(fn (HistoricoAcesso $a) => [$a->id => ['perfil' => 'Sem vínculo', 'local' => $a->imovel?->label() ?? '—']])->all();
+        }
+
+        $vinculos = Vinculo::query()->with('imovel')->whereIn('pessoa_id', $pessoaIds)->whereNull('ended_at')
+            ->get()->groupBy('pessoa_id');
+        $visitas = AutorizacaoAcesso::query()->with('imovel')->whereIn('pessoa_id', $pessoaIds)
+            ->where('tipo', AutorizacaoAcesso::TIPO_TURISTA)->orderByDesc('inicio')
+            ->get()->groupBy('pessoa_id');
+
+        return $acessos->mapWithKeys(function (HistoricoAcesso $acesso) use ($vinculos, $visitas): array {
+            $momento = $acesso->occurred_at;
+            // Folga de 10 min: a visita pode ser gravada logo depois do atendimento.
+            $visita = ($visitas[$acesso->pessoa_id] ?? collect())->first(
+                fn (AutorizacaoAcesso $v) => $v->inicio->lte($momento->copy()->addMinutes(10)) && ($v->fim === null || $v->fim->gte($momento))
+            );
+            $vinculo = ($vinculos[$acesso->pessoa_id] ?? collect())->first();
+
+            if ($visita !== null) {
+                $turista = $visita->imovel_id === null && $acesso->imovel_id === null;
+
+                return [$acesso->id => [
+                    'perfil' => $turista ? 'Turista' : 'Visitante',
+                    'local' => $turista ? 'Praia' : ($acesso->imovel?->label() ?? $visita->imovel?->label() ?? '—'),
+                ]];
+            }
+
+            return [$acesso->id => [
+                'perfil' => $vinculo ? BuscaPessoasValidacao::rotuloVinculo($vinculo->tipo) : 'Sem vínculo',
+                'local' => $acesso->imovel?->label() ?? $vinculo?->imovel?->label() ?? '—',
+            ]];
+        })->all();
     }
 
     private function periodoRotulo(?CaixaTurno $turno, bool $semTurno): string
@@ -265,6 +325,8 @@ class RelatorioFinalPortaria extends Component
         $contribuicoes = $semTurno ? collect() : $this->contribuicoesPagas($turno);
         $movimentacoes = $semTurno ? collect() : $this->movimentacoesCaixa($turno);
 
+        $perfis = $this->perfis($acessos->merge($contribuicoes->pluck('historicoAcesso')->filter())->unique('id'));
+
         $totalContribuicoes = round((float) $contribuicoes->sum(fn (Contribuicao $c) => (float) $c->valor), 2);
         $outrasEntradas = round((float) $movimentacoes->where('type', 'entrada')->sum('amount'), 2);
         $estornos = round((float) $movimentacoes->where('type', 'estorno')->sum('amount'), 2);
@@ -278,6 +340,11 @@ class RelatorioFinalPortaria extends Component
 
         return view('livewire.relatorio-final-portaria', [
             'acessos' => $acessos,
+            'perfis' => $perfis,
+            'porPerfil' => $acessos->where('tipo', 'entrada')
+                ->groupBy(fn (HistoricoAcesso $a) => $perfis[$a->id]['perfil'] ?? 'Sem vínculo')
+                ->map(fn (Collection $grupo) => $grupo->count())
+                ->sortDesc(),
             'turno' => $turno,
             'semTurno' => $semTurno,
             'turnos' => $this->turnosVisiveis()->with('operator')->latest('opened_at')->limit(30)->get(),
@@ -287,7 +354,7 @@ class RelatorioFinalPortaria extends Component
                 'informado' => $turno->status === 'fechado' ? (float) $turno->informed_amount : null,
                 'diferenca' => $turno->status === 'fechado' ? (float) $turno->difference : null,
             ] : null,
-            'contribuintes' => $this->contribuintes($contribuicoes),
+            'contribuintes' => $this->contribuintes($contribuicoes, $perfis),
             'movimentacoes' => $movimentacoes,
             'canViewPayments' => $this->canViewPayments(),
             'canViewConsolidated' => $this->canViewConsolidated(),

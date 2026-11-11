@@ -5,13 +5,17 @@ namespace Tests\Feature;
 use App\Livewire\CashRegister;
 use App\Livewire\Portaria;
 use App\Livewire\RelatorioFinalPortaria;
+use App\Models\AutorizacaoAcesso;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
+use App\Models\Imovel;
 use App\Models\Implantacao;
 use App\Models\Pessoa;
 use App\Models\User;
+use App\Models\Veiculo;
+use App\Models\Vinculo;
 use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -183,6 +187,37 @@ class RelatorioFinalPortariaTest extends TestCase
         Livewire::actingAs($this->operador('validacao.registrar', 'caixa.consolidado.consultar'))
             ->withQueryParams(['turno' => $turnoColega->id])->test(RelatorioFinalPortaria::class)
             ->assertSee('000333');
+    }
+
+    public function test_mostra_perfil_turista_na_praia_e_placas(): void
+    {
+        $operador = $this->operador('validacao.registrar', 'caixa.proprio.gerenciar');
+        $turno = CaixaTurno::query()->create(['terminal' => 'Caixa 01', 'operator_id' => $operador->id, 'opened_at' => now()->subHours(4), 'opening_balance' => 0, 'status' => 'aberto']);
+
+        $turista = Pessoa::factory()->create(['nome' => 'Tiago Turista']);
+        AutorizacaoAcesso::query()->create(['pessoa_id' => $turista->id, 'tipo' => AutorizacaoAcesso::TIPO_TURISTA, 'inicio' => now()->subHours(2), 'fim' => now()->addHours(22), 'status' => 'ativa']);
+        $entradaTurista = $this->contribuicao($operador, $turista, '000501', '15.00', 'pix', now()->subHours(2), $turno)->historicoAcesso;
+        $entradaTurista->update(['placa_informada' => 'TUR1A23']);
+
+        $imovel = Imovel::factory()->create(['codigo' => 'SRA-B-201']);
+        $visitante = Pessoa::factory()->create(['nome' => 'Vera Visitante']);
+        AutorizacaoAcesso::query()->create(['pessoa_id' => $visitante->id, 'imovel_id' => $imovel->id, 'tipo' => AutorizacaoAcesso::TIPO_TURISTA, 'inicio' => now()->subHour(), 'fim' => now()->addHours(23), 'status' => 'ativa']);
+        $this->contribuicao($operador, $visitante, '000502', '15.00', 'dinheiro', now()->subHour(), $turno);
+
+        $morador = Pessoa::factory()->create(['nome' => 'Mário Morador']);
+        Vinculo::factory()->for($morador, 'pessoa')->for($imovel, 'imovel')->create(['tipo' => 'morador']);
+        $veiculo = Veiculo::factory()->create(['plate_display' => 'MOR2B45', 'plate_normalized' => 'MOR2B45']);
+        HistoricoAcesso::factory()->create(['pessoa_id' => $morador->id, 'veiculo_id' => $veiculo->id, 'tipo' => 'entrada', 'resultado' => 'liberado', 'operator_id' => $operador->id, 'occurred_at' => now()->subMinutes(30)]);
+
+        Livewire::actingAs($operador)->test(RelatorioFinalPortaria::class)
+            ->assertViewHas('perfis', fn (array $p) => $p[$entradaTurista->id] === ['perfil' => 'Turista', 'local' => 'Praia'])
+            ->assertViewHas('contribuintes', fn ($c) => $c->firstWhere('pessoa', 'Tiago Turista')['placas'] === ['TUR1A23']
+                && $c->firstWhere('pessoa', 'Vera Visitante')['perfil'] === 'Visitante')
+            ->assertViewHas('porPerfil', fn ($p) => $p['Turista'] === 1 && $p['Visitante'] === 1 && $p['Morador'] === 1)
+            ->assertSee('Praia')
+            ->assertSee('TUR1A23')
+            ->assertSee('MOR2B45')
+            ->assertSee('Morador');
     }
 
     private function contribuicao(User $operador, Pessoa $pessoa, string $ticket, string $valor, string $forma, $quando = null, ?CaixaTurno $turno = null): Contribuicao

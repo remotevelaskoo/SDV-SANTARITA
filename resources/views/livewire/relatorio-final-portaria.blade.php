@@ -78,6 +78,17 @@
         @endif
     </section>
 
+    @if ($porPerfil->isNotEmpty())
+        <section class="relatorio-final__perfis" aria-label="Entradas por perfil">
+            <small>Entradas por perfil</small>
+            <ul>
+                @foreach ($porPerfil as $perfil => $quantidade)
+                    <li><strong>{{ $quantidade }}</strong> {{ $perfil }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if ($canViewPayments)
         <x-ui.card title="Valores recolhidos" description="Contribuições pagas no atendimento e lançamentos manuais do caixa">
             <table class="relatorio-final__tabela relatorio-final__tabela--totais">
@@ -109,13 +120,15 @@
                 <div class="relatorio-final__rolagem">
                     <table class="relatorio-final__tabela">
                         <thead>
-                            <tr><th>Pessoa</th><th>Imóvel</th><th>Tickets</th><th>Forma</th><th class="numeric">Qtd.</th><th class="numeric">Valor</th></tr>
+                            <tr><th>Pessoa</th><th>Perfil</th><th>Imóvel / local</th><th>Placa</th><th>Tickets</th><th>Forma</th><th class="numeric">Qtd.</th><th class="numeric">Valor</th></tr>
                         </thead>
                         <tbody>
                             @foreach ($contribuintes as $contribuinte)
                                 <tr>
                                     <td><strong>{{ $contribuinte['pessoa'] }}</strong></td>
+                                    <td>{{ $contribuinte['perfil'] }}</td>
                                     <td>{{ $contribuinte['imovel'] }}</td>
+                                    <td class="relatorio-final__tickets">{{ $contribuinte['placas'] ? implode(', ', $contribuinte['placas']) : '—' }}</td>
                                     <td class="relatorio-final__tickets">{{ $contribuinte['tickets'] ? implode(', ', $contribuinte['tickets']) : '—' }}</td>
                                     <td>{{ $contribuinte['formas'] }}</td>
                                     <td class="numeric">{{ $contribuinte['quantidade'] }}</td>
@@ -124,7 +137,7 @@
                             @endforeach
                         </tbody>
                         <tfoot>
-                            <tr><th colspan="4">Total das contribuições</th><td class="numeric">{{ $financeiro['quantidade'] }}</td><td class="numeric">R$ {{ number_format($financeiro['contribuicoes'], 2, ',', '.') }}</td></tr>
+                            <tr><th colspan="6">Total das contribuições</th><td class="numeric">{{ $financeiro['quantidade'] }}</td><td class="numeric">R$ {{ number_format($financeiro['contribuicoes'], 2, ',', '.') }}</td></tr>
                         </tfoot>
                     </table>
                 </div>
@@ -140,7 +153,7 @@
                 <table class="relatorio-final__tabela">
                     <thead>
                         <tr>
-                            <th>Data e hora</th><th>Movimento</th><th>Pessoa</th><th>Imóvel</th><th>Placa</th><th>Resultado</th><th>Contribuição</th><th>Ticket</th>
+                            <th>Data e hora</th><th>Movimento</th><th>Pessoa</th><th>Perfil</th><th>Imóvel / local</th><th>Placa</th><th>Resultado</th><th>Contribuição</th><th>Ticket</th>
                             @if ($canViewPayments)<th class="numeric">Valor</th>@endif
                         </tr>
                     </thead>
@@ -151,8 +164,9 @@
                                 <td class="numeric">{{ $acesso->occurred_at->format('d/m H:i') }}</td>
                                 <td>{{ $acesso->tipo === 'entrada' ? 'Entrada' : 'Saída' }}</td>
                                 <td><strong>{{ $acesso->pessoa?->nomeExibicao() ?? 'Não identificado' }}</strong></td>
-                                <td>{{ $acesso->imovel?->label() ?? '—' }}</td>
-                                <td>{{ $acesso->veiculo?->plate_display ?? '—' }}</td>
+                                <td>{{ $perfis[$acesso->id]['perfil'] ?? 'Sem vínculo' }}</td>
+                                <td>{{ $perfis[$acesso->id]['local'] ?? '—' }}</td>
+                                <td class="relatorio-final__tickets">{{ \App\Livewire\RelatorioFinalPortaria::placa($acesso) ?? '—' }}</td>
                                 <td>{{ ucfirst($acesso->resultado) }}</td>
                                 <td>{{ $contribuicao ? \App\Models\Contribuicao::rotuloSituacao($contribuicao->situacao_pagamento) : '—' }}</td>
                                 <td class="relatorio-final__tickets">{{ $contribuicao?->ticket_numero ?? '—' }}</td>
