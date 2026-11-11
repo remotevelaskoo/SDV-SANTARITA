@@ -1,0 +1,20 @@
+{
+    "name": "sdv-pre-cadastro-publico",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": ">=22"
+    },
+    "scripts": {
+        "test": "node --test tests/*.test.mjs",
+        "dev": "node dev.mjs"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "2.119.0",
+        "sharp": "0.35.5"
+    },
+    "devDependencies": {
+        "@electric-sql/pglite": "0.5.16"
+    }
+}

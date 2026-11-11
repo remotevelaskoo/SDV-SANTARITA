@@ -146,92 +146,18 @@ A seleção final depende de dimensionamento, mas a implantação deverá consid
 
 # 11. Relação com a ADR-008
 
-Esta decisão aprova a **topologia híbrida do sistema**, mas não autoriza automaticamente uma credencial, câmera, leitor ou portão a decidir offline.
+Esta decisão aprova a **topologia híbrida do sistema**, mas não autoriza automaticamente uma crede…2287 tokens truncated…e `.env.example` no backend, com segredos protegidos. A chave secreta do Supabase nunca é enviada ao visitante. Não habilite sem o projeto de banco isolado, catálogo real, aviso de privacidade e teste com o nó local.
 
-A ADR-008 continua controlando cache operacional, validade de autorização, revogação e comportamento dos equipamentos. Ela será retomada após o inventário e a prova com o hardware real. Até lá, a contingência física segue manual, limitada e auditável.
+A URL do convite tem formato `https://DOMINIO/#convite=SEGREDO`. O fragmento não entra na requisição inicial nem nos cabeçalhos de referência. O frontend envia o convite no cabeçalho somente à API do portal. O recibo também usa fragmento e não apresenta nome, CPF ou imagens. Não instalar analytics, pixels ou scripts de terceiros que possam ler esses fragmentos.
 
-# 12. Estratégia de implementação
+## Operação local
 
-## Fase 1 — Fundação sem hardware
+Depois de incorporar a branch ao nó local e aplicar sua migração:
 
-- definir nó local e ambiente de nuvem;
-- criar estado de conectividade e sincronização;
-- criar outbox local persistente;
-- implementar idempotência e recepção na nuvem;
-- implementar monitoramento do atraso;
-- separar sincronização de backup;
-- documentar instalação, atualização e recuperação.
+```sh
+php artisan pre-cadastro:sincronizar-nuvem
+```
 
-## Fase 2 — Fluxos essenciais
+O scheduler existente executará o comando a cada minuto **somente** com `SDV_PRE_CADASTRO_NUVEM_ENABLED=true`. Configure `schedule:run` no servidor. Use a credencial exclusiva do nó; não copie a chave administrativa do Supabase para o computador da portaria.
 
-- classificar quais operações podem ocorrer offline;
-- implementar autenticação e permissões locais com validade;
-- sincronizar acessos, caixa, encomendas e cadastros essenciais;
-- implementar tratamento de conflitos e painel de pendências;
-- testar queda e retorno da internet.
-
-## Fase 3 — Equipamentos e homologação
-
-- inventariar câmeras, controladoras e leitores;
-- retomar a ADR-008;
-- validar comportamento offline de cada adaptador;
-- testar falhas de energia, rede, relógio e duplicidade;
-- homologar o procedimento manual de contingência.
-
-# 13. Critérios de aceite
-
-**CA-ADR-018-001:** a portaria acessa os fluxos essenciais pela rede local sem internet.  
-**CA-ADR-018-002:** toda operação offline recebe identificador único e permanece em fila persistente.  
-**CA-ADR-018-003:** reenviar uma operação não duplica o registro.  
-**CA-ADR-018-004:** a interface informa modo local, última sincronização e pendências.  
-**CA-ADR-018-005:** conflitos nunca são resolvidos por sobrescrita silenciosa.  
-**CA-ADR-018-006:** sincronização e backup são mecanismos independentes.  
-**CA-ADR-018-007:** existe teste de restauração em equipamento substituto.  
-**CA-ADR-018-008:** recursos externos indisponíveis falham de forma clara e segura.  
-**CA-ADR-018-009:** decisões offline de equipamentos continuam condicionadas à ADR-008.  
-**CA-ADR-018-010:** queda e retorno da internet fazem parte da homologação antes do go-live.
-
-# 14. Métricas a definir antes da produção
-
-- tempo máximo para continuar operando sem internet;
-- intervalo e atraso máximo de sincronização;
-- RPO e RTO do nó local e da nuvem;
-- frequência, retenção e imutabilidade dos backups;
-- validade local de sessão, permissão e revogação;
-- limite de armazenamento da fila offline;
-- tempo para reposição do equipamento local.
-
-# 15. Dependências
-
-- ADR-002 — multi-implantação e isolamento;
-- ADR-004 — auditoria, eventos e outbox;
-- ADR-005 — filas, cache, locks e idempotência;
-- ADR-006 — armazenamento de arquivos;
-- ADR-007 — adaptadores de equipamentos;
-- ADR-008 — contingência e cache operacional;
-- ADR-009 — gestão de segredos;
-- ADR-010 — observabilidade;
-- ADR-012 — deploy e rollback.
-
-# 16. Pendências
-
-| ID | Pendência |
-|---|---|
-| PEN-ADR-018-001 | Escolher e dimensionar o equipamento dedicado local |
-| PEN-ADR-018-002 | Escolher provedor e região da nuvem |
-| PEN-ADR-018-003 | Definir RPO, RTO e retenção dos backups |
-| PEN-ADR-018-004 | Definir endereço local, certificado e descoberta pelos postos |
-| PEN-ADR-018-005 | Classificar, operação por operação, o que será permitido offline |
-| PEN-ADR-018-006 | Realizar inventário dos equipamentos e retomar a ADR-008 |
-
-# 17. Aprovação
-
-A necessidade de não depender totalmente da internet foi confirmada pelo responsável pelo projeto em 16/10/2026. A topologia híbrida é decisão vigente. Modelos específicos de hardware, provedor, prazos de retenção e metas numéricas permanecem decisões de implementação.
-
-# 18. Decisão resultante
-
-O SDV Access não terá a internet como ponto único de falha da operação da portaria. O condomínio contará com um nó operacional local e sincronização controlada com a nuvem, enquanto backups externos, protegidos e testados garantirão recuperação. Recursos físicos offline somente serão ativados após a homologação específica prevista na ADR-008.
-
-## Situação do ADR
-
-**Aprovado.**
+A fila de análise já existente recebe a solicitação e seus arquivos no armazenamento privado. O comando não cria pessoa autorizada, credencial facial, cobrança ou liberação física. O resultado de uma decisão local é confirmado na nuvem com versão crescente; falhas ficam pendentes para nova tentativa.
