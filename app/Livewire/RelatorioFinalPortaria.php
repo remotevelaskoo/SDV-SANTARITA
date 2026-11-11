@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\CaixaMovimentacao;
+use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
 use App\Models\User;
@@ -11,10 +12,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Relatório final do Modo Portaria: fechamento imprimível do período com
+ * Relatório final do Modo Portaria: fechamento imprimível do turno de caixa
+ * (da abertura ao fechamento) ou de um período por datas, com
  * todas as entradas e saídas, os valores recolhidos com o total de
  * arrecadação e os números de ticket (etiqueta) de cada pessoa que
  * contribuiu.
@@ -29,6 +32,13 @@ use Livewire\Component;
  */
 class RelatorioFinalPortaria extends Component
 {
+    /** "turno" (padrão: da abertura ao fechamento do caixa) ou "periodo" (por datas). */
+    #[Url(as: 'modo')]
+    public string $modo = 'turno';
+
+    #[Url(as: 'turno')]
+    public string $turnoId = '';
+
     public string $dateFrom = '';
 
     public string $dateTo = '';
@@ -39,6 +49,45 @@ class RelatorioFinalPortaria extends Component
     {
         $this->dateFrom = now()->toDateString();
         $this->dateTo = now()->toDateString();
+
+        if ($this->modo !== 'periodo') {
+            $this->modo = 'turno';
+            $this->turnoId = $this->turnoSelecionado()?->id ?? '';
+        }
+    }
+
+    public function updatedModo(): void
+    {
+        $this->modo = $this->modo === 'periodo' ? 'periodo' : 'turno';
+        if ($this->modo === 'turno' && $this->turnoId === '') {
+            $this->turnoId = $this->turnoSelecionado()?->id ?? '';
+        }
+    }
+
+    /** @return Builder<CaixaTurno> */
+    private function turnosVisiveis(): Builder
+    {
+        return CaixaTurno::query()
+            ->when(! $this->canViewConsolidated(), fn (Builder $q) => $q->where('operator_id', Auth::id()));
+    }
+
+    /**
+     * Turno pedido (se visível para quem consulta); senão o caixa aberto do
+     * próprio operador; senão o último turno que ele fechou.
+     */
+    private function turnoSelecionado(): ?CaixaTurno
+    {
+        if ($this->turnoId !== '') {
+            $turno = $this->turnosVisiveis()->with('operator')->find($this->turnoId);
+            if ($turno) {
+                return $turno;
+            }
+        }
+
+        $proprios = CaixaTurno::query()->with('operator')->where('operator_id', Auth::id());
+
+        return (clone $proprios)->where('status', 'aberto')->latest('opened_at')->first()
+            ?? $proprios->where('status', 'fechado')->latest('closed_at')->first();
     }
 
     public function updatedDateFrom(): void
@@ -53,7 +102,8 @@ class RelatorioFinalPortaria extends Component
 
     public function hoje(): void
     {
-        $this->mount();
+        $this->dateFrom = now()->toDateString();
+        $this->dateTo = now()->toDateString();
     }
 
     private function normalizarPeriodo(): void
@@ -85,13 +135,12 @@ class RelatorioFinalPortaria extends Component
     }
 
     /** @return Builder<HistoricoAcesso> */
-    private function accessQuery(): Builder
+    private function accessQuery(?CaixaTurno $turno): Builder
     {
         return HistoricoAcesso::query()
             ->with(['pessoa', 'imovel', 'veiculo', 'operator', 'contribuicao'])
-            ->whereDate('occurred_at', '>=', $this->dateFrom)
-            ->whereDate('occurred_at', '<=', $this->dateTo)
-            ->when($this->operatorFilter !== 'todos' && $this->canViewConsolidated(), fn (Builder $q) => $q->where('operator_id', $this->operatorFilter));
+            ->tap(fn (Builder $q) => $this->aplicarJanela($q, 'occurred_at', $turno))
+            ->when($turno === null && $this->operatorFilter !== 'todos' && $this->canViewConsolidated(), fn (Builder $q) => $q->where('operator_id', $this->operatorFilter));
     }
 
     /**
@@ -99,7 +148,7 @@ class RelatorioFinalPortaria extends Component
      *
      * @return Collection<int, Contribuicao>
      */
-    private function contribuicoesPagas(): Collection
+    private function contribuicoesPagas(?CaixaTurno $turno): Collection
     {
         if (! $this->canViewPayments()) {
             return collect();
@@ -108,15 +157,16 @@ class RelatorioFinalPortaria extends Component
         return Contribuicao::query()
             ->with(['historicoAcesso.pessoa', 'historicoAcesso.imovel'])
             ->where('situacao_pagamento', 'pago')
-            ->whereDate('registrada_em', '>=', $this->dateFrom)
-            ->whereDate('registrada_em', '<=', $this->dateTo)
-            ->tap(fn (Builder $q) => $this->aplicarEscopoFinanceiro($q))
+            ->tap(fn (Builder $q) => $turno
+                ? $q->where('caixa_turno_id', $turno->id)
+                : $this->aplicarJanela($q, 'registrada_em', null))
+            ->tap(fn (Builder $q) => $turno ? null : $this->aplicarEscopoFinanceiro($q))
             ->orderBy('registrada_em')
             ->get();
     }
 
     /** @return Collection<int, CaixaMovimentacao> */
-    private function movimentacoesCaixa(): Collection
+    private function movimentacoesCaixa(?CaixaTurno $turno): Collection
     {
         if (! $this->canViewPayments()) {
             return collect();
@@ -124,11 +174,29 @@ class RelatorioFinalPortaria extends Component
 
         return CaixaMovimentacao::query()
             ->with(['caixaTurno', 'operator'])
-            ->whereDate('occurred_at', '>=', $this->dateFrom)
-            ->whereDate('occurred_at', '<=', $this->dateTo)
-            ->tap(fn (Builder $q) => $this->aplicarEscopoFinanceiro($q))
+            ->tap(fn (Builder $q) => $turno
+                ? $q->where('caixa_turno_id', $turno->id)
+                : $this->aplicarJanela($q, 'occurred_at', null))
+            ->tap(fn (Builder $q) => $turno ? null : $this->aplicarEscopoFinanceiro($q))
             ->orderBy('occurred_at')
             ->get();
+    }
+
+    /**
+     * No turno: da abertura ao fechamento (ou até agora, se ainda aberto).
+     * No período: dias inteiros entre as datas escolhidas.
+     *
+     * @param  Builder<HistoricoAcesso>|Builder<Contribuicao>|Builder<CaixaMovimentacao>  $query
+     */
+    private function aplicarJanela(Builder $query, string $coluna, ?CaixaTurno $turno): void
+    {
+        if ($turno) {
+            $query->where($coluna, '>=', $turno->opened_at)->where($coluna, '<=', $turno->closed_at ?? now());
+
+            return;
+        }
+
+        $query->whereDate($coluna, '>=', $this->dateFrom)->whereDate($coluna, '<=', $this->dateTo);
     }
 
     /** @param Builder<Contribuicao>|Builder<CaixaMovimentacao> $query */
@@ -169,13 +237,33 @@ class RelatorioFinalPortaria extends Component
             ->values();
     }
 
+    private function periodoRotulo(?CaixaTurno $turno, bool $semTurno): string
+    {
+        if ($turno) {
+            $fim = $turno->closed_at?->format('d/m/Y H:i') ?? 'agora (caixa aberto)';
+
+            return "{$turno->terminal} · ".($turno->operator?->name ?? 'Sistema')." · {$turno->opened_at->format('d/m/Y H:i')} até {$fim}";
+        }
+
+        if ($semTurno) {
+            return 'Nenhum turno de caixa';
+        }
+
+        $inicio = Carbon::parse($this->dateFrom)->format('d/m/Y');
+
+        return $this->dateFrom === $this->dateTo ? $inicio : $inicio.' a '.Carbon::parse($this->dateTo)->format('d/m/Y');
+    }
+
     public function render(): View
     {
         $this->normalizarPeriodo();
 
-        $acessos = $this->accessQuery()->orderBy('occurred_at')->get();
-        $contribuicoes = $this->contribuicoesPagas();
-        $movimentacoes = $this->movimentacoesCaixa();
+        $turno = $this->modo === 'turno' ? $this->turnoSelecionado() : null;
+        $semTurno = $this->modo === 'turno' && $turno === null;
+
+        $acessos = $semTurno ? collect() : $this->accessQuery($turno)->orderBy('occurred_at')->get();
+        $contribuicoes = $semTurno ? collect() : $this->contribuicoesPagas($turno);
+        $movimentacoes = $semTurno ? collect() : $this->movimentacoesCaixa($turno);
 
         $totalContribuicoes = round((float) $contribuicoes->sum(fn (Contribuicao $c) => (float) $c->valor), 2);
         $outrasEntradas = round((float) $movimentacoes->where('type', 'entrada')->sum('amount'), 2);
@@ -190,6 +278,15 @@ class RelatorioFinalPortaria extends Component
 
         return view('livewire.relatorio-final-portaria', [
             'acessos' => $acessos,
+            'turno' => $turno,
+            'semTurno' => $semTurno,
+            'turnos' => $this->turnosVisiveis()->with('operator')->latest('opened_at')->limit(30)->get(),
+            'caixa' => $turno ? [
+                'saldoInicial' => (float) $turno->opening_balance,
+                'esperado' => $turno->status === 'fechado' ? (float) $turno->expected_amount : $turno->expectedBalance(),
+                'informado' => $turno->status === 'fechado' ? (float) $turno->informed_amount : null,
+                'diferenca' => $turno->status === 'fechado' ? (float) $turno->difference : null,
+            ] : null,
             'contribuintes' => $this->contribuintes($contribuicoes),
             'movimentacoes' => $movimentacoes,
             'canViewPayments' => $this->canViewPayments(),
@@ -216,13 +313,11 @@ class RelatorioFinalPortaria extends Component
                 'saidas' => $saidas,
                 'totalArrecadado' => round($totalContribuicoes + $outrasEntradas - $estornos, 2),
             ],
-            'periodoRotulo' => $this->dateFrom === $this->dateTo
-                ? Carbon::parse($this->dateFrom)->format('d/m/Y')
-                : Carbon::parse($this->dateFrom)->format('d/m/Y').' a '.Carbon::parse($this->dateTo)->format('d/m/Y'),
+            'periodoRotulo' => $this->periodoRotulo($turno, $semTurno),
         ])->layout('components.layouts.app', [
             'title' => 'Relatório final',
             'heading' => 'Relatório final da portaria',
-            'headingDescription' => 'Entradas, saídas, arrecadação e tickets do período',
+            'headingDescription' => 'Entradas, saídas, arrecadação e tickets do turno de caixa',
         ]);
     }
 }

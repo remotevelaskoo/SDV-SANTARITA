@@ -5,6 +5,18 @@
         </x-ui.toast>
     @endif
 
+    @if ($ultimoTurnoFechadoId && $status === 'fechado' && auth()->user()?->hasPermission('validacao.registrar'))
+        <section class="cash-register-report-cta" aria-label="Relatório final do turno">
+            <div>
+                <strong>Relatório final do turno</strong>
+                <p>Entradas, saídas, valores recolhidos e tickets de cada pessoa, da abertura ao fechamento deste caixa.</p>
+            </div>
+            <x-ui.button variant="primary" href="{{ route('portaria.relatorio-final', ['turno' => $ultimoTurnoFechadoId]) }}">
+                <x-icon name="file" /> Gerar relatório final
+            </x-ui.button>
+        </section>
+    @endif
+
     @if ($status === 'aberto')
         <section class="cash-register-grid">
             <x-ui.cash-summary
@@ -122,7 +134,7 @@
             empty-description="O histórico aparecerá aqui após o primeiro fechamento."
         >
             <x-slot:table>
-                <thead><tr><th>Período</th><th>Operador</th><th>Saldo inicial</th><th>Esperado</th><th>Informado</th><th>Diferença</th><th>Situação</th></tr></thead>
+                <thead><tr><th>Período</th><th>Operador</th><th>Saldo inicial</th><th>Esperado</th><th>Informado</th><th>Diferença</th><th>Situação</th>@if ($podeVerRelatorio)<th><span class="sr-only">Relatório</span></th>@endif</tr></thead>
                 <tbody>
                     @foreach (array_reverse($closedSessions) as $session)
                         <tr>
@@ -133,6 +145,9 @@
                             <td class="numeric">R$ {{ number_format($session['informed'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['difference'], 2, ',', '.') }}</td>
                             <td><x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença registrada' }}</x-ui.badge></td>
+                            @if ($podeVerRelatorio)
+                                <td><a class="reports-clear" href="{{ route('portaria.relatorio-final', ['turno' => $session['id']]) }}">Relatório final</a></td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
@@ -145,6 +160,7 @@
                             <div>
                                 <strong>{{ $session['period'] }}</strong>
                                 <small>{{ $session['operator'] }} · Esperado R$ {{ number_format($session['expected'], 2, ',', '.') }}</small>
+                                @if ($podeVerRelatorio)<a class="reports-clear" href="{{ route('portaria.relatorio-final', ['turno' => $session['id']]) }}">Relatório final</a>@endif
                             </div>
                             <time>R$ {{ number_format($session['difference'], 2, ',', '.') }}</time>
                             <x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença' }}</x-ui.badge>

@@ -2,7 +2,7 @@
     <section class="relatorio-final__toolbar reports-toolbar no-print" aria-labelledby="relatorio-final-titulo">
         <div>
             <h2 id="relatorio-final-titulo">Relatório final</h2>
-            <p>Escolha o período e imprima ou salve em PDF ao encerrar o turno.</p>
+            <p>Por padrão mostra o turno do seu caixa, da abertura ao fechamento. Ao fechar o caixa, imprima ou salve em PDF.</p>
         </div>
         <div class="relatorio-final__acoes">
             <x-ui.button variant="secondary" href="{{ route('portaria') }}"><x-icon name="chevron-left" /> Modo Portaria</x-ui.button>
@@ -11,9 +11,23 @@
     </section>
 
     <section class="reports-filters no-print" aria-label="Período do relatório">
+        <x-ui.select id="relatorio-final-modo" label="Relatório por" wire:model.live="modo">
+            <option value="turno">Turno do caixa</option>
+            <option value="periodo">Datas</option>
+        </x-ui.select>
+        @if ($modo === 'turno')
+            <x-ui.select id="relatorio-final-turno" label="Turno" wire:model.live="turnoId">
+                @forelse ($turnos as $opcao)
+                    <option value="{{ $opcao->id }}">{{ $opcao->opened_at->format('d/m H:i') }} – {{ $opcao->closed_at?->format('d/m H:i') ?? 'aberto' }} · {{ $opcao->operator?->name ?? 'Sistema' }}</option>
+                @empty
+                    <option value="">Nenhum turno de caixa</option>
+                @endforelse
+            </x-ui.select>
+        @else
         <label><span>Data inicial</span><input type="date" wire:model.live="dateFrom" max="{{ $dateTo }}"></label>
         <label><span>Data final</span><input type="date" wire:model.live="dateTo" min="{{ $dateFrom }}"></label>
-        @if ($canViewConsolidated)
+        @endif
+        @if ($canViewConsolidated && $modo === 'periodo')
             <x-ui.select id="relatorio-final-operador" label="Operador" wire:model.live="operatorFilter">
                 <option value="todos">Todos os operadores</option>
                 @foreach ($operators as $operator)
@@ -21,24 +35,36 @@
                 @endforeach
             </x-ui.select>
         @endif
-        <button type="button" class="reports-clear" wire:click="hoje">Hoje</button>
+        @if ($modo === 'periodo')
+            <button type="button" class="reports-clear" wire:click="hoje">Hoje</button>
+        @endif
     </section>
 
     <header class="relatorio-final__cabecalho">
         <strong>SDV One · Relatório final da portaria</strong>
-        <span>Período: {{ $periodoRotulo }}</span>
+        <span>{{ $turno ? 'Turno' : 'Período' }}: {{ $periodoRotulo }}</span>
         <span>Emitido em {{ now()->format('d/m/Y H:i') }} por {{ auth()->user()->name }}</span>
     </header>
 
-    @unless ($canViewPayments)
+    @if ($semTurno)
+        <x-ui.alert variant="info" title="Nenhum turno de caixa">
+            Você ainda não abriu nenhum caixa. Abra o caixa no início do turno para gerar o relatório final ao fechar, ou escolha "Datas" para ver um período.
+        </x-ui.alert>
+    @elseif ($turno && $turno->status === 'aberto')
+        <x-ui.alert variant="warning" title="Caixa ainda aberto">
+            O relatório mostra o turno até agora. Feche o caixa para gerar o relatório final com o valor conferido.
+        </x-ui.alert>
+    @endif
+
+    @if (! $canViewPayments)
         <x-ui.alert variant="info" title="Valores ocultos">
             Seu perfil não opera nem consulta caixa: valores, formas de pagamento e lançamentos não aparecem neste relatório.
         </x-ui.alert>
-    @elseif (! $canViewConsolidated)
+    @elseif (! $turno && ! $canViewConsolidated)
         <x-ui.alert variant="info" title="Escopo dos valores">
             Os valores e tickets mostrados são os registrados por você. As entradas e saídas incluem toda a portaria.
         </x-ui.alert>
-    @endunless
+    @endif
 
     <section class="relatorio-final__resumo" aria-label="Resumo do período">
         <article><small>Entradas</small><strong>{{ $resumo['entradas'] }}</strong></article>
@@ -64,6 +90,14 @@
                     <tr><th scope="row">Estornos</th><td class="numeric">− R$ {{ number_format($financeiro['estornos'], 2, ',', '.') }}</td></tr>
                     <tr class="relatorio-final__linha-total"><th scope="row">Total de arrecadação</th><td class="numeric">R$ {{ number_format($financeiro['totalArrecadado'], 2, ',', '.') }}</td></tr>
                     <tr class="relatorio-final__subitem"><th scope="row">Saídas do caixa (sangria, despesas — fora do total)</th><td class="numeric">R$ {{ number_format($financeiro['saidas'], 2, ',', '.') }}</td></tr>
+                    @if ($caixa)
+                        <tr><th scope="row">Saldo inicial do caixa</th><td class="numeric">R$ {{ number_format($caixa['saldoInicial'], 2, ',', '.') }}</td></tr>
+                        <tr><th scope="row">Saldo esperado no caixa</th><td class="numeric">R$ {{ number_format($caixa['esperado'], 2, ',', '.') }}</td></tr>
+                        @if ($caixa['informado'] !== null)
+                            <tr><th scope="row">Valor conferido no fechamento</th><td class="numeric">R$ {{ number_format($caixa['informado'], 2, ',', '.') }}</td></tr>
+                            <tr><th scope="row">Diferença</th><td class="numeric">R$ {{ number_format($caixa['diferenca'], 2, ',', '.') }}</td></tr>
+                        @endif
+                    @endif
                 </tbody>
             </table>
         </x-ui.card>
@@ -134,7 +168,7 @@
     </x-ui.card>
 
     @if ($canViewPayments && $movimentacoes->isNotEmpty())
-        <x-ui.card title="Lançamentos manuais do caixa" description="Movimentações registradas na tela de Caixa no período">
+        <x-ui.card title="Lançamentos manuais do caixa" description="Movimentações registradas na tela de Caixa">
             <div class="relatorio-final__rolagem">
                 <table class="relatorio-final__tabela">
                     <thead><tr><th>Data e hora</th><th>Tipo</th><th>Forma</th><th>Descrição</th><th>Operador</th><th class="numeric">Valor</th></tr></thead>
