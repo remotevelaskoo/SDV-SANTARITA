@@ -54,6 +54,12 @@ class AutorizacaoAcesso extends Model
         return $this->belongsTo(Pessoa::class);
     }
 
+    /** @return BelongsTo<Imovel, $this> */
+    public function imovel(): BelongsTo
+    {
+        return $this->belongsTo(Imovel::class);
+    }
+
     /** @return HasMany<CredencialAcesso, $this> */
     public function credenciais(): HasMany
     {

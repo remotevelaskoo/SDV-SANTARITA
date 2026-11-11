@@ -47,6 +47,9 @@ class CashRegister extends Component
     /** @var array{variant: string, title: string, message: string}|null */
     public ?array $feedback = null;
 
+    /** Turno recém-fechado: a tela oferece gerar o relatório final dele. */
+    public ?string $ultimoTurnoFechadoId = null;
+
     public function mount(): void
     {
         $sugerido = Configuracao::obter('caixa.saldo_sugerido_abertura');
@@ -161,6 +164,7 @@ class CashRegister extends Component
             'closing_status' => abs($difference) < 0.01 ? 'conferido' : 'diferenca',
         ]);
 
+        $this->ultimoTurnoFechadoId = $turno->id;
         $this->syncCurrentTurno();
         $this->reset(['informedAmount', 'closingNotes']);
         $this->feedback = [
@@ -253,6 +257,7 @@ class CashRegister extends Component
         return view('livewire.cash-register', [
             'movements' => $movements,
             'closedSessions' => $closedSessions,
+            'podeVerRelatorio' => Auth::user()?->hasPermission('validacao.registrar') ?? false,
         ])->layout('components.layouts.app', [
             'title' => 'Caixa',
             'heading' => 'Caixa',
