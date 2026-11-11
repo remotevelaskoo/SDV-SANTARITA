@@ -2341,3 +2341,751 @@ body.has-drawer-open { overflow: hidden; }
 @media (min-width: 640px) {
     .captura-documento__escolha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* ================================================================
+   SDV ONE / visual v1 — somente apresentação. O CSS original fica
+   preservado acima, permitindo reverter pela branch de backup.
+   ================================================================ */
+:root {
+    --sdv-one-navy: #061b3e;
+    --sdv-one-blue: #0868ed;
+    --sdv-one-line: #dbe6f7;
+    --sdv-one-shadow: 0 14px 35px rgb(13 48 101 / 0.085);
+}
+
+.app-shell { background: linear-gradient(135deg, #f8fbff 0%, #eff5ff 80%, #edf3fd 100%); }
+.sidebar, .mobile-drawer__panel {
+    background: radial-gradient(circle at 0% 85%, #073779 0%, transparent 42%),
+        linear-gradient(160deg, #04132e 5%, #061a3a 55%, #092b64 100%);
+}
+.sidebar::after {
+    position: absolute;
+    z-index: 0;
+    right: -45%;
+    bottom: 3.6rem;
+    width: 145%;
+    height: 10rem;
+    border-top: 1px solid rgb(39 147 255 / 0.3);
+    border-radius: 50%;
+    box-shadow: 0 -17px 50px rgb(6 127 255 / 0.15);
+    content: '';
+    pointer-events: none;
+    transform: rotate(-13deg);
+}
+.sidebar > * { position: relative; z-index: 1; }
+.sidebar__brand-row { height: 5.05rem; padding: 0 0.9rem; }
+.brand { width: 100%; }
+.sdv-one-logo { display: flex; min-width: 0; align-items: center; gap: 0.3rem; color: #fff; }
+.sdv-one-logo__symbol { width: 3.6rem; height: 3.2rem; flex: 0 0 auto; overflow: visible; }
+.sdv-one-logo__base { fill: #f5f8ff; }
+.sdv-one-logo__blue { fill: #126bff; }
+.sdv-one-logo__type { display: block; min-width: 0; }
+.sdv-one-logo__type > strong {
+    display: block; color: #fff; font-size: 1.26rem; font-weight: 850;
+    letter-spacing: -0.055em; line-height: 1.06; white-space: nowrap;
+}
+.sdv-one-logo__type > strong > span { color: #2687ff; }
+.sdv-one-logo__type > small {
+    display: block; margin-top: 0.25rem; color: #abbcdd; font-size: 0.67rem;
+    line-height: 1.15; white-space: nowrap; letter-spacing: 0.015em;
+}
+.sidebar__toggle { margin-top: 0.75rem; border-color: rgb(255 255 255 / 0.13); border-radius: 0.7rem; }
+.sidebar__toggle:hover { background: rgb(255 255 255 / 0.1); }
+.sidebar .navigation { padding: 1rem 0.6rem; }
+.navigation__group { margin-bottom: 0.55rem; }
+.navigation__group-toggle { color: #b5c5e3; font-weight: 750; letter-spacing: 0.085em; }
+.navigation__item { min-height: 2.85rem; border-radius: 0.66rem; color: #c4d2ea; }
+.navigation__item:hover { background: rgb(49 126 235 / 0.18); }
+.navigation__item--active, .navigation__item--active:hover {
+    background: linear-gradient(110deg, #068cf7, #0868ed); color: #fff;
+    box-shadow: 0 7px 15px rgb(0 74 184 / 0.27);
+}
+.navigation__item--active::before { top: 0.65rem; bottom: 0.65rem; width: 0.18rem; }
+.sidebar__footer { border-top-color: rgb(255 255 255 / 0.11); }
+.sidebar__footer strong { color: #fff; }
+.mobile-drawer__header { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.mobile-brand .sdv-one-logo__symbol { width: 3rem; height: 2.7rem; }
+.mobile-brand .sdv-one-logo__type > strong { font-size: 1.1rem; }
+
+.operational-header {
+    border-bottom-color: #e7edf8; background: rgb(255 255 255 / 0.95);
+    box-shadow: 0 2px 15px rgb(24 68 133 / 0.035);
+}
+.operational-header__main { min-height: 4.75rem; gap: 0.85rem; }
+.operational-header__title { display: flex; align-items: center; gap: 0.65rem; }
+.operational-header__title-copy { min-width: 0; }
+.operational-header__title-icon {
+    display: grid; width: 2.55rem; height: 2.55rem; flex: 0 0 auto;
+    place-items: center; border-radius: 0.75rem;
+    background: linear-gradient(145deg, #eff6ff, #d6e9ff); color: #0665dc;
+}
+.operational-header__title-icon .app-icon { width: 1.32rem; height: 1.32rem; }
+.operational-header__title h1 { font-size: 1.07rem; font-weight: 800; letter-spacing: -0.027em; }
+.operational-header__title p { font-size: 0.72rem; }
+.operational-header__actions { gap: 0.45rem; }
+.cash-status { background: #e7fbed; border: 1px solid #cdf6d7; font-weight: 750; }
+.global-search-row { padding-top: 0.15rem; padding-bottom: 0.75rem; border-top: 0; }
+.global-search { max-width: none; padding-top: 0; }
+.global-search > .app-icon { top: 0.83rem; left: 0.95rem; width: 1.1rem; height: 1.1rem; color: #637ba3; }
+.global-search input {
+    height: 2.8rem; padding-left: 2.9rem; border: 1px solid #ccdafa;
+    border-radius: 0.77rem; background: #fff; box-shadow: 0 4px 14px rgb(16 68 140 / 0.06);
+    font-size: 0.8rem;
+}
+.global-search input:disabled { cursor: not-allowed; opacity: 0.78; }
+.main-content { max-width: 110rem; }
+.workspace { background: linear-gradient(145deg, #fbfdff 0%, #f2f7ff 60%, #ecf3fe 100%); }
+
+/* Modo Portaria — a hierarquia visual segue o mockup aprovado. */
+.sdv-one-portaria { display: grid; gap: 1.05rem; color: #0b1d3c; }
+.sdv-one-portaria .ui-card {
+    border-color: var(--sdv-one-line); border-radius: 1.08rem;
+    box-shadow: var(--sdv-one-shadow);
+}
+.sdv-one-hero {
+    position: relative; display: flex; min-height: 8.7rem; align-items: center;
+    overflow: hidden; isolation: isolate; padding: 1.5rem 2rem;
+    border-radius: 1rem; background: linear-gradient(110deg, #061633 0%, #08295c 58%, #064e9c 100%);
+    color: #fff; box-shadow: 0 12px 30px rgb(8 42 100 / 0.14);
+}
+.sdv-one-hero::before {
+    position: absolute; z-index: -1; inset: 0; content: '';
+    background: radial-gradient(ellipse at 88% 60%, rgb(31 137 255 / 0.42), transparent 42%),
+        linear-gradient(145deg, transparent 48%, rgb(21 118 248 / 0.08) 64%, transparent 70%);
+}
+.sdv-one-hero__content { position: relative; z-index: 2; max-width: 70%; }
+.sdv-one-hero__eyebrow {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    margin-bottom: 0.42rem; color: #9dcbff; font-size: 0.67rem;
+    font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.sdv-one-hero__eyebrow .app-icon { width: 0.9rem; height: 0.9rem; }
+.sdv-one-hero h2 { font-size: clamp(1.38rem, 2.3vw, 2rem); letter-spacing: -0.045em; }
+.sdv-one-hero p { margin-top: 0.35rem; color: #d4e3fb; font-size: 0.83rem; }
+.sdv-one-hero__architecture { position: absolute; inset: 0 0 0 auto; width: 43%; overflow: hidden; opacity: 0.75; }
+.sdv-one-hero__roof {
+    position: absolute; top: 22%; right: -2%; width: 72%; height: 13%;
+    background: linear-gradient(180deg, #1c79dd, #093a75);
+    border: 1px solid rgb(143 206 255 / 0.35); transform: skew(-26deg);
+    box-shadow: 0 8px 22px rgb(3 22 58 / 0.8);
+}
+.sdv-one-hero__tower {
+    position: absolute; top: 31%; right: 7%; width: 58%; height: 74%;
+    border: 1px solid rgb(110 188 255 / 0.23);
+    background: repeating-linear-gradient(90deg, rgb(5 28 66 / 0.85) 0 18%, rgb(38 102 165 / 0.55) 18% 22%),
+        linear-gradient(150deg, #123966, #061632);
+    box-shadow: inset 0 5px 20px rgb(25 145 255 / 0.22);
+}
+.sdv-one-hero__gate {
+    position: absolute; right: 18%; bottom: -6%; width: 32%; height: 52%;
+    border: 0.26rem solid #5a9dd4; border-bottom: 0; border-radius: 0.2rem 0.2rem 0 0;
+    background: repeating-linear-gradient(90deg, #092044 0 10%, #3b82c6 10% 12%);
+}
+.sdv-one-hero__lights {
+    position: absolute; top: 35%; right: 14%; width: 39%; height: 0.23rem;
+    background: repeating-linear-gradient(90deg, #a9e8ff 0 6px, transparent 6px 43px);
+    filter: drop-shadow(0 0 5px #51bbff);
+}
+.sdv-one-operation { display: grid; grid-template-columns: 1fr; gap: 0.85rem; align-items: stretch; }
+.sdv-one-cash-panel { background: linear-gradient(148deg, #0950a7, #071e49 72%, #0a69e5) !important; color: #fff; }
+.sdv-one-cash-panel .ui-card__header { padding: 1.15rem 1.2rem; border-color: rgb(255 255 255 / 0.13); }
+.sdv-one-cash-panel .ui-card__header h3 { color: #fff; font-size: 0.95rem; font-weight: 800; }
+.sdv-one-cash-panel .ui-card__header p { color: #b7d1ff; font-size: 0.72rem; }
+.sdv-one-cash-panel .ui-card__body { min-height: 9rem; padding: 1.2rem; }
+.sdv-one-cash-panel .ui-card__footer { justify-content: stretch; padding: 0.9rem 1.15rem 1.15rem; background: transparent; border-color: rgb(255 255 255 / 0.12); }
+.sdv-one-cash-panel .ui-card__footer .ui-button { width: 100%; min-height: 2.7rem; border-radius: 0.65rem; color: #072653; font-weight: 800; }
+.sdv-one-cash-panel .cash-card__amount { margin-top: 0; color: #fff; font-size: clamp(2rem, 3vw, 2.7rem); font-weight: 850; }
+.sdv-one-cash-panel .cash-card__meta { margin-top: 1rem; padding-top: 1rem; border-color: rgb(255 255 255 / 0.2); color: #d6e7ff; font-size: 0.73rem; }
+.sdv-one-cash-panel .ui-badge--success { background: #ceffe5; color: #087c3b; }
+.sdv-one-shortcuts-panel { background: rgb(255 255 255 / 0.84); }
+.sdv-one-shortcuts-panel .ui-card__header { padding: 1rem 1.15rem 0.7rem; border: 0; }
+.sdv-one-shortcuts-panel .ui-card__header h3 { font-size: 1.1rem; font-weight: 850; letter-spacing: -0.03em; }
+.sdv-one-shortcuts-panel .ui-card__body { padding: 0.6rem 0.75rem 0.85rem; }
+.sdv-one-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+.sdv-one-shortcuts .shortcut-card {
+    position: relative; min-height: 7rem; grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center; gap: 0.6rem; padding: 0.85rem; border-color: #d8e4f6;
+    border-radius: 0.9rem; background: linear-gradient(120deg, #fff, #f6f9ff);
+    box-shadow: 0 4px 12px rgb(11 48 108 / 0.06);
+}
+.sdv-one-shortcuts .shortcut-card__icon { align-self: start; width: 2.65rem; height: 2.65rem; border-radius: 0.75rem; background: #e2efff; color: #0965dc; }
+.sdv-one-shortcuts .shortcut-card__icon .app-icon { width: 1.25rem; height: 1.25rem; }
+.sdv-one-shortcuts .shortcut-card__copy { display: grid; gap: 0.38rem; min-width: 0; }
+.sdv-one-shortcuts .shortcut-card strong { color: #132746; font-size: 0.83rem; line-height: 1.25; }
+.sdv-one-shortcuts .shortcut-card p { color: #596d8c; font-size: 0.69rem; line-height: 1.45; }
+.sdv-one-shortcuts .shortcut-card__arrow { display: grid; width: 1.75rem; height: 1.75rem; place-items: center; border-radius: 50%; background: #e8f0ff; color: #1769d3; }
+.sdv-one-shortcuts .shortcut-card__arrow .app-icon { width: 0.9rem; height: 0.9rem; }
+.sdv-one-shortcuts .shortcut-card--primary { border-color: #1779ef; background: linear-gradient(140deg, #0b91f5, #095ed4 56%, #073a88); color: #fff; }
+.sdv-one-shortcuts .shortcut-card--primary .shortcut-card__icon { background: rgb(255 255 255 / 0.16); color: #fff; }
+.sdv-one-shortcuts .shortcut-card--primary strong, .sdv-one-shortcuts .shortcut-card--primary p { color: #fff; }
+.sdv-one-shortcuts .shortcut-card--primary .shortcut-card__arrow { background: rgb(255 255 255 / 0.16); color: #fff; }
+.sdv-one-shortcuts .shortcut-card__status { color: #2167ce; font-size: 0.57rem; letter-spacing: 0; }
+.sdv-one-shortcuts .shortcut-card:hover { transform: translateY(-2px); border-color: #6bacff; }
+.sdv-one-overview { display: grid; grid-template-columns: 1fr; gap: 0.85rem; align-items: stretch; }
+.sdv-one-overview__metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.sdv-one-metric {
+    display: flex; min-width: 0; align-items: center; gap: 0.6rem; padding: 0.85rem 0.6rem;
+    border: 1px solid #dfeafa; border-radius: 0.85rem; background: #fff; box-shadow: 0 6px 16px rgb(11 48 108 / 0.06);
+}
+.sdv-one-metric__icon { display: grid; width: 2.4rem; height: 2.4rem; flex: 0 0 auto; place-items: center; border-radius: 0.65rem; background: #e9f2ff; color: #136bdb; }
+.sdv-one-metric__icon .app-icon { width: 1.25rem; height: 1.25rem; }
+.sdv-one-metric--entries .sdv-one-metric__icon { background: #dcfae9; color: #159956; }
+.sdv-one-metric--exits .sdv-one-metric__icon { background: #ffe8e8; color: #e34f4f; }
+.sdv-one-metric strong { display: block; color: #102649; font-size: 1.35rem; font-weight: 850; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.sdv-one-metric small { display: block; margin-top: 0.18rem; color: #667c9a; font-size: 0.65rem; line-height: 1.2; }
+.sdv-one-overview__alerts .ui-alert {
+    min-height: 100%; align-items: center; padding: 0.95rem 1rem;
+    border-radius: 0.95rem; border-color: #ffd37e; background: linear-gradient(115deg, #fff9e9, #fff3d8);
+}
+.sdv-one-overview__alerts .ui-alert__content { position: relative; }
+.sdv-one-overview__alerts .ui-alert__content > strong { color: #904100; font-size: 0.78rem; }
+.sdv-one-overview__alerts .ui-alert__message { color: #855111; font-size: 0.7rem; }
+.sdv-one-alert-link { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.55rem; color: #934b00; font-size: 0.71rem; font-weight: 800; text-decoration: underline; }
+.sdv-one-alert-link .app-icon { width: 0.75rem; height: 0.75rem; }
+.sdv-one-overview__all-clear {
+    display: flex; align-items: center; gap: 0.55rem; padding: 0.85rem 1rem;
+    border: 1px solid #bdeed5; border-radius: 0.85rem; background: #edfff4; color: #137748;
+}
+.sdv-one-overview__all-clear > .app-icon { width: 1.1rem; height: 1.1rem; }
+.sdv-one-overview__all-clear strong, .sdv-one-overview__all-clear small { display: block; }
+.sdv-one-overview__all-clear strong { font-size: 0.75rem; }
+.sdv-one-overview__all-clear small { font-size: 0.66rem; }
+.sdv-one-recent__card .ui-card__header { padding: 1.1rem 1.2rem; background: #fff; }
+.sdv-one-recent__card .ui-card__header h3 { font-size: 1.02rem; font-weight: 850; letter-spacing: -0.02em; }
+.sdv-one-recent__card .ui-card__body { padding: 0.65rem 1rem 1rem; }
+.sdv-one-recent__card .ui-responsive-table { border-color: #e3ebf7; border-radius: 0.85rem; }
+.sdv-one-recent__card .ui-responsive-table__desktop th { background: #f3f7ff; }
+.sdv-one-portaria > section[aria-label="Liberação manual"] { order: 0; }
+
+/* Barra compacta: preservar o ícone mesmo com a regra AJ-009 que ocultava spans. */
+@media (min-width: 64rem) {
+    html[data-sidebar="expanded"] { --sidebar-width: 17.5rem; }
+    html[data-sidebar="compact"] { --sidebar-width: 4.5rem; }
+    html[data-sidebar="compact"] .sidebar .brand > span.sdv-one-logo:not(.brand__mark) { display: flex; }
+    html[data-sidebar="compact"] .sidebar .sdv-one-logo__type { display: none; }
+    html[data-sidebar="compact"] .sidebar .sdv-one-logo__symbol { width: 3.1rem; height: 2.65rem; }
+    html[data-sidebar="compact"] .sidebar__brand-row { justify-content: center; padding: 0; }
+    html[data-sidebar="compact"] .sidebar .sdv-one-logo { justify-content: center; width: 100%; }
+    html[data-sidebar="compact"] .sidebar .brand { justify-content: center; }
+    .sdv-one-operation { grid-template-columns: minmax(16rem, 0.95fr) minmax(0, 1.7fr); }
+}
+@media (min-width: 76rem) {
+    .sdv-one-overview { grid-template-columns: minmax(0, 1fr) minmax(19rem, 1.3fr); }
+}
+@media (max-width: 75.99rem) {
+    .sdv-one-overview__metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 63.99rem) {
+    .sdv-one-hero__content { max-width: 83%; }
+    .sdv-one-operation { grid-template-columns: 1fr; }
+}
+@media (max-width: 44rem) {
+    .sdv-one-hero { min-height: 7.75rem; padding: 1.15rem; }
+    .sdv-one-hero__content { max-width: 100%; }
+    .sdv-one-hero__architecture { opacity: 0.24; width: 65%; }
+    .sdv-one-hero p { font-size: 0.74rem; }
+    .sdv-one-shortcuts { grid-template-columns: 1fr; }
+    .sdv-one-shortcuts .shortcut-card { min-height: 5.5rem; }
+    .sdv-one-overview__metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sdv-one-metric { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.65rem 0.5rem; }
+    .sdv-one-metric__icon { width: 2rem; height: 2rem; }
+    .sdv-one-metric small { font-size: 0.59rem; }
+    .sdv-one-overview { gap: 0.65rem; }
+    .operational-header__title-icon { display: none; }
+    .operational-header__actions .session-time { display: none; }
+    .sdv-one-portaria { gap: 0.8rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sdv-one-shortcuts .shortcut-card { transition: none; }
+}
+
+
+/* SDV One v2: status reais e notificações navegáveis, sem dados demonstrativos. */
+.cash-status--closed {
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    color: #56657c;
+}
+.sdv-one-notification-link {
+    display: block;
+    color: var(--navy-900);
+    font-weight: 750;
+    line-height: 1.4;
+    text-decoration: none;
+}
+.sdv-one-notification-link small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--neutral-600);
+    font-size: 0.68rem;
+    font-weight: 400;
+    white-space: normal;
+}
+.sdv-one-notification-link:hover,
+.sdv-one-notification-link:focus-visible {
+    color: var(--blue-700);
+    text-decoration: underline;
+}
+.notifications__panel li:has(.sdv-one-notification-link) {
+    display: block;
+}
+
+
+/* ================================================================
+   SDV ONE V3 | Validação de entrada e Pré-cadastros
+   Camada visual sem trocar formulários, handlers Livewire ou permissões.
+   ================================================================ */
+.sdv-one-page-intro {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.3rem;
+    min-height: 8.4rem;
+    padding: clamp(1.1rem, 2vw, 1.9rem);
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid #17427d;
+    border-radius: 1.1rem;
+    background: linear-gradient(117deg, #061733 0%, #0a2b60 62%, #0759b2 100%);
+    box-shadow: 0 13px 30px rgb(7 42 97 / 0.14);
+    color: #fff;
+}
+.sdv-one-page-intro::after {
+    position: absolute;
+    z-index: -1;
+    right: -3rem;
+    top: -5.5rem;
+    width: 21rem;
+    height: 21rem;
+    border: 2.3rem solid rgb(51 143 255 / 0.16);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2.7rem rgb(53 148 255 / 0.055), inset 0 0 3rem rgb(69 154 255 / 0.12);
+    content: '';
+    pointer-events: none;
+}
+.sdv-one-page-intro__copy { position: relative; z-index: 1; flex: 1 1 18rem; }
+.sdv-one-page-intro__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+    color: #b6d9ff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.095em;
+    text-transform: uppercase;
+}
+.sdv-one-page-intro__eyebrow .app-icon { width: 0.9rem; height: 0.9rem; }
+.sdv-one-page-intro__copy h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.4rem, 2.3vw, 2rem);
+    font-weight: 850;
+    letter-spacing: -0.043em;
+    line-height: 1.16;
+}
+.sdv-one-page-intro__copy p {
+    margin: 0.5rem 0 0;
+    max-width: 34rem;
+    color: #d6e5fc;
+    font-size: 0.79rem;
+    line-height: 1.55;
+}
+.sdv-one-page-intro__flow {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    max-width: 27rem;
+}
+.sdv-one-page-intro__flow span {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    padding: 0.52rem 0.6rem;
+    border: 1px solid rgb(181 216 255 / 0.24);
+    border-radius: 0.65rem;
+    background: rgb(6 24 62 / 0.42);
+    color: #e1edff;
+    font-size: 0.67rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+.sdv-one-page-intro__flow strong { color: #75bcff; font-variant-numeric: tabular-nums; font-weight: 900; }
+.sdv-one-page-intro__aside {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    flex: 0 1 15.5rem;
+    gap: 0.18rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid rgb(181 216 255 / 0.3);
+    border-radius: 0.76rem;
+    background: rgb(6 24 62 / 0.39);
+}
+.sdv-one-page-intro__aside span {
+    color: #a8cdff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+}
+.sdv-one-page-intro__aside strong {
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+.sdv-one-page-intro__aside small { color: #c8dcfc; font-size: 0.64rem; line-height: 1.4; }
+
+/* Validação: contexto enxuto, busca mais legível e etapas nítidas. */
+.sdv-one-validation { gap: 1.05rem; }
+.sdv-one-validation .validation-context {
+    gap: 0.4rem;
+    padding: 0.55rem;
+    border-color: #dbe7f8;
+    border-radius: 0.95rem;
+    box-shadow: 0 7px 18px rgb(11 47 110 / 0.05);
+}
+.sdv-one-validation .validation-context > div {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: center;
+    gap: 0.3rem;
+    border: 0;
+    border-radius: 0.62rem;
+    background: #f2f7ff;
+    padding: 0.68rem 0.8rem;
+}
+.sdv-one-validation .validation-context span:not(.ui-badge span) {
+    display: block;
+    width: 100%;
+    color: #617596;
+    font-size: 0.62rem;
+}
+.sdv-one-validation .validation-context strong {
+    color: #142a4d;
+    font-size: 0.76rem;
+    text-align: left;
+}
+.sdv-one-validation .validation-context .ui-badge {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+}
+.sdv-one-validation .validation-section,
+.sdv-one-validation .validation-decision {
+    border-color: #dbe6f7;
+    border-radius: 1.05rem;
+    background: #fff;
+    box-shadow: 0 10px 25px rgb(12 51 113 / 0.06);
+}
+.sdv-one-validation .validation-section__header {
+    gap: 0.8rem;
+    padding: 1.2rem 1.3rem;
+    border-bottom-color: #e5edf9;
+    background: linear-gradient(120deg, #fff, #f8fbff);
+}
+.sdv-one-validation .validation-section__number {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.7rem;
+    background: linear-gradient(145deg, #147af6, #0652be);
+    box-shadow: 0 6px 12px rgb(13 99 211 / 0.14);
+    font-size: 0.83rem;
+}
+.sdv-one-validation .validation-section__header h2 {
+    color: #102747;
+    font-size: 1rem;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+}
+.sdv-one-validation .validation-section__header p {
+    max-width: 33rem;
+    color: #657b9c;
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+.sdv-one-validation .validation-search { margin-top: 1rem; }
+.sdv-one-validation .validation-search__input {
+    min-height: 3rem;
+    border-color: #bdcff0;
+    border-radius: 0.75rem;
+    background: #fbfdff;
+}
+.sdv-one-validation .validation-search__input:focus-within {
+    background: #fff;
+    border-color: #1779ed;
+    box-shadow: 0 0 0 3px rgb(23 121 237 / 0.13);
+}
+.sdv-one-validation .validation-search__input input { min-height: 2.85rem; font-size: 0.81rem; }
+.sdv-one-validation .validation-search__results li {
+    border-color: #dbe7f7;
+    border-radius: 0.8rem;
+    background: #f9fbff;
+    padding: 0.8rem;
+}
+.sdv-one-validation .validation-search__results li:hover { border-color: #96bfff; }
+.sdv-one-validation .quick-registration { border-color: #bfd7fa; border-radius: 0.86rem; }
+.sdv-one-validation .validation-decision {
+    border-color: #b9d5fa;
+    box-shadow: 0 13px 29px rgb(12 79 167 / 0.1);
+}
+.sdv-one-validation .validation-decision > header {
+    background: linear-gradient(90deg, #eff6ff, #fff);
+    border-color: #dbe8fb;
+    padding: 1.1rem 1.2rem;
+}
+.sdv-one-validation .validation-decision h2 { font-size: 0.96rem; font-weight: 850; }
+.sdv-one-validation .validation-decision__actions { gap: 0.8rem; padding: 1.2rem; }
+.sdv-one-validation .validation-decision__actions .ui-button,
+.sdv-one-validation .validation-decision__actions .ui-overlay-trigger {
+    min-height: 2.8rem;
+    border-radius: 0.65rem;
+}
+.sdv-one-validation .validation-decision__actions small { line-height: 1.45; }
+
+/* Fila de pré-cadastros: métricas, filtros e ações em alto contraste. */
+.sdv-one-pre-registration-queue { gap: 1.05rem; }
+.sdv-one-pre-registration-queue .pre-registration-queue__summary { gap: 0.75rem; }
+.sdv-one-pre-registration-queue .sdv-one-status-card {
+    position: relative;
+    display: grid;
+    align-content: start;
+    min-height: 8rem;
+    gap: 0.35rem;
+    padding: 1.1rem;
+    overflow: hidden;
+    border: 1px solid #dce7f7;
+    border-radius: 0.95rem;
+    background: #fff;
+    box-shadow: 0 9px 23px rgb(11 46 109 / 0.06);
+}
+.sdv-one-pre-registration-queue .sdv-one-status-card::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.22rem;
+    background: #1876e3;
+    content: '';
+}
+.sdv-one-pre-registration-queue .sdv-one-status-card--approved::before { background: #1f9b60; }
+.sdv-one-pre-registration-queue .sdv-one-status-card--correction::before { background: #e29e21; }
+.sdv-one-pre-registration-queue .sdv-one-status-card--rejected::before { background: #d65252; }
+.sdv-one-pre-registration-queue .sdv-one-status-card__icon {
+    display: grid;
+    width: 2.3rem;
+    height: 2.3rem;
+    place-items: center;
+    margin-bottom: 0.15rem;
+    border-radius: 0.6rem;
+    background: #e5f0ff;
+    color: #1765cf;
+}
+.sdv-one-pre-registration-queue .sdv-one-status-card__icon .app-icon { width: 1.2rem; height: 1.2rem; }
+.sdv-one-pre-registration-queue .sdv-one-status-card--approved .sdv-one-status-card__icon { background: #e1f9ed; color: #168249; }
+.sdv-one-pre-registration-queue .sdv-one-status-card--correction .sdv-one-status-card__icon { background: #fff2d7; color: #a96a0d; }
+.sdv-one-pre-registration-queue .sdv-one-status-card--rejected .sdv-one-status-card__icon { background: #ffe5e5; color: #bb3131; }
+.sdv-one-pre-registration-queue .sdv-one-status-card > span:not(.sdv-one-status-card__icon) {
+    color: #596d89;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+.sdv-one-pre-registration-queue .sdv-one-status-card > strong {
+    margin-top: 0;
+    color: #0c2a50;
+    font-size: 1.9rem;
+    font-weight: 850;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+.sdv-one-pre-registration-queue .sdv-one-status-card > small { font-size: 0.65rem; line-height: 1.4; }
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace {
+    border-color: #dbe7f8;
+    border-radius: 1.05rem;
+    box-shadow: 0 10px 25px rgb(11 46 109 / 0.06);
+}
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace > header {
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem;
+    background: linear-gradient(120deg, #fff, #f7faff);
+}
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace > header h2 {
+    color: #0d284d;
+    font-size: 1.06rem;
+    font-weight: 850;
+}
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace > header p {
+    max-width: 35rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+.sdv-one-pre-registration-queue .pre-registration-status-tabs {
+    gap: 0.4rem;
+    padding: 0.8rem 1rem 0;
+    scrollbar-width: thin;
+}
+.sdv-one-pre-registration-queue .pre-registration-status-tabs button {
+    min-height: 2.45rem;
+    padding: 0.58rem 0.8rem;
+    border-radius: 0.62rem 0.62rem 0 0;
+    font-size: 0.73rem;
+}
+.sdv-one-pre-registration-queue .pre-registration-status-tabs button.is-active {
+    border-bottom-color: #096ef2;
+    background: #eef5ff;
+    color: #075ec8;
+}
+.sdv-one-pre-registration-queue .pre-registration-status-tabs button:focus-visible {
+    outline: 2px solid #1979e8;
+    outline-offset: -2px;
+}
+.sdv-one-pre-registration-queue .pre-registration-filters {
+    gap: 0.7rem;
+    background: #f7faff;
+    border-bottom: 1px solid #e5edf9;
+}
+.sdv-one-pre-registration-queue .sdv-one-filter-hint {
+    display: flex;
+    align-items: start;
+    gap: 0.35rem;
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #577092;
+    font-size: 0.68rem;
+    line-height: 1.5;
+}
+.sdv-one-pre-registration-queue .sdv-one-filter-hint .app-icon { flex: 0 0 auto; width: 0.84rem; height: 0.84rem; margin-top: 0.08rem; }
+.sdv-one-pre-registration-queue .pre-registration-search input {
+    height: 2.9rem;
+    border-color: #bbcff0;
+    border-radius: 0.75rem;
+    font-size: 0.78rem;
+}
+.sdv-one-pre-registration-queue .pre-registration-search input:focus-visible {
+    outline: 3px solid rgb(23 121 237 / 0.15);
+    border-color: #1779ed;
+}
+.sdv-one-pre-registration-queue .pre-registration-filters select:disabled { opacity: 0.62; }
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace .ui-responsive-table__desktop th { background: #eef5ff; }
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace .ui-responsive-table__desktop td {
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+}
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace .ui-responsive-table__desktop tbody tr:hover { background: #f7fbff; }
+.sdv-one-pre-registration-queue .pre-registration-queue__workspace .ui-responsive-table .ui-button { border-radius: 0.58rem; }
+.sdv-one-pre-registration-queue .pre-registration-mobile-list li { border-color: #dde8f7; border-radius: 0.8rem; }
+
+/* Análise: dados pessoais, imagens e ações permanecem em locais previstos no fluxo. */
+.sdv-one-pre-registration-review { gap: 1rem; }
+.sdv-one-pre-registration-review .pre-cadastro-analise__voltar a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0;
+    color: #125fbc;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pessoa {
+    padding: 1.1rem 1.2rem;
+    border-color: #dbe7f7;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 9px 23px rgb(11 46 109 / 0.06);
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pessoa .pre-registration-person-avatar {
+    width: 3rem;
+    height: 3rem;
+    background: #e2f0ff;
+    color: #1766d2;
+    font-size: 0.9rem;
+    font-weight: 850;
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pessoa h2 {
+    color: #0d294d;
+    font-size: 1.1rem;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pessoa p {
+    color: #597390;
+    font-size: 0.73rem;
+    line-height: 1.5;
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pendencias {
+    gap: 0.7rem;
+    padding: 0.95rem 1.05rem;
+    border-radius: 0.9rem;
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__pendencias h3 { font-size: 0.88rem; font-weight: 850; }
+.sdv-one-pre-registration-review .pre-cadastro-analise__imagens,
+.sdv-one-pre-registration-review .pre-cadastro-analise__bloco,
+.sdv-one-pre-registration-review .pre-cadastro-analise__decisao {
+    gap: 0.85rem;
+    padding: 1.05rem 1.1rem;
+    border-color: #dbe7f8;
+    border-radius: 0.98rem;
+    box-shadow: 0 8px 21px rgb(11 46 109 / 0.055);
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise h3 { font-size: 0.87rem; font-weight: 850; }
+.sdv-one-pre-registration-review .pre-cadastro-analise__moldura { border-color: #cdddf2; border-radius: 0.8rem; }
+.sdv-one-pre-registration-review .pre-cadastro-analise__decisao {
+    border-color: #a7ccfc;
+    background: #fcfdff;
+    box-shadow: 0 13px 31px rgb(10 65 143 / 0.12);
+}
+.sdv-one-pre-registration-review .pre-cadastro-analise__decisao > header h3 { color: #0e418f; font-size: 1rem; }
+.sdv-one-pre-registration-review .pre-cadastro-analise__acoes .ui-button { min-height: 2.7rem; border-radius: 0.66rem; }
+
+/* iPad/tablets + celular: leitura e toque, sem ocultar decisões. */
+@media (min-width: 48rem) and (max-width: 79.99rem) {
+    .sdv-one-page-intro__flow { max-width: 100%; }
+    .sdv-one-validation .validation-person-actions .ui-button { max-width: 100%; }
+}
+@media (min-width: 40rem) and (max-width: 63.99rem) {
+    .sdv-one-pre-registration-queue .pre-registration-queue__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 47.99rem) {
+    .sdv-one-page-intro { min-height: 0; padding: 1.1rem; border-radius: 0.9rem; }
+    .sdv-one-page-intro__aside { flex-basis: 100%; }
+    .sdv-one-page-intro__copy p { font-size: 0.73rem; }
+    .sdv-one-page-intro__flow { gap: 0.35rem; }
+    .sdv-one-page-intro__flow span { padding: 0.42rem 0.48rem; font-size: 0.6rem; }
+    .sdv-one-validation .validation-context { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sdv-one-validation .validation-section__header { padding: 0.95rem; }
+    .sdv-one-validation .validation-section__number { width: 1.9rem; height: 1.9rem; }
+    .sdv-one-validation .validation-section__header h2 { font-size: 0.93rem; }
+    .sdv-one-pre-registration-queue .pre-registration-queue__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sdv-one-pre-registration-queue .sdv-one-status-card { min-height: 7rem; padding: 0.8rem; }
+    .sdv-one-pre-registration-queue .sdv-one-status-card > strong { font-size: 1.55rem; }
+    .sdv-one-pre-registration-review .pre-cadastro-analise__pessoa { padding: 0.85rem; }
+    .sdv-one-pre-registration-review .pre-cadastro-analise__imagens,
+    .sdv-one-pre-registration-review .pre-cadastro-analise__bloco,
+    .sdv-one-pre-registration-review .pre-cadastro-analise__decisao { padding: 0.85rem; }
+}
+@media (max-width: 22rem) {
+    .sdv-one-pre-registration-queue .pre-registration-queue__summary { grid-template-columns: 1fr; }
+    .sdv-one-validation .validation-context { grid-template-columns: 1fr; }
+}
+
+/* SDV One — página de login e telas de entrada (guest).
+   Mesma marca do menu lateral; no cartão claro a base do símbolo e o texto
+   ficam azul-marinho para manter contraste. */
+.login-presentation {
+    background:
+        radial-gradient(circle at 82% 12%, rgb(18 107 255 / 0.32), transparent 28rem),
+        linear-gradient(160deg, #04132e 5%, #061a3a 55%, #092b64 100%);
+}
+.login-kicker { color: #2687ff; }
+.sdv-one-logo--login .sdv-one-logo__symbol { width: 4.4rem; height: 3.9rem; }
+.sdv-one-logo--login .sdv-one-logo__type > strong { font-size: 1.55rem; }
+.sdv-one-logo--login .sdv-one-logo__type > small { font-size: 0.75rem; }
+.sdv-one-logo--on-light .sdv-one-logo__base { fill: #061a3a; }
+.sdv-one-logo--on-light .sdv-one-logo__type > strong { color: #061a3a; }
+.sdv-one-logo--on-light .sdv-one-logo__type > strong > span { color: #126bff; }
+.sdv-one-logo--on-light .sdv-one-logo__type > small { color: var(--neutral-600); }

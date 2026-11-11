@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Acesso ao sistema de controle de acesso do condomínio Santa Rita.">
 
-        <title>{{ $title ?? config('app.name') }} — SDV Access Santa Rita</title>
+        <title>{{ $title ?? config('app.name') }} — SDV One · Santa Rita</title>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles

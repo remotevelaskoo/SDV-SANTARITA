@@ -1,8 +1,7 @@
 <div class="implantacao-selection">
     <div class="implantacao-selection__card">
         <div class="login-brand login-brand--mobile" aria-hidden="true">
-            <span class="brand__mark">SDV</span>
-            <span><strong>SDV Access</strong><small>Santa Rita</small></span>
+            <x-sdv-one-logo class="sdv-one-logo--on-light" />
         </div>
 
         <h1>Selecionar implantação</h1>
