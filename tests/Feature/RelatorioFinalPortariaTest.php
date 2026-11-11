@@ -220,6 +220,24 @@ class RelatorioFinalPortariaTest extends TestCase
             ->assertSee('Morador');
     }
 
+    public function test_contribuicao_do_turista_entra_sozinha_no_saldo_esperado_do_caixa(): void
+    {
+        $operador = $this->operador('validacao.registrar', 'caixa.proprio.gerenciar');
+        $turno = CaixaTurno::query()->create(['terminal' => 'Caixa 01', 'operator_id' => $operador->id, 'opened_at' => now()->subHours(2), 'opening_balance' => 100, 'status' => 'aberto']);
+        $this->contribuicao($operador, Pessoa::factory()->create(), '000801', '25.00', 'dinheiro', now()->subHour(), $turno);
+        CaixaMovimentacao::query()->create(['caixa_turno_id' => $turno->id, 'type' => 'entrada', 'amount' => 10, 'method' => 'dinheiro', 'description' => 'Outro', 'operator_id' => $operador->id, 'occurred_at' => now()]);
+
+        $this->assertSame(25.0, $turno->contribuicoesTotal());
+        $this->assertSame(35.0, $turno->incomeTotal());
+        $this->assertSame(135.0, $turno->expectedBalance());
+
+        // No fechamento, a conferência já espera os R$ 25,00 sem lançamento manual.
+        Livewire::actingAs($operador)->test(CashRegister::class)
+            ->set('informedAmount', '135,00')
+            ->call('closeRegister');
+        $this->assertSame('conferido', $turno->fresh()->closing_status);
+    }
+
     private function contribuicao(User $operador, Pessoa $pessoa, string $ticket, string $valor, string $forma, $quando = null, ?CaixaTurno $turno = null): Contribuicao
     {
         $quando ??= now();

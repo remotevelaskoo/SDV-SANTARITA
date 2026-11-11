@@ -46,9 +46,31 @@ class CaixaTurno extends Model
         return $this->hasMany(CaixaMovimentacao::class);
     }
 
-    public function incomeTotal(): float
+    /** @return HasMany<Contribuicao, $this> */
+    public function contribuicoes(): HasMany
+    {
+        return $this->hasMany(Contribuicao::class);
+    }
+
+    /**
+     * Contribuições pagas dos turistas neste turno. O valor é fixo no sistema
+     * (R$ 25,00) e entra no caixa sozinho: o porteiro não lança à mão.
+     */
+    public function contribuicoesTotal(): float
+    {
+        return (float) $this->contribuicoes()->where('situacao_pagamento', 'pago')->sum('valor');
+    }
+
+    /** Lançamentos manuais de entrada, sem as contribuições. */
+    public function manualIncomeTotal(): float
     {
         return (float) $this->movimentacoes()->where('type', 'entrada')->sum('amount');
+    }
+
+    /** Entradas do caixa: contribuições dos turistas + lançamentos manuais. */
+    public function incomeTotal(): float
+    {
+        return round($this->contribuicoesTotal() + $this->manualIncomeTotal(), 2);
     }
 
     public function outflowTotal(): float
