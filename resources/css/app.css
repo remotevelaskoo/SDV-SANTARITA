@@ -3111,3 +3111,10 @@ body.has-drawer-open { overflow: hidden; }
 .pre-registration-person > div { display: grid; min-width: 0; }
 .pre-registration-photo-missing { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.15rem; color: #9a5b00; font-size: 0.62rem; font-weight: 700; text-decoration: none; }
 .pre-registration-photo-missing:hover { text-decoration: underline; }
+
+/* Foto tirada na identificação da pessoa quando o cadastro não tem foto. */
+.validation-photo-capture { display: grid; gap: 0.6rem; margin-top: 0.75rem; padding: 0.85rem; border: 1px dashed #cdddf2; border-radius: 0.8rem; background: #f7fbff; }
+.validation-photo-capture header { display: grid; gap: 0.2rem; }
+.validation-photo-capture h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.8rem; }
+.validation-photo-capture h3 .app-icon { width: 1rem; height: 1rem; }
+.validation-photo-capture header p { margin: 0; color: var(--neutral-600); font-size: 0.7rem; }

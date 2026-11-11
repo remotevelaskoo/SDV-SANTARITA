@@ -16,7 +16,7 @@ import {
  * câmera de novo. Sem câmera ao vivo (conexão não segura), usa a câmera
  * nativa do celular. Nada fica no localStorage além da escolha da câmera.
  */
-export function fotoPessoaCamera({ implantacaoId, postoId, propriedade = 'fotoPessoa' } = {}) {
+export function fotoPessoaCamera({ implantacaoId, postoId, propriedade = 'fotoPessoa', metodoRefazer = 'refazerFotoPessoa' } = {}) {
     return {
         chave: chavePreferencia(implantacaoId, postoId),
         cameras: [],
@@ -126,7 +126,7 @@ export function fotoPessoaCamera({ implantacaoId, postoId, propriedade = 'fotoPe
 
         async refazer() {
             this.descartarPrevia();
-            await this.$wire.refazerFotoPessoa();
+            await this.$wire.call(metodoRefazer);
             this.abrir();
         },
 

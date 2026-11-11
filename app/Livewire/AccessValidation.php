@@ -22,6 +22,8 @@ use App\Services\AuditService;
 use App\Services\BuscaPessoasValidacao;
 use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
+use App\Services\PrivateFileService;
+use App\Services\ValidadorFotoPessoa;
 use App\Support\NormalizadorBusca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +34,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AccessValidation extends Component
 {
@@ -87,6 +90,15 @@ class AccessValidation extends Component
     /** Termo da busca de "Identificação da pessoa" (nome, documento, telefone, protocolo ou imóvel). */
     public string $busca = '';
 
+    /**
+     * Foto tirada na identificação quando a pessoa selecionada não tem foto.
+     * Mesma câmera do cadastro rápido (AJ-010); vira a foto do cadastro só em
+     * "Salvar foto". Não é enviada ao terminal facial.
+     */
+    public ?TemporaryUploadedFile $fotoIdentificacao = null;
+
+    public bool $fotoIdentificacaoSalva = false;
+
     public function selecionarPessoa(string $pessoaId, AuditService $audit): void
     {
         abort_unless(Auth::user()?->hasPermission('validacao.registrar'), 403);
@@ -100,6 +112,7 @@ class AccessValidation extends Component
         $this->quickResultado = null;
         $this->documentRevealed = false;
         $this->busca = '';
+        $this->encerrarFotoIdentificacao();
         unset($this->currentPerson, $this->currentProtectedFiles);
 
         $audit->record(
@@ -117,7 +130,92 @@ class AccessValidation extends Component
         $this->quickPersonRegistered = false;
         $this->quickResultado = null;
         $this->documentRevealed = false;
+        $this->encerrarFotoIdentificacao();
         unset($this->currentPerson, $this->currentProtectedFiles);
+    }
+
+    /** Conferência da foto logo após a captura; foto ruim é descartada para refazer. */
+    public function updatedFotoIdentificacao(ValidadorFotoPessoa $validador): void
+    {
+        if (! $this->podeTirarFotoIdentificacao()) {
+            $this->refazerFotoIdentificacao();
+            $this->addError('fotoIdentificacao', 'Você não tem permissão para fotografar pessoas.');
+
+            return;
+        }
+
+        $this->resetErrorBag('fotoIdentificacao');
+        $this->validate(['fotoIdentificacao' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:'.ValidadorFotoPessoa::TAMANHO_MAXIMO_KB]], [
+            'fotoIdentificacao.required' => 'Fotografe a pessoa antes de salvar.',
+            'fotoIdentificacao.image' => 'Envie uma foto JPEG ou PNG.',
+            'fotoIdentificacao.mimes' => 'Envie uma foto JPEG ou PNG.',
+            'fotoIdentificacao.max' => 'A foto passa de 5 MB.',
+        ]);
+
+        $problema = $validador->problema((string) file_get_contents($this->fotoIdentificacao->getRealPath()));
+        if ($problema !== null) {
+            $this->refazerFotoIdentificacao();
+            $this->addError('fotoIdentificacao', $problema);
+        }
+    }
+
+    public function refazerFotoIdentificacao(): void
+    {
+        $this->fotoIdentificacao?->delete();
+        $this->fotoIdentificacao = null;
+        $this->resetErrorBag('fotoIdentificacao');
+    }
+
+    /** Grava a foto como foto vigente do cadastro da pessoa selecionada (sem envio à facial). */
+    public function salvarFotoIdentificacao(PrivateFileService $files, ValidadorFotoPessoa $validador): void
+    {
+        abort_unless($this->podeTirarFotoIdentificacao(), 403);
+
+        $pessoa = Pessoa::query()->find($this->currentPessoaId);
+        abort_if($pessoa === null, 404);
+
+        if (app(FotoPessoaResolver::class)->paraPessoa($pessoa) !== null) {
+            $this->refazerFotoIdentificacao();
+            $this->addError('fotoIdentificacao', 'Esta pessoa já tem foto. Atualize a tela para vê-la.');
+
+            return;
+        }
+
+        if ($this->fotoIdentificacao === null) {
+            $this->addError('fotoIdentificacao', 'Fotografe a pessoa antes de salvar.');
+
+            return;
+        }
+
+        $problema = $validador->problema((string) file_get_contents($this->fotoIdentificacao->getRealPath()));
+        if ($problema !== null) {
+            $this->refazerFotoIdentificacao();
+            $this->addError('fotoIdentificacao', $problema);
+
+            return;
+        }
+
+        $files->storePessoaFoto($pessoa, $this->fotoIdentificacao, 'validacao_portaria');
+
+        $this->encerrarFotoIdentificacao();
+        unset($this->currentPerson);
+        $this->fotoIdentificacaoSalva = true;
+    }
+
+    private function podeTirarFotoIdentificacao(): bool
+    {
+        $usuario = Auth::user();
+
+        return $this->currentPessoaId !== null
+            && (bool) $usuario?->hasPermission('validacao.registrar')
+            && (bool) $usuario?->hasPermission('pessoas.gerenciar');
+    }
+
+    private function encerrarFotoIdentificacao(): void
+    {
+        $this->fotoIdentificacaoSalva = false;
+        $this->refazerFotoIdentificacao();
+        $this->dispatch('foto-identificacao-encerrada');
     }
 
     /** @return array{resultados: list<array<string, mixed>>, mais: bool, criterios: list<string>} */
@@ -285,6 +383,7 @@ class AccessValidation extends Component
         $this->currentPessoaId = null;
         $this->busca = '';
         $this->documentRevealed = false;
+        $this->encerrarFotoIdentificacao();
     }
 
     public function toggleDocumentReveal(AuditService $audit): void
@@ -337,6 +436,7 @@ class AccessValidation extends Component
                 'photo_url' => null,
                 'photo_state' => 'sem_foto',
                 'photo_origin' => null,
+                'can_take_photo' => false,
                 'links' => [],
                 'vehicles' => [],
                 'alerts' => [],
@@ -347,7 +447,9 @@ class AccessValidation extends Component
         $vinculos = Vinculo::query()->where('pessoa_id', $pessoa->id)->whereNull('ended_at')->with('imovel')->orderBy('started_at')->get();
         $vinculo = $vinculos->first();
         $documento = $pessoa->documentos->first()?->valor_apresentacao;
-        $foto = $this->canViewImage() ? app(FotoPessoaResolver::class)->paraPessoa($pessoa) : null;
+        $fotoExistente = app(FotoPessoaResolver::class)->paraPessoa($pessoa);
+        $foto = $this->canViewImage() ? $fotoExistente : null;
+        $podeTirarFoto = $fotoExistente === null && $this->podeTirarFotoIdentificacao();
         $veiculos = VeiculoVinculo::query()
             ->where('pessoa_id', $pessoa->id)
             ->whereNull('ended_at')
@@ -374,7 +476,7 @@ class AccessValidation extends Component
         if ($documento === null) {
             $alertas[] = ['tone' => 'warning', 'text' => 'Nenhum documento ativo no cadastro.'];
         }
-        if ($foto === null && $this->canViewImage()) {
+        if ($foto === null && $this->canViewImage() && ! $podeTirarFoto) {
             $alertas[] = ['tone' => 'info', 'text' => 'Sem foto cadastrada: confira o documento original.'];
         }
 
@@ -399,6 +501,7 @@ class AccessValidation extends Component
             'photo_url' => $foto ? route('protected-files.show', ['arquivo' => $foto['arquivo'], 'contexto' => 'validacao']) : null,
             'photo_state' => $foto ? 'disponivel' : ($this->canViewImage() ? 'sem_foto' : 'sem_permissao'),
             'photo_origin' => $foto ? ($foto['origem'] === 'cadastro' ? 'Foto do cadastro' : 'Selfie do pré-cadastro aprovado') : null,
+            'can_take_photo' => $podeTirarFoto,
             'links' => $vinculos->map(fn (Vinculo $item) => [
                 'type' => BuscaPessoasValidacao::rotuloVinculo($item->tipo),
                 'property' => $item->imovel?->label() ?? 'Sem imóvel',
