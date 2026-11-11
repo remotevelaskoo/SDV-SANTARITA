@@ -15,7 +15,8 @@ class SincronizarPreCadastroNuvem extends Command
     {
         try {
             $totais = $sync->sincronizar();
-            $this->info(sprintf('Recebidos: %d; confirmações: %d; pendências: %d.', $totais['importados'], $totais['confirmados'], $totais['falhas']));
+            $this->info(sprintf('Recebidos: %d; confirmações: %d; pendências: %d; enviados para conferência: %d.',
+                $totais['importados'], $totais['confirmados'], $totais['falhas'], $totais['conferencia']));
 
             return $totais['falhas'] > 0 ? self::FAILURE : self::SUCCESS;
         } catch (\Throwable) {

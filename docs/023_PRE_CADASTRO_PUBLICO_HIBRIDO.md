@@ -48,7 +48,7 @@ O formulário público separado tem blocos de identificação, documento, selfie
 - Tipos públicos preservados: turista, visitante e prestador. Não confundir com todos os tipos do cadastro rápido.
 - **Revisão atual do PO:** visitante tem imóvel e responsável obrigatórios. O portal valida o imóvel no catálogo real e resolve o responsável no servidor; nomes de responsáveis não aparecem na lista pública. Não aceitar o responsável indicado pelo navegador como autoridade.
 - Turista não possui vínculo com imóvel nem responsável; destino Praia do Santa Rita. Prestador mantém destino no formulário público, sem responsável por esta regra.
-- Catálogo real vem de `PORTAL_DESTINATIONS`, uma lista de objetos `label`/`responsible`. Não copiar apartamentos ou pessoas do `DestinationDirectory` de demonstração. Sem catálogo, não aceitar visitante/prestador com destino inventado.
+- Catálogo de imóveis vem do **cadastro local** (imóveis ativos e responsável principal vigente), publicado à nuvem a cada sincronização (§12). A variável `PORTAL_DESTINATIONS` e a lista fixa `DestinationDirectory` foram removidas. Sem catálogo publicado, não aceitar visitante/prestador com destino inventado.
 - Frente documental e selfie obrigatórias; verso adicional obrigatório no RG/CIN. Fotografias válidas, com lado mínimo de 320 px e limite de 40 milhões de pixels. Metadados EXIF removidos na normalização JPEG; objetos originais também são privados.
 - Veículo opcional; placa obrigatória se indicado veículo. Modelo e cor opcionais.
 - Nome digitado manualmente. OCR automático ainda não exposto por esta primeira fatia na nuvem; o formulário informa conferência manual. O motor e o formulário Laravel atuais não foram removidos ou alterados.
@@ -75,7 +75,7 @@ Antes da produção: formalizar aviso e versão de privacidade, retenção dos r
 
 1. Revisar/integração da branch antes de atualizar o nó local. Executar sua migração, que só acrescenta `pre_cadastro_nuvem_recebimentos`; não move nem apaga tabelas existentes.
 2. Configurar projeto Vercel separado com raiz `services/pre-cadastro-publico`. Usar Node.js, saída `public` e Functions `api/`, nunca a raiz administrativa.
-3. Configurar no backend as variáveis do `.env.example` do portal: URL Supabase, chave secreta, UUID da implantação operacional, segredos independentes do convite/nó/quota, nome, catálogo real e aviso de privacidade. Começar com `PORTAL_ENABLED=false`.
+3. Configurar no backend as variáveis do `.env.example` do portal: URL Supabase, chave secreta, UUID da implantação operacional, segredos independentes do convite/nó/quota, nome e aviso de privacidade (o catálogo vem do sistema local, §12). Começar com `PORTAL_ENABLED=false`.
 4. O UUID deve corresponder à implantação do nó local, e não ao ID do projeto Supabase. Não inventar/copiar UUID de dados demo.
 5. As ferramentas Supabase conectadas fornecem as chaves publicáveis, mas não a chave secreta. O proprietário deve configurá-la diretamente como variável protegida do projeto Vercel; não enviar a chave pelo chat ou colocá-la no código. Sem ela não habilitar o endpoint nem prometer publicação funcional.
 6. No nó local configurar `SDV_PRE_CADASTRO_NUVEM_URL`, `SDV_PRE_CADASTRO_NUVEM_TOKEN` (segredo exclusivo do nó) e `SDV_PRE_CADASTRO_NUVEM_IMPLANTACAO_ID`; habilitar só no ambiente de teste. Ativar o scheduler Laravel com `schedule:run`.
@@ -168,13 +168,13 @@ Capturas e o harness ficaram nos arquivos do projeto (`pre-cadastro-hibrido/`), 
 
 ### 11.4 Divergências para decisão do PO (não alteradas)
 
-1. **Prestador com responsável no formulário Laravel.** A revisão do PO de 08/11 (doc 021) diz que prestador não tem responsável, e o portal segue isso. O formulário público Laravel já existente (`PublicPreRegistration`) ainda grava o responsável do imóvel para prestador. Decidir se o formulário local deve ser alinhado.
-2. **Origem do catálogo de imóveis e responsáveis do portal.** Vem da variável `PORTAL_DESTINATIONS` no Vercel, digitada à parte, e não do cadastro de imóveis/vínculos do sistema local. Pode ficar desatualizada. Decidir quem mantém a lista e se ela deve vir do sistema local no futuro. Sem essa lista, visitante e prestador continuam recusados no portal.
-3. **Período do pré-cadastro.** Segue o formulário local: 24 h a partir do envio. Um visitante que se cadastra dias antes chega com o período vencido. Aprovação não autoriza entrada, mas o PO deve confirmar se o portal precisa perguntar a data da visita.
+1. **Prestador com responsável no formulário Laravel.** Decidido pelo PO: alinhar (feito no §12). A revisão do PO de 08/11 (doc 021) diz que prestador não tem responsável, e o portal segue isso. O formulário público Laravel já existente (`PublicPreRegistration`) ainda grava o responsável do imóvel para prestador. Decidir se o formulário local deve ser alinhado.
+2. **Origem do catálogo de imóveis e responsáveis do portal.** Era digitada no Vercel (`PORTAL_DESTINATIONS`). Decidido pelo PO: vir do sistema local (feito no §12).
+3. **Período do pré-cadastro.** Decidido pelo PO: perguntar a data prevista (feito no §12). Segue o formulário local: 24 h a partir do envio. Um visitante que se cadastra dias antes chega com o período vencido. Aprovação não autoriza entrada, mas o PO deve confirmar se o portal precisa perguntar a data da visita.
 
 ### 11.5 Riscos técnicos encontrados
 
-- **Fila presa por solicitações inválidas.** A nuvem sempre devolve as 10 mais antigas em `enviado`. Se uma delas for recusada pela validação local (por exemplo, relógio da portaria atrasado ou mudança futura de regra), ela é reapresentada a cada ciclo; dez casos assim impedem novas importações. Hoje as validações dos dois lados coincidem, então o risco é baixo; recomenda-se, antes da produção, um estado de “recusado na importação” na nuvem (exige migração no Supabase do portal, não aplicada aqui).
+- **Fila presa por solicitações inválidas.** Confirmado pelo PO e corrigido no §12. A nuvem sempre devolve as 10 mais antigas em `enviado`. Se uma delas for recusada pela validação local (por exemplo, relógio da portaria atrasado ou mudança futura de regra), ela é reapresentada a cada ciclo; dez casos assim impedem novas importações. Hoje as validações dos dois lados coincidem, então o risco é baixo; recomenda-se, antes da produção, um estado de “recusado na importação” na nuvem (exige migração no Supabase do portal, não aplicada aqui).
 - **Relógio do computador da portaria.** `submitted_at` não pode estar no futuro em relação ao relógio local; manter NTP ativo.
 - **Lock de execução.** Usa `Cache::lock`; o `CACHE_STORE` do servidor deve suportar locks (`database`, `file` ou `redis`).
 - Mensagem “Foto capturada…” permanece na tela ao escolher depois uma imagem salva em outro campo (cosmético).
@@ -182,3 +182,52 @@ Capturas e o harness ficaram nos arquivos do projeto (`pre-cadastro-hibrido/`), 
 ### 11.6 Pendente — não concluído
 
 Configuração e homologação no computador da portaria, catálogo real, implantação real, aviso de privacidade definitivo, retenção, celulares/iPad reais e produção (`PORTAL_ENABLED=false` mantido). Nada disso foi feito nesta revisão.
+
+
+## 12. Ajustes da revisão do PO no PR #88 — 11/11/2026
+
+O PO revisou o PR #88 e pediu quatro correções antes do merge. Todas foram feitas; o merge na main continua aguardando aprovação explícita.
+
+### 12.1 Fila sem bloqueio: retentativa com espera e conferência
+
+- Quando a importação local recusa uma solicitação, o nó avisa a nuvem com um **código sem dados pessoais** (`dados_invalidos`, `arquivos_incompletos`, `arquivo_integridade`, `imagem_invalida`, `erro_interno`). A nuvem conta a tentativa e agenda a próxima com espera crescente (1, 2, 4, 8 min… até 60 min). Enquanto espera, a solicitação **não ocupa a fila**: as seguintes continuam sendo importadas.
+- Na 5ª falha a solicitação sai da fila e fica em `conferencia`. O recibo público passa a mostrar "Em conferência pela administração", sem detalhes.
+- No sistema local, a tabela `pre_cadastro_nuvem_falhas` guarda só protocolo, código, nomes dos campos recusados, tentativas e situação. A tela **Pré-cadastros** mostra o aviso "N envios do portal precisam de conferência" com protocolo, motivo e campos (ex.: "Dados fora das regras atuais (CPF)"). Quem tem `pre-registro.editar` pode clicar em **Tentar novamente**: a próxima sincronização reabre a solicitação na nuvem. Nada é aprovado ou liberado por isso; a ação é auditada.
+- Diferença de relógio de até 5 minutos entre nuvem e portaria passou a ser tolerada.
+
+### 12.2 Data prevista da visita
+
+- Portal e formulário local pedem a **data prevista da visita**, de hoje até 30 dias à frente (fuso do condomínio). O formulário vem com a data de hoje preenchida.
+- O período do pré-cadastro passa a ser o dia da visita inteiro (00h00 até 00h00 do dia seguinte, 24 h). Envios antigos sem data mantêm as 24 h desde o envio.
+- **Suposição a confirmar pelo PO:** limite de 30 dias de antecedência.
+- Aprovação continua não sendo autorização; a regra de 24 h do turista e a visita do visitante ao enviar à facial não mudaram.
+
+### 12.3 Prestador sem responsável no formulário antigo
+
+O formulário público Laravel e a correção na tela de análise não gravam mais responsável para prestador (revisão do PO de 08/11/2026). Ao corrigir um prestador antigo que tinha responsável, o valor é removido e o histórico de edição registra a mudança.
+
+### 12.4 Uma só lista de imóveis: o cadastro local
+
+- Novo serviço `CatalogoDestinos`: imóveis **ativos** da implantação, com o **responsável principal** vigente (vínculo ativo). Visitante só vê imóveis com responsável; prestador vê todos; turista não usa imóvel.
+- O formulário local, a correção na análise e o portal usam essa mesma lista. A lista fixa de demonstração (`DestinationDirectory`) e a variável `PORTAL_DESTINATIONS` foram removidas.
+- A cada sincronização o nó publica a lista na nuvem (só rótulo e nome do responsável, sem identificadores internos) quando ela muda, e ao menos a cada hora. O portal devolve ao navegador só os rótulos; os nomes dos responsáveis não saem do servidor.
+
+### 12.5 Ordem obrigatória de implantação (nuvem)
+
+1. Aplicar `services/pre-cadastro-publico/supabase/migrations/20261111200000_fila_conferencia_catalogo_local.sql` **somente** no projeto `sdv-santa-rita`. Não aplicar em `certificados`.
+2. Publicar o novo código do portal no Vercel (Preview).
+3. Remover a variável `PORTAL_DESTINATIONS` do Vercel (não é mais lida).
+4. Só então atualizar o sistema local e rodar `php artisan migrate`. Um nó novo com o portal antigo falha ao publicar o catálogo e não importa nada (os dados ficam preservados na nuvem).
+
+Nada disso foi aplicado no Supabase ou no Vercel nesta revisão.
+
+### 12.6 Testes
+
+- `php artisan test`: **581 aprovados** (10 novos: catálogo local, falha → conferência → reabertura, permissão para reabrir, data da visita, tolerância de relógio, prestador sem responsável, janela de 30 dias).
+- `npm test` do portal: **20 aprovados** (5 novos, incluindo a migração no PostgreSQL embarcado: espera, conferência na 5ª falha, reabertura, RLS do catálogo).
+- `pnpm test:js` 22 aprovados; `pnpm build` e `vendor/bin/pint --test` aprovados.
+- Ponta a ponta no harness isolado: catálogo publicado pelo nó (visitante vê só o imóvel com responsável, prestador vê os dois); visitante com câmera e data D+3 recebido; segundo envio importado **mesmo com o primeiro sendo recusado**; primeiro foi para conferência na 5ª tentativa, apareceu na fila local com "Dados fora das regras atuais (CPF)" e "Tentar novamente"; reabertura devolveu à fila da nuvem. Nenhuma autorização, credencial ou contribuição criada.
+
+### 12.7 Continua pendente
+
+Configuração e homologação no computador da portaria, aplicação da migração no Supabase e publicação no Vercel, aviso de privacidade e retenção definitivos, dispositivos reais e produção (`PORTAL_ENABLED=false`).

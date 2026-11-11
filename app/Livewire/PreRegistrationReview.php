@@ -7,10 +7,10 @@ use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Services\AuditService;
+use App\Services\PreCadastro\CatalogoDestinos;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\ComparacaoOcrPreCadastro;
-use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -328,10 +328,9 @@ class PreRegistrationReview extends Component
         ];
 
         if ($record->access_type === 'visitante') {
-            $rules['editDestinationProperty'] = ['required', Rule::in(DestinationDirectory::options())];
+            $rules['editDestinationProperty'] = ['required', Rule::in(app(CatalogoDestinos::class)->opcoes('visitante'))];
         } elseif ($record->access_type === 'prestador') {
             $rules['editDestinationLabel'] = ['required', 'string', 'max:120'];
-            $rules['editResponsibleName'] = ['required', 'string', 'max:120'];
         }
 
         $this->validate($rules, [
@@ -490,7 +489,7 @@ class PreRegistrationReview extends Component
         }
 
         if ($record->access_type === 'visitante') {
-            $responsible = DestinationDirectory::responsibleFor($this->editDestinationProperty);
+            $responsible = app(CatalogoDestinos::class)->responsavel($this->editDestinationProperty);
 
             $this->diffAndQueue($changes, 'destination_property', 'Imóvel de destino', $record->destination_property, $this->editDestinationProperty);
             $record->destination_property = $this->editDestinationProperty;
@@ -498,9 +497,10 @@ class PreRegistrationReview extends Component
             $record->responsible_name = $responsible;
         } elseif ($record->access_type === 'prestador') {
             $this->diffAndQueue($changes, 'destination_label', 'Destino', $record->destination_label, $this->editDestinationLabel);
-            $this->diffAndQueue($changes, 'responsible_name', 'Responsável', $record->responsible_name, $this->editResponsibleName);
+            // Prestador não tem responsável (revisão do PO de 08/11/2026).
+            $this->diffAndQueue($changes, 'responsible_name', 'Responsável', $record->responsible_name, '');
             $record->destination_label = $this->editDestinationLabel;
-            $record->responsible_name = $this->editResponsibleName;
+            $record->responsible_name = null;
         }
 
         $newStart = Carbon::parse($this->editPeriodStart);

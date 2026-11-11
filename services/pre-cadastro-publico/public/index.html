@@ -79,12 +79,21 @@
                                 name="birthDate"
                                 type="date"
                                 autocomplete="bday" /></label
+                        ><label
+                            >Data prevista da visita<input
+                                name="visitDate"
+                                type="date"
+                                required /></label
                         ><label id="destino" hidden
                             >Imóvel de destino<select
                                 name="destinationProperty"
                             >
                                 <option value="">Selecione o imóvel</option>
                             </select></label
+                        ><p id="destino-vazio" class="wide" role="status" hidden>
+                            Nenhum imóvel disponível para este tipo de acesso
+                            no momento. Procure a administração do condomínio.
+                        </p
                         ><label class="wide"
                             >Endereço <small>opcional</small
                             ><input

@@ -26,6 +26,28 @@
         <article class="sdv-one-status-card sdv-one-status-card--rejected"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="x" /></span><span>Rejeitados</span><strong>{{ $statusCounts['rejeitado'] }}</strong><small>Registros preservados</small></article>
     </section>
 
+    @if ($falhasPortal !== [])
+        <section class="pre-registration-queue__portal-failures" aria-labelledby="portal-failures-title">
+            <x-ui.alert variant="warning" :title="count($falhasPortal) === 1 ? '1 envio do portal precisa de conferência' : count($falhasPortal).' envios do portal precisam de conferência'">
+                <p id="portal-failures-title">O sistema tentou importar estes envios várias vezes e parou para não travar a fila. Confira o motivo e, depois de corrigir a causa, peça uma nova tentativa. Nada foi aprovado ou liberado.</p>
+                <ul>
+                    @foreach ($falhasPortal as $falha)
+                        <li wire:key="falha-{{ $falha['id'] }}">
+                            <strong>{{ $falha['protocolo'] ?? 'Protocolo não identificado' }}</strong>
+                            · {{ $falha['motivo'] }}@if ($falha['campos'] !== []) ({{ implode(', ', $falha['campos']) }})@endif
+                            · {{ $falha['tentativas'] }} {{ $falha['tentativas'] === 1 ? 'tentativa' : 'tentativas' }}
+                            @if ($falha['situacao'] === 'reabertura_solicitada')
+                                · <em>nova tentativa na próxima sincronização</em>
+                            @elseif ($podeReabrir)
+                                <x-ui.button variant="secondary" size="sm" wire:click="tentarNovamente('{{ $falha['id'] }}')">Tentar novamente</x-ui.button>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </x-ui.alert>
+        </section>
+    @endif
+
     <section class="pre-registration-queue__workspace" aria-labelledby="pre-registration-list-title">
         <header>
             <div>

@@ -217,13 +217,12 @@
                             <x-ui.field id="edit-destination" label="Destino" value="Praia do Santa Rita" readonly help="Turista não exige imóvel nem responsável." />
                         @elseif ($record->access_type === 'visitante')
                             <x-ui.select id="edit-destination-property" label="Imóvel de destino" wire:model="editDestinationProperty" :error="$errors->first('editDestinationProperty')" required>
-                                @foreach (\App\Support\DestinationDirectory::options() as $option)
+                                @foreach (app(\App\Services\PreCadastro\CatalogoDestinos::class)->opcoes('visitante') as $option)
                                     <option value="{{ $option }}">{{ $option }}</option>
                                 @endforeach
                             </x-ui.select>
                         @else
                             <x-ui.field id="edit-destination-label" label="Destino" wire:model="editDestinationLabel" :error="$errors->first('editDestinationLabel')" required />
-                            <x-ui.field id="edit-responsible" label="Responsável" wire:model="editResponsibleName" :error="$errors->first('editResponsibleName')" required />
                         @endif
 
                         <x-ui.field id="edit-period-start" type="datetime-local" label="Início do período" wire:model="editPeriodStart" :error="$errors->first('editPeriodStart')" required />

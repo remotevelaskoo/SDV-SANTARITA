@@ -36,25 +36,6 @@ export function configuration(env = process.env) {
         "Portal aguardando aviso de privacidade.",
         503,
     );
-    let destinations;
-    try {
-        destinations = JSON.parse(env.PORTAL_DESTINATIONS || "[]");
-    } catch {
-        check(false, "Portal aguardando catálogo.", 503);
-    }
-    check(
-        Array.isArray(destinations) &&
-            destinations.every(
-                (d) =>
-                    d &&
-                    typeof d.label === "string" &&
-                    d.label.trim() &&
-                    typeof d.responsible === "string" &&
-                    d.responsible.trim(),
-            ),
-        "Portal aguardando catálogo.",
-        503,
-    );
     return {
         client: createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, {
             auth: { persistSession: false, autoRefreshToken: false },
@@ -64,10 +45,28 @@ export function configuration(env = process.env) {
         invite: env.PORTAL_INVITE_SECRET,
         node: env.PORTAL_NODE_SECRET,
         rateSecret: env.PORTAL_RATE_SECRET,
-        destinations,
         name: env.PORTAL_NAME || "Santa Rita",
         privacy: env.PORTAL_PRIVACY_TEXT,
     };
+}
+// Catálogo publicado pelo sistema local (imóveis ativos e responsável principal).
+// Sem catálogo sincronizado, visitante e prestador ficam indisponíveis.
+export async function catalog(ctx) {
+    const item = await result(
+        ctx.client
+            .from("sdv_portal_catalogos")
+            .select("itens")
+            .eq("implantacao_id", ctx.tenant)
+            .maybeSingle(),
+    );
+    const itens = Array.isArray(item?.itens) ? item.itens : [];
+    return itens.filter(
+        (d) =>
+            d &&
+            typeof d.label === "string" &&
+            d.label.trim() &&
+            (d.responsible === null || typeof d.responsible === "string"),
+    );
 }
 export async function result(promise) {
     const { data, error } = await promise;

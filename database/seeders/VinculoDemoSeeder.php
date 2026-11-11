@@ -11,11 +11,10 @@ use Illuminate\Database\Seeder;
 
 /**
  * Liga as pessoas e imóveis já semeados (PessoaDemoSeeder, ImovelDemoSeeder)
- * usando o mesmo mapeamento de responsável já usado em
- * App\Support\DestinationDirectory. Eduardo Nogueira (mapeado para o
- * "Bloco A — Apto 112" no DestinationDirectory) fica sem vínculo aqui,
- * porque esse código não existe entre os imóveis semeados — inconsistência
- * de dados de demonstração pré-existente, não algo criado por esta fatia.
+ * usando o mapeamento de responsável da antiga lista fixa de demonstração
+ * (removida: o pré-cadastro agora usa o cadastro de imóveis). Eduardo
+ * Nogueira ("Bloco A — Apto 112" naquela lista) fica sem vínculo aqui,
+ * porque esse código não existe entre os imóveis semeados.
  */
 class VinculoDemoSeeder extends Seeder
 {

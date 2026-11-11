@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\PreRegistration;
-use App\Support\DestinationDirectory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,10 +12,17 @@ class PreRegistrationFactory extends Factory
 {
     protected $model = PreRegistration::class;
 
+    /** Destinos fixos só para testes; o sistema usa o cadastro de imóveis (CatalogoDestinos). */
+    private const DESTINOS = [
+        'Bloco B — Apto 304' => 'Mariana Souza',
+        'Bloco A — Apto 102' => 'Marcos Vinicius da Silva',
+        'Bloco A — Apto 208' => 'Bianca Moretti',
+    ];
+
     public function definition(): array
     {
         $start = now()->addDay()->setTime(14, 0);
-        $property = DestinationDirectory::options()[0];
+        $property = array_key_first(self::DESTINOS);
 
         return [
             'protocol' => 'PRE-SRA-'.strtoupper(fake()->bothify('??####')),
@@ -29,7 +35,7 @@ class PreRegistrationFactory extends Factory
             'address_informed' => fake()->streetAddress().' · '.fake()->city().'/SP',
             'destination_property' => $property,
             'destination_label' => $property,
-            'responsible_name' => DestinationDirectory::responsibleFor($property),
+            'responsible_name' => self::DESTINOS[$property] ?? null,
             'period_start' => $start,
             'period_end' => (clone $start)->addHours(4),
             'vehicle_plate' => null,
@@ -57,13 +63,13 @@ class PreRegistrationFactory extends Factory
 
     public function visitor(?string $property = null): static
     {
-        $property ??= DestinationDirectory::options()[0];
+        $property ??= array_key_first(self::DESTINOS);
 
         return $this->state(fn (array $attributes): array => [
             'access_type' => 'visitante',
             'destination_property' => $property,
             'destination_label' => $property,
-            'responsible_name' => DestinationDirectory::responsibleFor($property),
+            'responsible_name' => self::DESTINOS[$property] ?? null,
         ]);
     }
 

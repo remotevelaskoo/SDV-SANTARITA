@@ -1,6 +1,13 @@
 import { createHmac } from "node:crypto";
 import sharp from "sharp";
-import { configuration, result, row, respond, failure } from "../lib/cloud.js";
+import {
+    configuration,
+    catalog,
+    result,
+    row,
+    respond,
+    failure,
+} from "../lib/cloud.js";
 import {
     check,
     hash,
@@ -9,6 +16,7 @@ import {
     sameSecret,
     normalize,
     categories,
+    visitWindow,
 } from "../lib/validation.js";
 
 export function createHandler(makeContext = configuration) {
@@ -20,12 +28,21 @@ export function createHandler(makeContext = configuration) {
                 "Convite inválido ou encerrado.",
                 401,
             );
-            if (req.method === "GET")
+            if (req.method === "GET") {
+                // Somente rótulos: nomes de responsáveis não saem do servidor.
+                const destinations = await catalog(ctx);
                 return respond(res, 200, {
                     name: ctx.name,
-                    destinations: ctx.destinations.map((d) => d.label),
+                    destinations: {
+                        visitante: destinations
+                            .filter((d) => d.responsible)
+                            .map((d) => d.label),
+                        prestador: destinations.map((d) => d.label),
+                    },
+                    visitWindow: visitWindow(),
                     privacy: ctx.privacy,
                 });
+            }
             check(req.method === "POST", "Método não permitido.", 405);
             const body = req.body;
             check(
@@ -120,7 +137,7 @@ export function createHandler(makeContext = configuration) {
                 "Solicitação inválida.",
                 403,
             );
-            const data = normalize(body.data, ctx.destinations);
+            const data = normalize(body.data, await catalog(ctx));
             check(
                 data.document_type === item.document_type,
                 "Tipo de documento alterado. Reinicie o formulário.",

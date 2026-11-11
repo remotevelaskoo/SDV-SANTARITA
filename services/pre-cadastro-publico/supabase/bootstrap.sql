@@ -39,5 +39,6 @@ grant execute on function public.sdv_portal_ack(uuid,uuid,integer,text) to servi
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
  values('pre-cadastro-privado','pre-cadastro-privado',false,8388608,array['image/jpeg','image/png','image/webp']);
 commit;
+-- Estrutura posterior: aplicar em seguida, na ordem, os arquivos de supabase/migrations/.
 -- Não criar políticas públicas no bucket. Upload/download só por backend e URLs assinadas.
 -- Retenção: remover rascunhos/objetos órfãos e contadores antigos conforme manual, antes da produção.

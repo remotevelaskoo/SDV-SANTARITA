@@ -6,9 +6,10 @@ use App\Documentos\Dominio\DiagnosticoLeitura;
 use App\Documentos\Dominio\FalhaLeituraDocumento;
 use App\Models\PreRegistration;
 use App\Services\DocumentOcrClient;
+use App\Services\PreCadastro\CatalogoDestinos;
 use App\Services\PrivateFileService;
-use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -56,7 +57,9 @@ class PublicPreRegistration extends Component
 
     public string $state = '';
 
-    public string $destinationProperty = 'Bloco B — Apto 304';
+    public string $destinationProperty = '';
+
+    public string $visitDate = '';
 
     public string $documentType = 'cnh';
 
@@ -122,6 +125,12 @@ class PublicPreRegistration extends Component
         ['label' => 'Veículo', 'description' => 'Informação opcional'],
         ['label' => 'Confirmação', 'description' => 'Revisão e envio'],
     ];
+
+    /** A data prevista começa em hoje; quem vem depois escolhe outro dia (até 30 dias). */
+    public function mount(): void
+    {
+        $this->visitDate = today()->toDateString();
+    }
 
     public function start(): void
     {
@@ -194,15 +203,18 @@ class PublicPreRegistration extends Component
         $this->state = $response->json('uf') ?: $this->state;
     }
 
-    public function destinationResponsible(): string
+    /** Só o visitante leva responsável (revisão do PO de 08/11/2026); prestador não. */
+    public function destinationResponsible(): ?string
     {
-        return DestinationDirectory::responsibleFor($this->destinationProperty) ?? 'Não definido';
+        return $this->accessType === 'visitante'
+            ? app(CatalogoDestinos::class)->responsavel($this->destinationProperty)
+            : null;
     }
 
-    /** @return list<string> */
+    /** @return list<string> Imóveis ativos do cadastro local; visitante só onde há responsável. */
     public function destinationOptions(): array
     {
-        return DestinationDirectory::options();
+        return app(CatalogoDestinos::class)->opcoes($this->accessType);
     }
 
     public function updatedDocumentFile(): void
@@ -380,10 +392,11 @@ class PublicPreRegistration extends Component
 
         $addressLine = $this->addressLine();
         $isTourist = $this->accessType === 'turista';
+        $visitStart = Carbon::createFromFormat('!Y-m-d', $this->visitDate, (string) config('app.timezone'));
         $portraitBytes = $this->preparePortraitCrop();
 
         try {
-            $preRegistration = DB::transaction(function () use ($addressLine, $isTourist, $privateFiles): PreRegistration {
+            $preRegistration = DB::transaction(function () use ($addressLine, $isTourist, $visitStart, $privateFiles): PreRegistration {
                 $preRegistration = PreRegistration::query()->create([
                     'protocol' => $this->generateProtocol(),
                     'name' => $this->name,
@@ -396,12 +409,10 @@ class PublicPreRegistration extends Component
                     'address_informed' => $addressLine,
                     'destination_property' => $isTourist ? null : $this->destinationProperty,
                     'destination_label' => $isTourist ? 'Praia do Santa Rita' : $this->destinationProperty,
-                    'responsible_name' => $isTourist ? null : $this->destinationResponsible(),
-                    // O formulário público ainda não coleta o período pretendido da
-                    // visita — usamos uma janela padrão de 24h a partir do envio até
-                    // essa decisão de produto ser tomada (registrado em docs/013).
-                    'period_start' => now(),
-                    'period_end' => now()->addDay(),
+                    'responsible_name' => $this->destinationResponsible(),
+                    // Período: o dia previsto da visita (docs/023 §12), no fuso do condomínio.
+                    'period_start' => $visitStart,
+                    'period_end' => $visitStart->copy()->addDay(),
                     'vehicle_plate' => $this->hasVehicle ? $this->plate : null,
                     'vehicle_model' => $this->hasVehicle ? $this->vehicleModel : null,
                     'vehicle_color' => $this->hasVehicle ? $this->vehicleColor : null,
@@ -592,6 +603,7 @@ class PublicPreRegistration extends Component
             'phone' => ['nullable', 'string', 'min:10', 'max:20'],
             'email' => ['nullable', 'email', 'max:120'],
             'accessType' => ['required', Rule::in(['visitante', 'turista', 'prestador'])],
+            'visitDate' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'before_or_equal:'.today()->addDays(30)->toDateString()],
         ];
     }
 

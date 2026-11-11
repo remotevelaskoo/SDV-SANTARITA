@@ -126,6 +126,7 @@
                                     <option value="turista">Turista</option>
                                     <option value="prestador">Prestador</option>
                                 </x-ui.select>
+                                <x-ui.field id="pre-visit-date" type="date" label="Data prevista da visita" wire:model="visitDate" min="{{ today()->toDateString() }}" max="{{ today()->addDays(30)->toDateString() }}" :error="$errors->first('visitDate')" required />
                             </div>
                         @elseif ($step === 2)
                             <x-ui.alert variant="info" title="Endereço informado">
@@ -153,11 +154,16 @@
                                 <article class="pre-registration-destination pre-registration-destination--property">
                                     <span>Destino da visita</span>
                                     <x-ui.select id="pre-destination-property" label="Imóvel de destino" wire:model.live="destinationProperty" :error="$errors->first('destinationProperty')" required>
+                                        <option value="">Selecione o imóvel</option>
                                         @foreach ($this->destinationOptions() as $option)
                                             <option value="{{ $option }}">{{ $option }}</option>
                                         @endforeach
                                     </x-ui.select>
-                                    <small>Responsável: {{ $this->destinationResponsible() }}</small>
+                                    @if ($this->destinationOptions() === [])
+                                        <small>Nenhum imóvel disponível para este tipo de acesso. Procure a administração do condomínio.</small>
+                                    @elseif ($accessType === 'visitante' && $destinationProperty !== '')
+                                        <small>Responsável: {{ $this->destinationResponsible() ?? 'Não definido' }}</small>
+                                    @endif
                                 </article>
                             @endif
                         @elseif ($step === 3)

@@ -40,7 +40,34 @@ function text(value, max, field, required = false) {
     check(!required || result.length >= 3, `Preencha ${field}.`);
     return result || null;
 }
-export function normalize(input, destinations = []) {
+export const VISIT_MAX_DAYS = 30;
+// Data civil no fuso do condomínio (America/Sao_Paulo), sem depender do fuso do servidor.
+export function localDate(date = new Date()) {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(date);
+}
+export function validDay(day) {
+    if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day))
+        return false;
+    const time = Date.parse(day + "T12:00:00Z");
+    return (
+        !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === day
+    );
+}
+function addDays(day, days) {
+    const date = new Date(day + "T12:00:00Z");
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+}
+export function visitWindow(now = new Date()) {
+    const today = localDate(now);
+    return { min: today, max: addDays(today, VISIT_MAX_DAYS) };
+}
+export function normalize(input, destinations = [], now = new Date()) {
     check(
         input && typeof input === "object" && !Array.isArray(input),
         "Dados inválidos.",
@@ -85,7 +112,9 @@ export function normalize(input, destinations = []) {
             ? null
             : text(input.destinationProperty, 160, "imóvel", true);
     const destination = destinations.find(
-        (d) => d.label === destination_property,
+        (d) =>
+            d.label === destination_property &&
+            (access_type !== "visitante" || d.responsible),
     );
     check(!destination_property || destination, "Selecione um imóvel válido.");
     const responsible_name =
@@ -97,6 +126,14 @@ export function normalize(input, destinations = []) {
                   true,
               )
             : null;
+    const visit_date = text(input.visitDate, 10, "data da visita", true);
+    const allowed = visitWindow(now);
+    check(
+        validDay(visit_date) &&
+            visit_date >= allowed.min &&
+            visit_date <= allowed.max,
+        `Informe a data prevista da visita entre hoje e os próximos ${VISIT_MAX_DAYS} dias.`,
+    );
     check(
         typeof input.hasVehicle === "boolean",
         "Informe se está com veículo.",
@@ -127,6 +164,7 @@ export function normalize(input, destinations = []) {
                 ? "Praia do Santa Rita"
                 : destination_property,
         responsible_name,
+        visit_date,
         vehicle_plate,
         vehicle_model: input.hasVehicle
             ? text(input.vehicleModel, 100, "modelo")

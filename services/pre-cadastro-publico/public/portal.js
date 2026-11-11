@@ -20,6 +20,17 @@ const camera = new CameraSession((constraints) =>
 let cameraCategory = null;
 let cameraSequence = 0;
 let submitting = false;
+let catalog = { visitante: [], prestador: [] };
+function destinationOptions() {
+    const select = form.elements.destinationProperty;
+    const type = form.elements.accessType.value;
+    const current = select.value;
+    const labels = catalog[type] || [];
+    select.replaceChildren(new Option("Selecione o imóvel", ""));
+    for (const label of labels) select.append(new Option(label, label));
+    select.value = labels.includes(current) ? current : "";
+    $("#destino-vazio").hidden = type === "turista" || labels.length > 0;
+}
 const imageFile = (category) =>
     capturedFiles.get(category) || form.elements[category].files[0];
 function invalidateAttempt() {
@@ -157,9 +168,14 @@ async function api(body) {
     if (!response.ok) throw new Error(result.error || "Serviço indisponível.");
     return result;
 }
+let destinationType = null;
 function conditionals() {
     const type = form.elements.accessType.value;
     $("#destino").hidden = type === "turista";
+    if (destinationType !== type) {
+        destinationType = type;
+        destinationOptions();
+    }
     form.elements.destinationProperty.required = type !== "turista";
     const back = form.elements.documentType.value === "rg_cin";
     $("#verso").hidden = !back;
@@ -199,7 +215,9 @@ async function refresh() {
         $("#status").textContent =
             response.state === "rascunho"
                 ? "Envio não concluído."
-                : labels[response.status];
+                : response.state === "conferencia"
+                  ? "Em conferência pela administração. Se precisar, procure a portaria."
+                  : labels[response.status];
     } catch (error) {
         $("#status").textContent = error.message;
     }
@@ -315,12 +333,10 @@ try {
     const config = await api();
     $("#condominio").textContent = config.name;
     $("#privacidade").textContent = config.privacy;
-    for (const destination of config.destinations) {
-        const option = document.createElement("option");
-        option.value = destination;
-        option.textContent = destination;
-        form.elements.destinationProperty.append(option);
-    }
+    catalog = config.destinations;
+    form.elements.visitDate.min = config.visitWindow.min;
+    form.elements.visitDate.max = config.visitWindow.max;
+    form.elements.visitDate.value ||= config.visitWindow.min;
     $("#loading").hidden = true;
     if (id && receipt) {
         showReceipt();

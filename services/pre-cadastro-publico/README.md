@@ -18,7 +18,9 @@ O serviço usa variáveis do ambiente; para desenvolvimento com arquivo local: `
 
 Crie um projeto **somente para este diretório**, com `framework: null`, instalação `npm ci` e saída `public`, preservando `api/` como Functions. Não aponte para a raiz Laravel. Use `vercel.json` deste diretório; não publique `.env`, testes ou SQL como arquivos estáticos.
 
-Configure as variáveis de `.env.example` no backend, com segredos protegidos. A chave secreta do Supabase nunca é enviada ao visitante. Não habilite sem o projeto de banco isolado, catálogo real, aviso de privacidade e teste com o nó local.
+Configure as variáveis de `.env.example` no backend, com segredos protegidos. A chave secreta do Supabase nunca é enviada ao visitante. Não habilite sem o projeto de banco isolado, aviso de privacidade e teste com o nó local. O catálogo de imóveis é publicado pelo sistema local a cada sincronização; não há lista no Vercel.
+
+Mudanças de banco ficam em `supabase/migrations/` e são aplicadas, em ordem, **antes** de publicar o código que depende delas (documento 023 §12.5).
 
 A URL do convite tem formato `https://DOMINIO/#convite=SEGREDO`. O fragmento não entra na requisição inicial nem nos cabeçalhos de referência. O frontend envia o convite no cabeçalho somente à API do portal. O recibo também usa fragmento e não apresenta nome, CPF ou imagens. Não instalar analytics, pixels ou scripts de terceiros que possam ler esses fragmentos.
 
