@@ -3,7 +3,7 @@
 **Data:** 11/11/2026  
 **Base verificada:** main `fc0497a`, atualizada antes da implementação.  
 **Referências:** documentos 006, 019, 021 (inclusive revisão do PO de 08/11/2026) e ADR-018.  
-**Situação:** código e banco isolado preparados; publicação e conexão com o equipamento real ainda não concluídas. Não afirmar operação híbrida homologada.
+**Situação:** portal publicado em homologação restrita, com envio real ao Supabase e integração comprovada com Laravel isolado de teste. Produção desativada; instalação e homologação no equipamento real da portaria pendentes.
 
 ## 1. Decisão e escopo
 
@@ -22,10 +22,10 @@ O sistema legado de certificados é independente e não recebe alterações. Nã
 | Banco do portal | Duas tabelas, políticas explícitas de bloqueio ao acesso direto e funções de quota/ACK |
 | Imagens | Bucket `pre-cadastro-privado`, não público, limite 8 MB por objeto |
 | Segurança do banco | RLS e ausência de SELECT para anon/authenticated conferidos por SQL; auditor Supabase sem avisos após políticas explícitas |
-| Dados no banco | Nenhuma solicitação real cadastrada |
+| Dados no banco | Uma solicitação sintética usada na homologação; nenhuma pessoa real cadastrada |
 | Teste antigo Vercel | `sdv-santarita-vercel`; exclusão ainda exige confirmação do usuário no painel, conforme ferramenta do provedor |
-| Novo projeto Vercel do portal | `sdv-santa-rita-pre-cadastro` (`prj_UuOLXXPCxRdHJzxiUx0W3FYMumQ8`), raiz `services/pre-cadastro-publico`, pré-configurado e desativado |
-| Novo portal publicado | Ainda não; chave secreta de backend e configuração operacional pendentes |
+| Novo projeto Vercel do portal | `sdv-santa-rita-pre-cadastro` (`prj_UuOLXXPCxRdHJzxiUx0W3FYMumQ8`), raiz `services/pre-cadastro-publico`; chave secreta configurada pelo proprietário como variável sensível |
+| Novo portal publicado | Sim, somente homologação (`target=staging`, variáveis Preview), deployment `dpl_GAQPzqLdSiHBVuHkAkbW7se5iGu3`; produção com `PORTAL_ENABLED=false` |
 
 Migrações remotas aplicadas: `pre_cadastro_publico_hibrido` e `pre_cadastro_politicas_privadas_explicitas`. `services/pre-cadastro-publico/supabase/bootstrap.sql` reproduz a estrutura final em um projeto novo. Não reaplicar esse bootstrap sobre o banco já criado; alterações futuras exigem migrações próprias.
 
@@ -89,8 +89,27 @@ A exclusão do projeto Vercel antigo exige ação explícita no painel, pelo lin
 - `pnpm build`: aprovado; `pnpm test:js`: **22 testes passaram**.
 - `vendor/bin/pint --test`: aprovado.
 - `npm test` no portal: **10 testes passaram**, com imagens sintéticas, transporte simulado e PostgreSQL PGlite para esquema, RLS, concessões, quota e ACK.
-- SQL no Supabase novo: RLS ligado, privilégios públicos negados, bucket privado e zero solicitações. Auditor de segurança sem avisos após políticas explícitas.
-- Revisão visual/interação de navegador: tentativa de execução impedida pelas restrições do ambiente de Chromium; **não homologada**. Sem promessa de teste em computador/celular real.
-- Não executados: upload real ao Supabase via portal publicado, importação no servidor físico do condomínio, OCR remoto, aprovação real ou envio à facial.
+- SQL no Supabase novo: RLS ligado, privilégios públicos negados e bucket privado. A verificação inicial ocorreu sem solicitações; a homologação posterior acrescentou somente a solicitação sintética descrita no §9. Auditor de segurança sem avisos após políticas explícitas.
+- Revisão inicial por navegador local foi bloqueada pelo ambiente. Posteriormente, o portal publicado foi aberto no navegador compartilhado: carregamento real do formulário, identificação de HOMOLOGAÇÃO, alternância CNH/RG com verso e campos de veículo conferidos. Tela inicial capturada. Celular/iPad e dispositivos da portaria ainda não homologados.
+- Não executados: importação no servidor físico do condomínio, OCR remoto, aprovação real ou envio à facial. Upload real e importação em Laravel isolado foram executados posteriormente (§9).
 
-**Próximo marco:** configuração dos segredos e da implantação real, publicação restrita de homologação e teste integrado. Esta entrega não deve ser marcada como produção pronta.
+**Próximo marco:** revisão da PR, configuração da implantação real e instalação do conector no servidor da portaria. Homologar dispositivos e catálogo antes de liberar a produção; esta entrega não deve ser marcada como produção pronta.
+
+
+## 9. Publicação e prova integrada após configuração da chave pelo proprietário
+
+- Código publicado: commit `22b6c6c98ed1ff5e1a7e53fec00939ea8a334c63`, PR #87, somente o diretório do portal; a main não foi substituída.
+- Endereço de homologação: `https://sdv-santa-rita-pre-cadastro-8jxaoqzdh-remotevelaskoo-1198.vercel.app`. O acesso requer link temporário do Vercel e convite; não registrar esses tokens no Git. Link de compartilhamento inicial com validade de 23 horas, encerrando em 12/11/2026 conforme horário informado pelo provedor.
+- O primeiro deployment foi publicado com o alvo padrão de produção, **desativado pelas variáveis de produção**. A versão habilitada para testes foi criada depois, explicitamente com `target=staging` (equivalente ao ambiente Preview na API Vercel). Não há aceite de cadastros em produção.
+- A chave do Supabase permaneceu como variável sensível; seu valor não foi lido nem copiado para o código. Três segredos independentes foram configurados somente para Preview. A implantação usada é uma identidade de teste e **não deve ser copiada para o servidor real**.
+- Catálogo de destinos de teste vazio: testar primeiro **Turista**; visitante/prestador continuam condicionados ao catálogo real, sem criar imóveis ou responsáveis fictícios para liberar o envio.
+- Portal publicado: GET de configuração com convite aceito; sem convite, 401; fila de sincronização sem credencial do nó, 401.
+- Upload real ao Supabase de PNGs totalmente sintéticos (sem pessoas), documento e selfie separados; normalização JPEG concluída; recibo público sem nome, CPF ou links de imagens.
+- Repetição do mesmo submit devolveu o mesmo protocolo e não criou outra solicitação.
+- Laravel em SQLite isolado recebeu efetivamente a solicitação da nuvem, verificou hashes e gravou os dois arquivos no disco privado. Uma segunda sincronização não duplicou cadastro ou arquivos.
+- A mudança de teste para `correcao`, versão 2, foi confirmada na nuvem; SQL no Supabase verificou `state=importado`, `review_status=correcao`, `local_version=2`, quantidade 1. Não se trata de decisão sobre pessoa real.
+- Foram confirmados zero pessoas operacionais e zero autorizações no banco local de teste. Nenhuma facial ou relé foi acionado.
+- Falha 503 simulada no cliente preservou os registros/arquivos locais. Depois, a conexão real foi restabelecida e a sincronização concluiu sem duplicação.
+- O cliente PHP deste ambiente necessitou das configurações do proxy e de timeout de conexão maior no harness de teste. Isso não substitui verificar TLS, latência e conectividade no servidor físico. O segredo de proteção do Preview usado no harness também não pertence à configuração de produção do nó.
+
+A prova demonstra o transporte e a idempotência do pré-cadastro. Não representa homologação do funcionamento offline integral da portaria, de relógios, revogações, backup/restauração ou hardware.
