@@ -109,7 +109,7 @@
                         <div class="quick-registration__fields">
                             <div class="nome-por-voz" x-data="nomePorVoz()" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()" x-on:cadastro-rapido-foco-nome.window="focarNome()">
                                 <x-ui.field id="quick-name" label="Nome completo" wire:model.blur="quickName" :error="$errors->first('quickName')" required />
-                                {{-- Voz só neste campo (docs/021 §12): começa no clique, não salva nem envia nada. --}}
+                                {{-- Voz no nome (docs/021 §12) e no CPF: começa no clique, não salva nem envia nada. --}}
                                 <div class="nome-por-voz__acoes">
                                     <template x-if="suportado">
                                         <span class="nome-por-voz__botoes">
@@ -125,8 +125,9 @@
                                 </div>
                                 @if ($conferirBadge('quickName'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickName')"><span class="ui-button__content">Confirmar</span></button></span>@endif
                             </div>
-                            <div>
+                            <div class="nome-por-voz" x-data="nomePorVoz({ tipo: 'cpf', metodo: 'preencherCpfPorVoz' })" x-on:input="digitou()" x-on:cadastro-rapido-encerrado.window="cancelar()">
                                 <x-ui.field id="quick-document" label="CPF" wire:model.blur="quickDocument" wire:blur="checkQuickDocument" help="A verificação evita criar uma pessoa duplicada." :error="$errors->first('quickDocument')" required />
+                                @include('livewire.partials.voz-botao', ['rotulo' => 'Ditar CPF'])
                                 @if ($conferirBadge('quickDocument'))<span class="captura-documento__conferir"><x-ui.badge variant="warning">Requer conferência</x-ui.badge> <button type="button" class="ui-button ui-button--ghost ui-button--sm" wire:click="confirmarCampo('quickDocument')"><span class="ui-button__content">Confirmar</span></button></span>@endif
                             </div>
                             <div>
@@ -468,7 +469,10 @@
                         <x-ui.field id="ident-nome" label="Nome completo" wire:model="identNome" :error="$errors->first('identNome')" required />
                         <x-ui.field id="ident-nome-social" label="Nome social (opcional)" wire:model="identNomeSocial" :error="$errors->first('identNomeSocial')" />
                         <x-ui.field id="ident-nascimento" type="date" label="Data de nascimento" wire:model="identNascimento" :error="$errors->first('identNascimento')" />
-                        <x-ui.field id="ident-cpf" label="CPF" wire:model="identCpf" inputmode="numeric" :error="$errors->first('identCpf')" help="Corrija se estiver diferente do documento." />
+                        <div class="nome-por-voz" x-data="nomePorVoz({ tipo: 'cpf', metodo: 'preencherCpfIdentificacaoPorVoz' })" x-on:input="digitou()">
+                            <x-ui.field id="ident-cpf" label="CPF" wire:model="identCpf" inputmode="numeric" :error="$errors->first('identCpf')" help="Corrija se estiver diferente do documento." />
+                            @include('livewire.partials.voz-botao', ['rotulo' => 'Ditar CPF'])
+                        </div>
                         <x-ui.field id="ident-telefone" type="tel" label="Telefone" wire:model="identTelefone" :error="$errors->first('identTelefone')" help="Com DDD. Deixe em branco se não houver." />
                         <x-ui.field id="ident-email" type="email" label="E-mail" wire:model="identEmail" :error="$errors->first('identEmail')" />
                     </div>

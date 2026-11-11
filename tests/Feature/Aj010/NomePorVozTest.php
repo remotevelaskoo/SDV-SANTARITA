@@ -113,6 +113,20 @@ class NomePorVozTest extends TestCase
             ->assertSet('quickPersonRegistered', false);
     }
 
+    public function test_cpf_ditado_preenche_formatado_e_confere_duplicidade(): void
+    {
+        $html = $this->conferencia()->assertSee('Ditar CPF')->html();
+        $this->assertMatchesRegularExpression('/nomePorVoz\(\{ tipo: \'cpf\', metodo: \'preencherCpfPorVoz\' \}\)"[^>]*>\s*<label class="ui-field" for="quick-document"/s', $html);
+
+        $tela = $this->conferencia()->set('quickDocument', '');
+        $tela->call('preencherCpfPorVoz', '5299')->assertSet('quickDocument', '');
+        $tela->call('preencherCpfPorVoz', '529 982 247 25')
+            ->assertSet('quickDocument', '529.982.247-25')
+            ->assertSet('quickDuplicateFound', false)
+            ->assertSet('camposEditados', fn (array $campos) => in_array('quickDocument', $campos, true));
+        $this->assertSame(0, Pessoa::query()->count());
+    }
+
     public function test_nome_ditado_segue_a_validacao_existente(): void
     {
         $this->conferencia()->call('preencherNomePorVoz', 'Al')->assertHasErrors('quickName');

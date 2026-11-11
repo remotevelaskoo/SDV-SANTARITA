@@ -146,6 +146,23 @@ class IdentificacaoConferenciaDadosTest extends TestCase
         $this->assertSame('Pessoa Sintetica Errada', $pessoa->fresh()->nome);
     }
 
+    public function test_cpf_ditado_na_correcao(): void
+    {
+        $tela = $this->tela($this->pessoa(), 'pessoas.gerenciar')
+            ->call('editarIdentificacao')
+            ->assertSee('Ditar CPF');
+
+        $tela->call('preencherCpfIdentificacaoPorVoz', '111')->assertSet('identCpf', '529.982.247-25');
+        $tela->call('preencherCpfIdentificacaoPorVoz', '11144477735')->assertSet('identCpf', '111.444.777-35');
+    }
+
+    public function test_cpf_ditado_fora_da_edicao_e_recusado(): void
+    {
+        $this->tela($this->pessoa(), 'pessoas.gerenciar')
+            ->call('preencherCpfIdentificacaoPorVoz', '11144477735')
+            ->assertForbidden();
+    }
+
     public function test_sem_permissao_nao_edita(): void
     {
         $this->tela($this->pessoa())

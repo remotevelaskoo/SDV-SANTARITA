@@ -20,6 +20,51 @@ export const MENSAGENS_VOZ = {
     semSuporte: 'Preenchimento por voz indisponível neste navegador. Digite o nome.',
 };
 
+/** Mensagens do CPF por voz: mesmas regras, com orientação para os dígitos. */
+export const MENSAGENS_VOZ_CPF = {
+    ouvindo: 'Ouvindo… fale os 11 números do CPF.',
+    naoEntendeu: 'Não entendi os 11 números do CPF. Toque no microfone e fale um número de cada vez, ou digite.',
+    permissao: 'O navegador não liberou o microfone. Digite o CPF ou libere o microfone nas configurações do navegador.',
+    semMicrofone: 'Nenhum microfone encontrado neste computador. Digite o CPF.',
+    servico: 'O reconhecimento de voz está indisponível agora (sem internet ou serviço fora do ar). Digite o CPF.',
+    falha: 'O reconhecimento de voz parou. Toque no microfone e tente novamente ou digite.',
+    semSuporte: 'Preenchimento por voz indisponível neste navegador. Digite o CPF.',
+};
+
+const DIGITOS_FALADOS = {
+    zero: '0', um: '1', uma: '1', dois: '2', duas: '2', tres: '3', quatro: '4',
+    cinco: '5', seis: '6', meia: '6', sete: '7', oito: '8', nove: '9',
+};
+
+/**
+ * CPF a partir da fala: aceita algarismos ("529 982 247 25") e números
+ * falados um a um ("cinco dois nove…", "meia" = 6). Ignora "ponto", "traço"
+ * e afins. Devolve 000.000.000-00, ou null quando não saem 11 dígitos.
+ */
+export function cpfFalado(texto) {
+    const palavras = String(texto ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean);
+
+    let digitos = '';
+    for (const palavra of palavras) {
+        if (/^\d+$/.test(palavra)) {
+            digitos += palavra;
+        } else if (DIGITOS_FALADOS[palavra] !== undefined) {
+            digitos += DIGITOS_FALADOS[palavra];
+        }
+    }
+
+    if (digitos.length !== 11) {
+        return null;
+    }
+
+    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9)}`;
+}
+
 const ERROS = {
     'no-speech': 'naoEntendeu',
     'not-allowed': 'permissao',
@@ -49,10 +94,18 @@ export function transcricaoFinal(evento) {
     return texto === '' ? null : texto;
 }
 
-export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor } = {}) {
+/**
+ * `tipo: 'cpf'` reaproveita o mesmo fluxo para o CPF: a fala vira os 11
+ * dígitos formatados antes de chegar ao Livewire; fala sem 11 dígitos não
+ * altera o campo.
+ */
+export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor, tipo = 'nome' } = {}) {
+    const MSG = tipo === 'cpf' ? MENSAGENS_VOZ_CPF : MENSAGENS_VOZ;
+    const converter = tipo === 'cpf' ? cpfFalado : (texto) => texto;
+
     return {
         suportado: false,
-        textoSemSuporte: MENSAGENS_VOZ.semSuporte,
+        textoSemSuporte: MSG.semSuporte,
         ouvindo: false,
         mensagem: '',
         sessao: 0,
@@ -100,8 +153,13 @@ export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor } = {}
                 }
                 this.recebeuFinal = true;
                 this.encerrarSessao();
+                const valor = converter(texto);
+                if (valor === null) {
+                    this.mensagem = MSG.naoEntendeu;
+                    return;
+                }
                 this.mensagem = '';
-                this.$wire[metodo](texto);
+                this.$wire[metodo](valor);
             };
             rec.onerror = (evento) => {
                 if (sessao !== this.sessao) {
@@ -111,15 +169,15 @@ export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor } = {}
                 if (evento?.error === 'aborted') {
                     return; // cancelamento pedido pelo operador ou pela tela
                 }
-                this.mensagem = MENSAGENS_VOZ[chave ?? 'falha'];
+                this.mensagem = MSG[chave ?? 'falha'];
                 this.encerrarSessao();
             };
             rec.onend = () => {
                 if (sessao !== this.sessao) {
                     return;
                 }
-                if (this.ouvindo && !this.recebeuFinal && this.mensagem === MENSAGENS_VOZ.ouvindo) {
-                    this.mensagem = MENSAGENS_VOZ.naoEntendeu;
+                if (this.ouvindo && !this.recebeuFinal && this.mensagem === MSG.ouvindo) {
+                    this.mensagem = MSG.naoEntendeu;
                 }
                 this.ouvindo = false;
                 this.reconhecimento = null;
@@ -128,11 +186,11 @@ export function nomePorVoz({ metodo = 'preencherNomePorVoz', Reconhecedor } = {}
             this.reconhecimento = rec;
             this.recebeuFinal = false;
             this.ouvindo = true;
-            this.mensagem = MENSAGENS_VOZ.ouvindo;
+            this.mensagem = MSG.ouvindo;
             try {
                 rec.start();
             } catch {
-                this.mensagem = MENSAGENS_VOZ.falha;
+                this.mensagem = MSG.falha;
                 this.encerrarSessao();
             }
         },

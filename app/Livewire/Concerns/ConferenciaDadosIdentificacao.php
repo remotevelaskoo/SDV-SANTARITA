@@ -86,6 +86,20 @@ trait ConferenciaDadosIdentificacao
         $this->identEmail = (string) $this->contatoVigente($pessoa, 'email')?->valor;
     }
 
+    /** CPF ditado na correção dos dados: só aceita 11 dígitos. */
+    public function preencherCpfIdentificacaoPorVoz(string $texto): void
+    {
+        abort_unless($this->podeEditarIdentificacao() && $this->editandoIdentificacao, 403);
+
+        $digitos = NormalizadorBusca::digitos($texto);
+        if (strlen($digitos) !== 11) {
+            return; // fala incompleta não apaga o CPF atual
+        }
+
+        $this->identCpf = substr($digitos, 0, 3).'.'.substr($digitos, 3, 3).'.'.substr($digitos, 6, 3).'-'.substr($digitos, 9, 2);
+        $this->resetErrorBag('identCpf');
+    }
+
     public function cancelarEdicaoIdentificacao(): void
     {
         $this->editandoIdentificacao = false;
