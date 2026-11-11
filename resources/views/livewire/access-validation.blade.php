@@ -446,6 +446,49 @@
             </section>
         @endif
 
+        @php($dadosIdent = $this->dadosIdentificacao)
+        @if ($dadosIdent)
+            <section class="validation-person-data" aria-labelledby="identificacao-dados-titulo" wire:key="dados-identificacao-{{ $currentPessoaId }}">
+                <header>
+                    <div>
+                        <h3 id="identificacao-dados-titulo">Dados para conferência</h3>
+                        <p>Compare com o documento apresentado. Se algo estiver errado, corrija antes de decidir.</p>
+                    </div>
+                    @if (! $editandoIdentificacao && $this->podeEditarIdentificacao())
+                        <x-ui.button variant="secondary" size="sm" wire:click="editarIdentificacao">Editar dados</x-ui.button>
+                    @endif
+                </header>
+
+                @if ($dadosIdentificacaoSalvos)
+                    <x-ui.alert variant="success" title="Dados corrigidos">O cadastro da pessoa foi atualizado. Os valores anteriores ficam no histórico.</x-ui.alert>
+                @endif
+
+                @if ($editandoIdentificacao)
+                    <div class="registration-fields">
+                        <x-ui.field id="ident-nome" label="Nome completo" wire:model="identNome" :error="$errors->first('identNome')" required />
+                        <x-ui.field id="ident-nome-social" label="Nome social (opcional)" wire:model="identNomeSocial" :error="$errors->first('identNomeSocial')" />
+                        <x-ui.field id="ident-nascimento" type="date" label="Data de nascimento" wire:model="identNascimento" :error="$errors->first('identNascimento')" />
+                        <x-ui.field id="ident-cpf" label="CPF" wire:model="identCpf" inputmode="numeric" :error="$errors->first('identCpf')" help="Corrija se estiver diferente do documento." />
+                        <x-ui.field id="ident-telefone" type="tel" label="Telefone" wire:model="identTelefone" :error="$errors->first('identTelefone')" help="Com DDD. Deixe em branco se não houver." />
+                        <x-ui.field id="ident-email" type="email" label="E-mail" wire:model="identEmail" :error="$errors->first('identEmail')" />
+                    </div>
+                    <div class="equipamento-management-acoes">
+                        <x-ui.button variant="ghost" size="sm" wire:click="cancelarEdicaoIdentificacao">Cancelar</x-ui.button>
+                        <x-ui.button variant="success" size="sm" wire:click="salvarIdentificacao" wire:loading.attr="disabled" wire:target="salvarIdentificacao">Salvar correção</x-ui.button>
+                    </div>
+                @else
+                    <dl>
+                        <div><dt>Nome completo</dt><dd>{{ $dadosIdent['nome'] }}</dd></div>
+                        @if ($dadosIdent['nome_social'])<div><dt>Nome social</dt><dd>{{ $dadosIdent['nome_social'] }}</dd></div>@endif
+                        <div><dt>Data de nascimento</dt><dd>{{ $dadosIdent['nascimento'] ?? 'Não informada' }}</dd></div>
+                        <div><dt>CPF</dt><dd>{{ $dadosIdent['cpf'] ? ($documentRevealed ? $dadosIdent['cpf'] : \App\Support\NormalizadorBusca::mascararDocumento($dadosIdent['cpf'])) : 'Não informado' }}</dd></div>
+                        <div><dt>Telefone</dt><dd>{{ $dadosIdent['telefone'] ?? 'Não informado' }}</dd></div>
+                        <div><dt>E-mail</dt><dd>{{ $dadosIdent['email'] ?? 'Não informado' }}</dd></div>
+                    </dl>
+                @endif
+            </section>
+        @endif
+
         @foreach ($currentPerson['alerts'] as $alerta)
             <x-ui.alert :variant="$alerta['tone']" title="Atenção">{{ $alerta['text'] }}</x-ui.alert>
         @endforeach

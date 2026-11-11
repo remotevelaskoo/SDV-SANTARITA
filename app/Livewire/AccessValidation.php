@@ -6,6 +6,7 @@ use App\Integracoes\Aplicacao\CamerasPlaca;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CadastroRapidoAtendimento;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
+use App\Livewire\Concerns\ConferenciaDadosIdentificacao;
 use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
 use App\Models\Catalogo;
@@ -38,7 +39,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AccessValidation extends Component
 {
-    use CadastroRapidoAtendimento, CapturaDocumentoAssistida {
+    use CadastroRapidoAtendimento, CapturaDocumentoAssistida, ConferenciaDadosIdentificacao {
         CadastroRapidoAtendimento::avancarParaConferencia insteadof CapturaDocumentoAssistida;
     }
 
@@ -213,6 +214,7 @@ class AccessValidation extends Component
 
     private function encerrarFotoIdentificacao(): void
     {
+        $this->encerrarEdicaoIdentificacao();
         $this->fotoIdentificacaoSalva = false;
         $this->refazerFotoIdentificacao();
         $this->dispatch('foto-identificacao-encerrada');
