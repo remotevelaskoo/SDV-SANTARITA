@@ -36,7 +36,7 @@ class ContribuicoesAtendimento
     {
         $valor = Configuracao::obter('contribuicao.valor_padrao');
 
-        return is_numeric($valor) ? number_format((float) $valor, 2, '.', '') : '15.00';
+        return is_numeric($valor) ? number_format((float) $valor, 2, '.', '') : '25.00';
     }
 
     public static function normalizarTicket(?string $ticket): ?string

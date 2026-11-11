@@ -12,9 +12,11 @@ use App\Models\Pessoa;
 use App\Models\User;
 use App\Models\Veiculo;
 use App\Models\Vinculo;
+use App\Services\ContribuicoesAtendimento;
 use App\Support\ImplantacaoContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Simulação para analisar o relatório final do Modo Portaria no ambiente
@@ -22,7 +24,7 @@ use Illuminate\Support\Carbon;
  * (ou num turno novo), registra turistas da praia com placa, visitantes de
  * imóvel, um morador com veículo cadastrado, contribuições com ticket e
  * algumas saídas. Todos os dados são fictícios e marcados com protocolo
- * SIM-RF-; rodar de novo não duplica.
+ * SIM-RF-; rodar de novo refaz a simulação.
  *
  *   php artisan db:seed --class=RelatorioFinalDemoSeeder
  */
@@ -38,9 +40,10 @@ class RelatorioFinalDemoSeeder extends Seeder
         ['nome' => 'Thiago Barbosa Nunes', 'perfil' => 'turista', 'placa' => 'SOL3E21', 'contribui' => 'nao_contribui', 'forma' => null, 'sai' => true],
         ['nome' => 'Patrícia Gomes Silveira', 'perfil' => 'turista', 'placa' => null, 'contribui' => 'isento', 'forma' => null, 'sai' => false],
         ['nome' => 'Bruno Cardoso Teixeira', 'perfil' => 'turista', 'placa' => 'OND5G67', 'contribui' => 'contribui', 'forma' => 'pix', 'sai' => false],
-        ['nome' => 'Fernanda Ribeiro Castro', 'perfil' => 'visitante', 'placa' => 'VIS9H12', 'contribui' => 'contribui', 'forma' => 'dinheiro', 'sai' => true],
-        ['nome' => 'Ricardo Moura Santos', 'perfil' => 'visitante', 'placa' => null, 'contribui' => 'isento', 'forma' => null, 'sai' => false],
-        ['nome' => 'Helena Duarte Vieira', 'perfil' => 'morador', 'placa' => 'CAS4J56', 'contribui' => 'isento', 'forma' => null, 'sai' => true],
+        // Só turista contribui (regra do PO de 11/11/2026): visitante e morador ficam sem contribuição.
+        ['nome' => 'Fernanda Ribeiro Castro', 'perfil' => 'visitante', 'placa' => 'VIS9H12', 'contribui' => 'nao_se_aplica', 'forma' => null, 'sai' => true],
+        ['nome' => 'Ricardo Moura Santos', 'perfil' => 'visitante', 'placa' => null, 'contribui' => 'nao_se_aplica', 'forma' => null, 'sai' => false],
+        ['nome' => 'Helena Duarte Vieira', 'perfil' => 'morador', 'placa' => 'CAS4J56', 'contribui' => 'nao_se_aplica', 'forma' => null, 'sai' => true],
     ];
 
     public function run(): void
@@ -58,11 +61,7 @@ class RelatorioFinalDemoSeeder extends Seeder
 
     private function simular(User $operador): void
     {
-        if (HistoricoAcesso::query()->where('protocol', 'like', 'SIM-RF-%')->exists()) {
-            $this->command?->info('Simulação do relatório final já existe; nada a fazer.');
-
-            return;
-        }
+        $this->limparSimulacaoAnterior();
 
         $turno = CaixaTurno::query()->where('operator_id', $operador->id)->where('status', 'aberto')->latest('opened_at')->first()
             ?? CaixaTurno::query()->create([
@@ -118,23 +117,25 @@ class RelatorioFinalDemoSeeder extends Seeder
             $entrada = $this->acesso($pessoa, $operador, 'entrada', $momento, $i, $veiculo, $dados['perfil'] === 'turista' ? null : $imovel, $veiculo ? null : $dados['placa']);
 
             $pago = $dados['contribui'] === 'contribui';
-            Contribuicao::query()->create([
-                'historico_acesso_id' => $entrada->id,
-                'pessoa_id' => $pessoa->id,
-                'classificacao' => $dados['contribui'],
-                'situacao_pagamento' => match ($dados['contribui']) {
-                    'contribui' => 'pago',
-                    'isento' => 'isento',
-                    default => 'sem_pagamento',
-                },
-                'valor' => $pago ? '15.00' : null,
-                'forma_pagamento' => $pago ? $dados['forma'] : null,
-                'ticket_numero' => $pago ? sprintf('%06d', $ticket++) : null,
-                'caixa_turno_id' => $turno->id,
-                'operator_id' => $operador->id,
-                'registrada_em' => $momento,
-                'versao' => 1,
-            ]);
+            if ($dados['contribui'] !== 'nao_se_aplica') {
+                Contribuicao::query()->create([
+                    'historico_acesso_id' => $entrada->id,
+                    'pessoa_id' => $pessoa->id,
+                    'classificacao' => $dados['contribui'],
+                    'situacao_pagamento' => match ($dados['contribui']) {
+                        'contribui' => 'pago',
+                        'isento' => 'isento',
+                        default => 'sem_pagamento',
+                    },
+                    'valor' => $pago ? ContribuicoesAtendimento::valorPadrao() : null,
+                    'forma_pagamento' => $pago ? $dados['forma'] : null,
+                    'ticket_numero' => $pago ? sprintf('%06d', $ticket++) : null,
+                    'caixa_turno_id' => $turno->id,
+                    'operator_id' => $operador->id,
+                    'registrada_em' => $momento,
+                    'versao' => 1,
+                ]);
+            }
 
             if ($dados['sai']) {
                 $saidas[] = [$pessoa, $veiculo, $dados['perfil'] === 'turista' ? null : $imovel, $veiculo ? null : $dados['placa']];
@@ -147,6 +148,32 @@ class RelatorioFinalDemoSeeder extends Seeder
         }
 
         $this->command?->info('Simulação criada: '.count(self::PESSOAS).' entradas e '.count($saidas).' saídas no turno '.$turno->terminal.'.');
+    }
+
+    /**
+     * Rodar de novo refaz a simulação: apaga só o que ela mesma criou
+     * (atendimentos SIM-RF-, suas contribuições, visitas, vínculos e pessoas).
+     */
+    private function limparSimulacaoAnterior(): void
+    {
+        $historicos = DB::table('historico_acessos')->where('protocol', 'like', 'SIM-RF-%');
+        $pessoaIds = (clone $historicos)->pluck('pessoa_id')->filter()->unique()->values();
+        if ($pessoaIds->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($historicos, $pessoaIds): void {
+            $historicoIds = (clone $historicos)->pluck('id');
+            $contribuicaoIds = DB::table('contribuicoes')->whereIn('historico_acesso_id', $historicoIds)->pluck('id');
+            DB::table('contribuicao_ticket_correcoes')->whereIn('contribuicao_id', $contribuicaoIds)->delete();
+            DB::table('contribuicoes')->whereIn('id', $contribuicaoIds)->delete();
+            DB::table('historico_acessos')->whereIn('id', $historicoIds)->delete();
+            DB::table('autorizacoes_acesso')->whereIn('pessoa_id', $pessoaIds)->delete();
+            DB::table('vinculos')->whereIn('pessoa_id', $pessoaIds)->delete();
+            DB::table('pessoas')->whereIn('id', $pessoaIds)->delete();
+        });
+
+        $this->command?->info('Simulação anterior do relatório final removida.');
     }
 
     private function acesso(Pessoa $pessoa, User $operador, string $tipo, Carbon $quando, int $n, ?Veiculo $veiculo, ?Imovel $imovel, ?string $placa): HistoricoAcesso

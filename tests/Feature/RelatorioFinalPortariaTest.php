@@ -210,7 +210,7 @@ class RelatorioFinalPortariaTest extends TestCase
         HistoricoAcesso::factory()->create(['pessoa_id' => $morador->id, 'veiculo_id' => $veiculo->id, 'tipo' => 'entrada', 'resultado' => 'liberado', 'operator_id' => $operador->id, 'occurred_at' => now()->subMinutes(30)]);
 
         Livewire::actingAs($operador)->test(RelatorioFinalPortaria::class)
-            ->assertViewHas('perfis', fn (array $p) => $p[$entradaTurista->id] === ['perfil' => 'Turista', 'local' => 'Praia'])
+            ->assertViewHas('perfis', fn (array $p) => $p[$entradaTurista->id] === ['perfil' => 'Turista', 'local' => 'Praia', 'turista' => true])
             ->assertViewHas('contribuintes', fn ($c) => $c->firstWhere('pessoa', 'Tiago Turista')['placas'] === ['TUR1A23']
                 && $c->firstWhere('pessoa', 'Vera Visitante')['perfil'] === 'Visitante')
             ->assertViewHas('porPerfil', fn ($p) => $p['Turista'] === 1 && $p['Visitante'] === 1 && $p['Morador'] === 1)

@@ -5,6 +5,7 @@ namespace Tests\Feature\Aj006;
 use App\Livewire\AccessValidation;
 use App\Livewire\Reports;
 use App\Models\AuditoriaEvento;
+use App\Models\AutorizacaoAcesso;
 use App\Models\Contribuicao;
 use App\Models\ContribuicaoTicketCorrecao;
 use App\Models\HistoricoAcesso;
@@ -54,7 +55,7 @@ class TicketContribuicaoTest extends TestCase
         $contribuicao = Contribuicao::query()->sole();
         $this->assertSame('000123', $contribuicao->ticket_numero);
         $this->assertSame('pago', $contribuicao->situacao_pagamento);
-        $this->assertSame('15.00', $contribuicao->valor);
+        $this->assertSame('25.00', $contribuicao->valor);
         $this->assertSame('dinheiro', $contribuicao->forma_pagamento);
         $this->assertSame($teste->get('protocol'), $contribuicao->historicoAcesso->protocol);
     }
@@ -100,6 +101,29 @@ class TicketContribuicaoTest extends TestCase
 
         $this->assertSame(2, Contribuicao::query()->where('ticket_numero', '0042')->count());
         $this->assertTrue(Contribuicao::query()->latest('registrada_em')->latest('id')->where('ticket_duplicado', true)->exists());
+    }
+
+    public function test_so_turista_contribui_e_o_valor_e_25_reais(): void
+    {
+        $morador = Pessoa::factory()->create(['nome' => 'Mara Moradora']);
+        Vinculo::factory()->for($morador, 'pessoa')->for(Imovel::factory()->create(), 'imovel')->create(['ended_at' => null, 'tipo' => 'morador']);
+
+        Livewire::actingAs($this->operador('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->call('selecionarPessoa', $morador->id)
+            ->assertSee('Sem contribuição: Morador')
+            ->assertDontSee('Número do ticket de acesso')
+            ->call('release')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, HistoricoAcesso::query()->count());
+        $this->assertSame(0, Contribuicao::query()->count());
+
+        Livewire::actingAs($this->operador('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->call('selecionarPessoa', $this->pessoa()->id)
+            ->assertSee('R$ 25,00')
+            ->assertSee('Número do ticket de acesso');
     }
 
     public function test_correcao_exige_permissao_justificativa_e_preserva_valor_anterior(): void
@@ -226,8 +250,12 @@ class TicketContribuicaoTest extends TestCase
 
     private function pessoa(): Pessoa
     {
+        // Só turista contribui (regra do PO de 11/11/2026): visita de 24 h sem imóvel.
         $pessoa = Pessoa::factory()->create(['nome' => 'Pessoa Atendida']);
-        Vinculo::factory()->for($pessoa, 'pessoa')->for(Imovel::factory()->create(), 'imovel')->create(['ended_at' => null]);
+        AutorizacaoAcesso::query()->create([
+            'pessoa_id' => $pessoa->id, 'tipo' => AutorizacaoAcesso::TIPO_TURISTA,
+            'inicio' => now()->subMinute(), 'fim' => now()->addHours(24), 'status' => 'ativa',
+        ]);
 
         return $pessoa;
     }

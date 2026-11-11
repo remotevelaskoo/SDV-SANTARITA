@@ -43,8 +43,8 @@ class ConfiguracaoSeeder extends Seeder
             'categoria' => 'contribuição e caixa',
             'tipo' => 'numero',
             'rotulo' => 'Valor da contribuição por acesso',
-            'descricao' => 'Valor apresentado na Validação de Entrada quando a pessoa contribui (AJ-006).',
-            'valor_padrao' => '15.00',
+            'descricao' => 'Valor apresentado na Validação de Entrada quando o turista contribui. Só turista contribui (regra do PO de 11/11/2026).',
+            'valor_padrao' => '25.00',
         ],
     ];
 
