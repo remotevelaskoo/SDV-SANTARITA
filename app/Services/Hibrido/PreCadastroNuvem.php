@@ -43,7 +43,7 @@ class PreCadastroNuvem
     public function sincronizar(): array
     {
         if (! config('pre_cadastro_nuvem.enabled')) {
-            throw new RuntimeException('Sincronização do pré-cadastro desativada.');
+            throw new SincronizacaoIndisponivel('Sincronização do pré-cadastro desativada.');
         }
 
         $this->url = rtrim((string) config('pre_cadastro_nuvem.url'), '/');
@@ -52,13 +52,13 @@ class PreCadastroNuvem
         if (! is_array($parsed) || ($parsed['scheme'] ?? '') !== 'https' || empty($parsed['host'])
             || (isset($parsed['user']) || isset($parsed['pass'])) || isset($parsed['query']) || isset($parsed['fragment'])
             || ! in_array($parsed['path'] ?? '', ['', '/'], true) || strlen($this->token) < 32) {
-            throw new RuntimeException('Configure um endereço HTTPS e a credencial exclusiva do nó.');
+            throw new SincronizacaoIndisponivel('Configure um endereço HTTPS e a credencial exclusiva do nó.');
         }
 
         $implantacao = Implantacao::query()->whereKey(config('pre_cadastro_nuvem.implantacao_id'))->where('status', 'ativa')->firstOrFail();
         $lock = Cache::lock('pre-cadastro-nuvem:'.$implantacao->id, 3600);
         if (! $lock->get()) {
-            throw new RuntimeException('Outra sincronização está em andamento.');
+            throw new SincronizacaoIndisponivel('Outra sincronização está em andamento.');
         }
 
         try {
@@ -110,11 +110,11 @@ class PreCadastroNuvem
 
         $response = $this->http()->get($this->url.'/api/sync', ['action' => 'pull']);
         if (! $response->successful()) {
-            throw new RuntimeException('Nuvem indisponível; os dados locais e as confirmações pendentes foram preservados.');
+            throw new SincronizacaoIndisponivel('Nuvem indisponível; os dados locais e as confirmações pendentes foram preservados.');
         }
         $records = $response->json('records');
         if (! is_array($records) || count($records) > 10) {
-            throw new RuntimeException('Resposta inválida do portal.');
+            throw new SincronizacaoIndisponivel('Resposta inválida do portal.');
         }
 
         foreach ($records as $item) {
@@ -275,7 +275,7 @@ class PreCadastroNuvem
         }
         $response = $this->http()->post($this->url.'/api/sync', ['action' => 'catalogo', 'itens' => $itens]);
         if (! $response->successful()) {
-            throw new RuntimeException('Catálogo de imóveis não publicado.');
+            throw new SincronizacaoIndisponivel('Nuvem indisponível ou portal desatualizado; os registros locais foram preservados.');
         }
         // Republica ao menos a cada hora, mesmo sem mudança local.
         Cache::put($chave, $hash, 3600);

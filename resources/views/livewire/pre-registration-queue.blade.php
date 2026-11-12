@@ -26,6 +26,12 @@
         <article class="sdv-one-status-card sdv-one-status-card--rejected"><span class="sdv-one-status-card__icon" aria-hidden="true"><x-icon name="x" /></span><span>Rejeitados</span><strong>{{ $statusCounts['rejeitado'] }}</strong><small>Registros preservados</small></article>
     </section>
 
+    @if ($resultadoBusca)
+        <x-ui.alert :variant="$resultadoBusca['variant']" :title="$resultadoBusca['title']" class="pre-registration-queue__busca">
+            {{ $resultadoBusca['message'] }}
+        </x-ui.alert>
+    @endif
+
     @if ($falhasPortal !== [])
         <section class="pre-registration-queue__portal-failures" aria-labelledby="portal-failures-title">
             <x-ui.alert variant="warning" :title="count($falhasPortal) === 1 ? '1 envio do portal precisa de conferência' : count($falhasPortal).' envios do portal precisam de conferência'">
@@ -63,6 +69,12 @@
                 <x-ui.button variant="secondary" href="{{ route('pre-registrations.share') }}">
                     Link e QR code para divulgar
                 </x-ui.button>
+                @if ($podeBuscarNuvem)
+                    <x-ui.button variant="primary" wire:click="buscarDaNuvem" wire:loading.attr="disabled" wire:target="buscarDaNuvem">
+                        <span wire:loading.remove wire:target="buscarDaNuvem">Buscar envios da nuvem</span>
+                        <span wire:loading wire:target="buscarDaNuvem">Buscando…</span>
+                    </x-ui.button>
+                @endif
             </div>
         </header>
 

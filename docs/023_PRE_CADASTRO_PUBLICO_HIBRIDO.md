@@ -242,3 +242,15 @@ O PO decidiu deixar o formulário aberto a todos e orientar visitantes, turistas
 - **Sistema local:** nova variável `SDV_PRE_CADASTRO_LINK_PUBLICO` (fora do Git). O botão **Abrir formulário público** da tela Pré-cadastros abre o portal; sem link válido configurado, o botão não aparece. O formulário Laravel de demonstração (`/pre-cadastro/convite-demonstracao`) continua existindo, mas deixou de ser o link da fila.
 - **Cartaz:** a tela **Link e QR code para divulgar** (`/pre-cadastros/divulgacao`, permissão `pre-registro.analisar`) mostra o QR code gerado no próprio servidor (biblioteca `bacon/bacon-qr-code`, sem serviço externo), as instruções e o botão **Imprimir cartaz**. Na impressão, o link em texto e a orientação técnica são ocultados.
 - Testes: `PreCadastroDivulgacaoTest` (5): botão abre o portal configurado; sem link não há botão quebrado; QR em SVG; link sem HTTPS ou sem convite válido não gera QR; página exige login e permissão. Suíte completa: 586 aprovados.
+
+## 14. Botão "Buscar envios da nuvem" — pedido do PO em 12/11/2026
+
+Na homologação local, o agendador não importou sozinho e o comando manual trouxe o envio. Para não depender do terminal, a tela **Pré-cadastros** ganhou o botão **Buscar envios da nuvem**.
+
+- Executa a mesma sincronização do agendador (`PreCadastroNuvem::sincronizar`): publica o catálogo, confirma pendências e importa até dez envios. Não aprova, não libera entrada e não envia à facial.
+- Aparece só com a sincronização ligada (`SDV_PRE_CADASTRO_NUVEM_ENABLED=true`) e para quem tem `pre-registro.editar`; a ação reconfere a permissão no servidor e é auditada (`buscou_pre_cadastros_nuvem`, só contagens).
+- Cliques repetidos: o botão fica desabilitado enquanto busca, há intervalo mínimo de 15 s por implantação e o mesmo bloqueio do agendador impede duas sincronizações ao mesmo tempo ("Outra sincronização está em andamento").
+- Resultado na tela: novos recebidos, pendências com nova tentativa automática e envios mandados para conferência; falha de rede mostra mensagem genérica e preserva os registros locais.
+- Testes: dois novos em `PreCadastroNuvemTest` (resultado e clique repetido; permissão, configuração desligada e nuvem fora do ar). Suíte completa: 588 aprovados.
+
+**Se a busca automática não rodar:** confirmar que `php artisan schedule:work` está ativo depois da atualização do código (reiniciar o processo), rodar `php artisan config:clear` se houver cache de configuração e conferir `php artisan schedule:list`. O agendamento usa `withoutOverlapping(60)`: se um processo for interrompido no meio de uma sincronização, o próximo ciclo automático pode esperar até 60 minutos; o botão e o comando manual continuam funcionando.

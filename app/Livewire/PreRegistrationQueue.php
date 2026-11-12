@@ -6,12 +6,14 @@ use App\Models\Implantacao;
 use App\Models\PreRegistration;
 use App\Services\AuditService;
 use App\Services\Hibrido\PreCadastroNuvem;
+use App\Services\Hibrido\SincronizacaoIndisponivel;
 use App\Services\PreCadastro\LinkPublico;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 /**
@@ -30,6 +32,9 @@ class PreRegistrationQueue extends Component
     ];
 
     public string $statusFilter = 'aguardando';
+
+    /** @var array{variant:string,title:string,message:string}|null */
+    public ?array $resultadoBusca = null;
 
     public string $search = '';
 
@@ -122,6 +127,51 @@ class PreRegistrationQueue extends Component
             ])->all();
     }
 
+    /**
+     * Busca na hora os envios do portal, quando a busca automática ainda não trouxe.
+     * Mesmo serviço do agendador: não aprova, não libera e não envia à facial.
+     */
+    public function buscarDaNuvem(): void
+    {
+        abort_unless((bool) Auth::user()?->hasPermission('pre-registro.editar'), 403);
+
+        $chave = 'pre-cadastro-nuvem:busca-manual:'.Implantacao::current()->id;
+        if (RateLimiter::tooManyAttempts($chave, 1)) {
+            $this->resultadoBusca = ['variant' => 'info', 'title' => 'Busca recente', 'message' => 'Aguarde '.RateLimiter::availableIn($chave).' segundos para buscar de novo.'];
+
+            return;
+        }
+        RateLimiter::hit($chave, 15);
+
+        try {
+            $totais = app(PreCadastroNuvem::class)->sincronizar();
+        } catch (SincronizacaoIndisponivel $erro) {
+            $this->resultadoBusca = ['variant' => 'warning', 'title' => 'Busca não concluída', 'message' => $erro->getMessage()];
+
+            return;
+        } catch (\Throwable) {
+            $this->resultadoBusca = ['variant' => 'warning', 'title' => 'Busca não concluída', 'message' => 'Confira a internet e a configuração. Os registros locais foram preservados.'];
+
+            return;
+        }
+
+        app(AuditService::class)->record(action: 'buscou_pre_cadastros_nuvem', module: 'pre-cadastro', entityType: 'pre_cadastro_nuvem',
+            classification: 'interna', metadata: $totais);
+
+        $partes = [$totais['importados'] === 1 ? '1 novo pré-cadastro recebido' : $totais['importados'].' novos pré-cadastros recebidos'];
+        if ($totais['falhas'] > 0) {
+            $partes[] = $totais['falhas'].' com pendência (nova tentativa automática)';
+        }
+        if ($totais['conferencia'] > 0) {
+            $partes[] = $totais['conferencia'].' enviado(s) para conferência';
+        }
+        $this->resultadoBusca = [
+            'variant' => $totais['falhas'] > 0 ? 'warning' : 'success',
+            'title' => $totais['importados'] > 0 ? 'Busca concluída' : 'Nenhum envio novo',
+            'message' => implode('; ', $partes).'.',
+        ];
+    }
+
     /** Devolve a solicitação à fila da nuvem na próxima sincronização. Não aprova nem libera nada. */
     public function tentarNovamente(string $falhaId): void
     {
@@ -150,6 +200,7 @@ class PreRegistrationQueue extends Component
             'falhasPortal' => $this->falhasDoPortal(),
             'podeReabrir' => (bool) Auth::user()?->hasPermission('pre-registro.editar'),
             'linkPublico' => app(LinkPublico::class)->url(),
+            'podeBuscarNuvem' => (bool) config('pre_cadastro_nuvem.enabled') && (bool) Auth::user()?->hasPermission('pre-registro.editar'),
         ])->layout('components.layouts.app', [
             'title' => 'Pré-cadastros',
             'heading' => 'Pré-cadastros',

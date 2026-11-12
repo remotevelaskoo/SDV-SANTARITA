@@ -289,4 +289,40 @@ class PreCadastroNuvemTest extends TestCase
         $this->assertSame(0, app(PreCadastroNuvem::class)->sincronizar()['falhas']);
         $this->assertDatabaseCount('pre_registrations', 1);
     }
+
+    public function test_botao_busca_na_hora_mostra_resultado_e_evita_cliques_repetidos(): void
+    {
+        $this->cloud();
+        $this->actingAs($this->operador('pre-registro.analisar', 'pre-registro.editar'));
+        $fila = Livewire::test(PreRegistrationQueue::class)
+            ->assertSee('Buscar envios da nuvem')
+            ->call('buscarDaNuvem')
+            ->assertSee('Busca concluída')
+            ->assertSee('1 novo pré-cadastro recebido');
+        $this->assertDatabaseCount('pre_registrations', 1);
+        $this->assertDatabaseCount('autorizacoes_acesso', 0);
+
+        $fila->call('buscarDaNuvem')->assertSee('Busca recente');
+        $this->assertDatabaseCount('pre_registrations', 1);
+    }
+
+    public function test_botao_respeita_permissao_configuracao_e_queda_da_nuvem(): void
+    {
+        $this->actingAs($this->operador('pre-registro.analisar'));
+        Livewire::test(PreRegistrationQueue::class)
+            ->assertDontSee('Buscar envios da nuvem')
+            ->call('buscarDaNuvem')
+            ->assertForbidden();
+
+        $this->actingAs($this->operador('pre-registro.analisar', 'pre-registro.editar'));
+        Http::swap(new Factory);
+        Http::fake(fn () => Http::response([], 503));
+        Livewire::test(PreRegistrationQueue::class)
+            ->call('buscarDaNuvem')
+            ->assertSee('Busca não concluída')
+            ->assertSee('Nuvem indisponível');
+
+        config(['pre_cadastro_nuvem.enabled' => false]);
+        Livewire::test(PreRegistrationQueue::class)->assertDontSee('Buscar envios da nuvem');
+    }
 }
