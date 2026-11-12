@@ -46,6 +46,14 @@ Route::get('/entrar', Login::class)->name('login');
 
 Route::post('/sair', function (Request $request, AuditService $audit, TurnosOperacionais $turnos) {
     if ($request->user() !== null) {
+        // Com o caixa aberto não se sai: o posto ficaria preso com dinheiro
+        // sem conferência (SDV-OPE-018 §14).
+        if ($turnos->caixaAberto($request->user()) !== null) {
+            return redirect()->back(fallback: route('cash-register'))
+                ->with('erro_titulo', 'Caixa aberto')
+                ->with('erro', 'Feche o caixa antes de sair. Ao sair, o seu turno no posto é encerrado e o posto fica livre para o próximo operador.');
+        }
+
         // Sair do sistema encerra o turno no posto (SDV-OPE-018 §2).
         rescue(fn () => $turnos->encerrar($request->user(), TurnosOperacionais::MOTIVO_SAIDA), report: false);
     }
@@ -99,7 +107,7 @@ Route::get('/catalogos', CatalogoManagement::class)->middleware(['auth', 'permis
 Route::get('/equipamentos', EquipamentoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('equipment');
 Route::get('/pontos-acesso', PontoAcessoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('access-points');
 Route::get('/cameras-placas', CameraPlacasManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('plate-cameras');
-Route::get('/postos', PostoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar'])->name('posts');
+Route::get('/postos', PostoManagement::class)->middleware(['auth', 'permissao:integracoes.gerenciar,postos.liberar'])->name('posts');
 Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::class)
     ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])
     ->name('equipment.image');

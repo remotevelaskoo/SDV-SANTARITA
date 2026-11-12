@@ -3,18 +3,18 @@
 namespace App\Integracoes\Aplicacao;
 
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
-use App\Models\OperadorPosto;
+use App\Models\OperadorTurno;
 use App\Models\PontoAcesso;
 use App\Models\Posto;
 use App\Models\PostoPontoAcesso;
 use App\Models\User;
-use App\Models\UsuarioImplantacao;
 use App\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Postos da portaria, pontos que cada um atende e operadores designados
- * (ADR-017). Nada é apagado: vínculos e designações são encerrados com data.
+ * Postos da portaria e pontos que cada um atende (ADR-017). Qualquer
+ * operador assume qualquer posto ativo (SDV-OPE-018 §14), então não há
+ * designação por posto. Nada é apagado: vínculos são encerrados com data.
  */
 class CadastroPostos
 {
@@ -30,9 +30,7 @@ class CadastroPostos
             throw new RegraIntegracaoViolada('posto_duplicado', 'Já existe um posto com este código nesta implantação.');
         }
 
-        if (! in_array($tipo, [Posto::TIPO_PRINCIPAL, Posto::TIPO_VEICULOS, Posto::TIPO_PEDESTRES], true)) {
-            throw new RegraIntegracaoViolada('posto_tipo_invalido', 'Tipo de posto inválido.');
-        }
+        $this->validarTipo($tipo);
 
         $posto = Posto::query()->create(['codigo' => $codigo, 'nome' => trim($nome), 'tipo' => $tipo, 'status' => 'ativo', 'created_by' => $ator?->id]);
         $this->auditar('posto_cadastrado', $posto->id, ['codigo' => $codigo, 'nome' => $posto->nome, 'tipo' => $tipo]);
@@ -64,30 +62,39 @@ class CadastroPostos
         }
     }
 
-    public function designarOperador(Posto $posto, User $operador, ?User $ator = null): OperadorPosto
+    /** Edita nome e tipo; o código fica, pois identifica o posto na auditoria. */
+    public function editarPosto(Posto $posto, string $nome, string $tipo, ?User $ator = null): Posto
     {
-        if (! UsuarioImplantacao::query()->where('user_id', $operador->id)->where('status', 'ativa')->exists()) {
-            throw new RegraIntegracaoViolada('operador_fora_da_implantacao', 'Este usuário não atua nesta implantação.');
+        $nome = trim($nome);
+        if (mb_strlen($nome) < 3) {
+            throw new RegraIntegracaoViolada('posto_invalido', 'Informe o nome do posto (mínimo de 3 letras).');
         }
-        if (OperadorPosto::query()->where('user_id', $operador->id)->where('posto_id', $posto->id)->whereNull('ended_at')->exists()) {
-            throw new RegraIntegracaoViolada('operador_ja_designado', 'Este operador já está designado para o posto.');
-        }
+        $this->validarTipo($tipo);
 
-        $designacao = OperadorPosto::query()->create([
-            'user_id' => $operador->id, 'posto_id' => $posto->id, 'started_at' => now(), 'created_by' => $ator?->id,
-        ]);
-        $this->auditar('operador_designado_ao_posto', $posto->id, ['user_id' => $operador->id, 'operador' => $operador->name]);
+        $antes = ['nome' => $posto->nome, 'tipo' => $posto->tipo];
+        $posto->forceFill(['nome' => $nome, 'tipo' => $tipo])->save();
+        $this->auditar('posto_editado', $posto->id, ['antes' => $antes, 'depois' => ['nome' => $nome, 'tipo' => $tipo]]);
 
-        return $designacao;
+        return $posto;
     }
 
-    public function encerrarDesignacao(Posto $posto, User $operador, ?User $ator = null): void
+    /** Desativa ou reativa. Posto ocupado não é desativado: o operador precisa encerrar o turno antes. */
+    public function alterarStatus(Posto $posto, bool $ativo, ?User $ator = null): Posto
     {
-        $encerradas = OperadorPosto::query()
-            ->where('user_id', $operador->id)->where('posto_id', $posto->id)->whereNull('ended_at')
-            ->update(['ended_at' => now()]);
-        if ($encerradas > 0) {
-            $this->auditar('operador_removido_do_posto', $posto->id, ['user_id' => $operador->id, 'operador' => $operador->name]);
+        if (! $ativo && OperadorTurno::query()->where('posto_id', $posto->id)->whereNull('encerrado_em')->exists()) {
+            throw new RegraIntegracaoViolada('posto_ocupado', 'O posto está ocupado. Ele só pode ser desativado depois que o operador encerrar o turno ou o posto for liberado.');
+        }
+
+        $posto->forceFill(['status' => $ativo ? 'ativo' : 'inativo'])->save();
+        $this->auditar($ativo ? 'posto_reativado' : 'posto_desativado', $posto->id, ['codigo' => $posto->codigo, 'nome' => $posto->nome]);
+
+        return $posto;
+    }
+
+    private function validarTipo(string $tipo): void
+    {
+        if (! in_array($tipo, [Posto::TIPO_PRINCIPAL, Posto::TIPO_VEICULOS, Posto::TIPO_PEDESTRES], true)) {
+            throw new RegraIntegracaoViolada('posto_tipo_invalido', 'Tipo de posto inválido.');
         }
     }
 

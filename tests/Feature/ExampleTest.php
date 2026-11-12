@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Exceptions\InvalidTemporalRangeException;
+use App\Integracoes\Aplicacao\CadastroPostos;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Livewire\AccessHistory;
 use App\Livewire\AccessValidation;
 use App\Livewire\ActiveSessions;
@@ -395,8 +397,11 @@ class ExampleTest extends TestCase
         $turno = CaixaTurno::factory()->create([
             'status' => 'aberto',
             'terminal' => 'Caixa 01 — Guarita',
+            'operator_id' => $operator->id,
             'opening_balance' => 200,
         ]);
+        // O caixa de outra guarita não aparece no Modo Portaria deste operador.
+        CaixaTurno::factory()->create(['status' => 'aberto', 'terminal' => 'Guarita de outro operador', 'operator_id' => User::factory()->create()->id]);
 
         $response = $this->actingAs($operator)->get('/portaria');
 
@@ -405,9 +410,10 @@ class ExampleTest extends TestCase
             ->assertSee('Olá, Beatriz Cardoso')
             ->assertSee('Caixa 01 — Guarita')
             ->assertSee('Aberto')
-            ->assertSee('R$ 200,00');
+            ->assertSee('R$ 200,00')
+            ->assertDontSee('Guarita de outro operador');
 
-        $this->assertSame($turno->id, CaixaTurno::query()->where('status', 'aberto')->first()->id);
+        $this->assertSame($turno->id, CaixaTurno::query()->where('status', 'aberto')->where('operator_id', $operator->id)->first()->id);
     }
 
     public function test_the_portaria_shows_no_open_cash_register_when_none_is_open(): void
@@ -1829,9 +1835,10 @@ class ExampleTest extends TestCase
     public function test_the_cash_register_renders_the_p14_open_state(): void
     {
         $this->withoutVite();
-        $this->actingAs($this->operatorWithPermissions('caixa.proprio.gerenciar'));
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $this->actingAs($operador);
 
-        $turno = CaixaTurno::factory()->create(['status' => 'aberto']);
+        $turno = CaixaTurno::factory()->create(['status' => 'aberto', 'operator_id' => $operador->id]);
         CaixaMovimentacao::factory()->for($turno, 'caixaTurno')->create([
             'description' => 'Contribuição — visitante Camila Andrade',
         ]);
@@ -1870,9 +1877,13 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_blocks_movement_when_closed_and_reopens(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+        // Cada posto tem o seu caixa (SDV-OPE-018 §14): reabrir exige o posto do turno.
+        $operador = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $posto = app(CadastroPostos::class)->criarPosto('GUARITA-TESTE', 'Guarita de Teste');
+        app(TurnosOperacionais::class)->assumir($operador, $posto->id);
+        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00, 'operator_id' => $operador->id]);
 
-        Livewire::test(CashRegister::class)
+        Livewire::actingAs($operador)->test(CashRegister::class)
             ->set('informedAmount', '50,00')
             ->call('closeRegister')
             ->assertSet('status', 'fechado')
@@ -1885,7 +1896,7 @@ class ExampleTest extends TestCase
             ->assertSet('status', 'aberto');
 
         $this->assertDatabaseCount('caixa_turnos', 2);
-        $this->assertDatabaseHas('caixa_turnos', ['status' => 'aberto', 'opening_balance' => 200.00]);
+        $this->assertDatabaseHas('caixa_turnos', ['status' => 'aberto', 'opening_balance' => 200.00, 'posto_id' => $posto->id, 'terminal' => 'Guarita de Teste']);
     }
 
     public function test_the_cash_register_closing_computes_the_difference(): void

@@ -1991,6 +1991,11 @@ body.has-drawer-open { overflow: hidden; }
 .liberacao-manual__resultado { display: grid; gap: 0.75rem; padding: 0 1rem 1rem; }
 .liberacao-manual__excepcional { margin: 0 1rem 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid var(--red-300, #fda29b); border-radius: 0.5rem; background: var(--red-50, #fef3f2); }
 .posto-selecao { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.postos-gestao__topo { justify-content: flex-end; padding: 0; }
+.postos-gestao__inativo { opacity: 0.65; }
+.postos-gestao__pontos { margin: 0 1rem 1rem; padding-top: 0.75rem; border-top: 1px solid var(--neutral-200); }
+.postos-gestao__pontos > summary { cursor: pointer; color: var(--navy-900); font-size: 0.78rem; font-weight: 700; padding-bottom: 0.6rem; }
+.postos-gestao__pontos .equipamento-management-historico, .postos-gestao__pontos .equipamento-management-acoes { padding-left: 0; padding-right: 0; }
 .posto-ativo { text-decoration: none; }
 .captura-documento { display: grid; gap: 0.75rem; margin-bottom: 1rem; padding: 0.85rem; border: 1px dashed var(--neutral-300); border-radius: 0.5rem; }
 .captura-documento header { display: grid; gap: 0.2rem; }

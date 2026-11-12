@@ -50,6 +50,7 @@ class UsuarioDemoSeeder extends Seeder
         'integracoes.gerenciar' => ['modulo' => 'integracoes', 'descricao' => 'Gerenciar integrações externas'],
         'acessos.liberar-reles-do-posto' => ['modulo' => 'acessos', 'descricao' => 'Liberar entrada ou saída manualmente pelos relés do posto ativo'],
         'acessos.liberar-outros-reles' => ['modulo' => 'acessos', 'descricao' => 'Liberar manualmente relés de outros pontos da implantação, com confirmação destacada'],
+        'postos.liberar' => ['modulo' => 'acessos', 'descricao' => 'Liberar um posto preso por outro operador, com motivo; o caixa vai para conferência'],
         'acessos.liberar-excepcionalmente' => ['modulo' => 'acessos', 'descricao' => 'Liberação excepcional por checkbox, sem autorização regular confirmada, com auditoria reforçada'],
         'equipamentos.liberar-acesso' => ['modulo' => 'integracoes', 'descricao' => 'Liberar acesso remotamente pelo equipamento (teste do relé em homologação)'],
         'auditoria.consultar' => ['modulo' => 'auditoria', 'descricao' => 'Consultar logs e detalhes da auditoria'],
@@ -111,7 +112,7 @@ class UsuarioDemoSeeder extends Seeder
         $grants = [
             'Porteiro/Caixa' => self::PORTEIRO_CAIXA,
             'Direção' => ['dashboard.visualizar'],
-            'Gestor' => [...self::PORTEIRO_CAIXA, 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket'],
+            'Gestor' => [...self::PORTEIRO_CAIXA, 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket', 'postos.liberar'],
             'Auditor' => self::AUDITOR,
             'Administrador' => array_values(array_diff(array_keys(self::PERMISSOES), ['dashboard.visualizar'])),
         ];

@@ -88,16 +88,13 @@ class LiberacaoManualTest extends TestCase
         return $usuario;
     }
 
-    /** Cria o posto, vincula os pontos dos terminais e designa o operador. */
-    private function posto(string $tipo, array $terminais, User ...$operadores): Posto
+    /** Cria o posto e vincula os pontos dos terminais (qualquer operador assume qualquer posto). */
+    private function posto(string $tipo, array $terminais): Posto
     {
         $cadastro = app(CadastroPostos::class);
         $posto = $cadastro->criarPosto('P-'.Str::upper(Str::random(6)), 'Guarita '.$tipo, null, $tipo);
         foreach ($terminais as $terminal) {
             $cadastro->vincularPonto($posto, $terminal->pontoVigente());
-        }
-        foreach ($operadores as $operador) {
-            $cadastro->designarOperador($posto, $operador);
         }
 
         return $posto;
@@ -137,9 +134,9 @@ class LiberacaoManualTest extends TestCase
     public function test_seleciona_os_tres_postos_registra_troca_e_encerramento(): void
     {
         $operador = $this->operador();
-        $principal = $this->posto(Posto::TIPO_PRINCIPAL, [], $operador);
-        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [], $operador);
-        $pedestres = $this->posto(Posto::TIPO_PEDESTRES, [], $operador);
+        $principal = $this->posto(Posto::TIPO_PRINCIPAL, []);
+        $veiculos = $this->posto(Posto::TIPO_VEICULOS, []);
+        $pedestres = $this->posto(Posto::TIPO_PEDESTRES, []);
         $turnos = app(TurnosOperacionais::class);
         $this->actingAs($operador);
 
@@ -157,23 +154,33 @@ class LiberacaoManualTest extends TestCase
         $this->assertSame(TurnosOperacionais::MOTIVO_SAIDA, OperadorTurno::query()->where('posto_id', $pedestres->id)->value('motivo_encerramento'));
     }
 
-    public function test_operador_so_assume_posto_em_que_esta_designado_e_e_levado_a_escolher(): void
+    public function test_qualquer_operador_assume_posto_livre_e_posto_ocupado_e_recusado(): void
     {
-        $operador = $this->operador();
-        $meu = $this->posto(Posto::TIPO_VEICULOS, [], $operador);
-        $outro = $this->posto(Posto::TIPO_PEDESTRES, []);
+        $tatiane = $this->operador();
+        $outro = $this->operador();
+        $principal = $this->posto(Posto::TIPO_PRINCIPAL, []);
+        $pedestres = $this->posto(Posto::TIPO_PEDESTRES, []);
+        $turnos = app(TurnosOperacionais::class);
 
-        $this->assertRegraViolada('posto_nao_autorizado', fn () => app(TurnosOperacionais::class)->assumir($operador, $outro->id));
+        $turnos->assumir($tatiane, $principal->id);
+        $this->assertRegraViolada('posto_ocupado', fn () => $turnos->assumir($outro, $principal->id));
 
-        $this->actingAs($operador)->get('/portaria')->assertRedirect(route('posto.selecionar', ['voltar' => '/portaria']));
+        $this->actingAs($outro)->get('/portaria')->assertRedirect(route('posto.selecionar', ['voltar' => '/portaria']));
 
-        Livewire::actingAs($operador)->test(SelecaoPosto::class)
-            ->assertSee($meu->nome)
-            ->assertDontSee($outro->nome)
-            ->call('assumir', $meu->id)
+        Livewire::actingAs($outro)->test(SelecaoPosto::class)
+            ->assertSee($principal->nome)
+            ->assertSee('Ocupado por '.$tatiane->name)
+            ->assertSee($pedestres->nome)
+            ->call('assumir', $principal->id)
+            ->assertSee('precisa fechar o caixa e encerrar o turno')
+            ->call('assumir', $pedestres->id)
             ->assertRedirect('/portaria');
 
-        $this->actingAs($operador)->get('/portaria')->assertOk()->assertSee('Posto: '.$meu->nome);
+        $this->actingAs($outro)->get('/portaria')->assertOk()->assertSee('Posto: '.$pedestres->nome);
+
+        $turnos->encerrar($tatiane);
+        $turnos->assumir($outro, $principal->id);
+        $this->assertSame($principal->id, $turnos->turnoAtivo($outro)->posto_id, 'Posto liberado pode ser assumido por outro operador.');
     }
 
     // ---- Relés preferenciais e alcance -------------------------------------------
@@ -184,9 +191,9 @@ class LiberacaoManualTest extends TestCase
         $catraca = $this->terminalOperacional('Facial Entrada Pedestres', 'catraca');
         $operador = $this->operador(ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES);
         $comum = $this->operador();
-        $principal = $this->posto(Posto::TIPO_PRINCIPAL, [], $operador, $comum);
-        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela], $operador, $comum);
-        $pedestres = $this->posto(Posto::TIPO_PEDESTRES, [$catraca], $operador, $comum);
+        $principal = $this->posto(Posto::TIPO_PRINCIPAL, []);
+        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela]);
+        $pedestres = $this->posto(Posto::TIPO_PEDESTRES, [$catraca]);
         $servico = app(LiberacaoManual::class);
 
         $todos = $servico->equipamentosDisponiveis($comum, $principal, Direcao::Entrada);
@@ -208,11 +215,16 @@ class LiberacaoManualTest extends TestCase
         $catraca = $this->terminalOperacional('Facial Entrada Pedestres', 'catraca');
         $comum = $this->operador();
         $ampliado = $this->operador(ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES);
-        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela], $comum, $ampliado);
+        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela]);
         $this->assumir($comum, $veiculos);
-        $this->assumir($ampliado, $veiculos);
 
         $this->assertRegraViolada('fora_do_posto_sem_permissao', fn () => $this->liberar($comum, $catraca, ['confirmou_fora_do_posto' => true]));
+        $doPosto = $this->liberar($comum, $cancela);
+        $this->assertFalse($doPosto->fora_do_posto);
+
+        // Um posto, uma pessoa: o comum encerra o turno antes do ampliado assumir.
+        app(TurnosOperacionais::class)->encerrar($comum);
+        $this->assumir($ampliado, $veiculos);
         $this->assertRegraViolada('confirmacao_fora_do_posto', fn () => $this->liberar($ampliado, $catraca));
         $this->assertSame(0, $this->simulador()->totalAberturasFisicas($catraca->id));
 
@@ -223,9 +235,6 @@ class LiberacaoManualTest extends TestCase
         $this->assertNotNull($evento->operador_turno_id);
         $this->assertSame(1, $this->simulador()->totalAberturasFisicas($catraca->id));
         $this->assertTrue(AuditoriaEvento::query()->where('action', 'liberacao_manual_solicitada')->with('context')->get()->contains(fn ($a) => $a->context->metadata['fora_do_posto'] === true));
-
-        $doPosto = $this->liberar($comum, $cancela);
-        $this->assertFalse($doPosto->fora_do_posto);
     }
 
     public function test_tela_destaca_confirmacao_fora_do_posto(): void
@@ -233,7 +242,7 @@ class LiberacaoManualTest extends TestCase
         $cancela = $this->terminalOperacional('Facial Entrada Veículos', 'cancela');
         $catraca = $this->terminalOperacional('Facial Entrada Pedestres', 'catraca');
         $ampliado = $this->operador(ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES);
-        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela], $ampliado);
+        $veiculos = $this->posto(Posto::TIPO_VEICULOS, [$cancela]);
         $this->assumir($ampliado, $veiculos);
         $pessoa = $this->pessoaAutorizada();
 
@@ -260,7 +269,7 @@ class LiberacaoManualTest extends TestCase
 
         ImplantacaoContext::setCurrentForTesting(Implantacao::factory()->create());
         $intruso = $this->operador(ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES);
-        $this->assumir($intruso, $this->posto(Posto::TIPO_PRINCIPAL, [], $intruso));
+        $this->assumir($intruso, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         try {
             $this->liberar($intruso, $equipamento, ['confirmou_fora_do_posto' => true]);
@@ -276,7 +285,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         $evento = $this->liberar($operador, $equipamento, [
             'endereco_rede' => '10.66.66.66', 'porta_rede' => 9999, 'porta_rele' => 2,
@@ -300,11 +309,12 @@ class LiberacaoManualTest extends TestCase
         $semPermissao = $this->usuarioCom('validacao.registrar', ComandosAbertura::PERMISSAO_LIBERAR);
         UsuarioImplantacao::query()->create(['user_id' => $semPermissao->id, 'status' => 'ativa']);
         $operador = $this->operador();
-        $posto = $this->posto(Posto::TIPO_PRINCIPAL, [], $semPermissao, $operador);
+        $posto = $this->posto(Posto::TIPO_PRINCIPAL, []);
 
         $this->assertRegraViolada('sem_posto_ativo', fn () => $this->liberar($operador, $equipamento));
         $this->assumir($semPermissao, $posto);
         $this->assertRegraViolada('sem_permissao', fn () => $this->liberar($semPermissao, $equipamento));
+        app(TurnosOperacionais::class)->encerrar($semPermissao);
         $this->assumir($operador, $posto);
 
         $casos = [
@@ -333,7 +343,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL);
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
         $semVinculo = Pessoa::factory()->create();
 
         $this->assertRegraViolada('sem_vinculo_vigente', fn () => $this->liberar($operador, $equipamento, ['pessoa_id' => $semVinculo->id]));
@@ -359,7 +369,7 @@ class LiberacaoManualTest extends TestCase
         $cancela = $this->terminalOperacional('Facial Entrada Veículos', 'cancela');
         $catraca = $this->terminalOperacional('Facial Entrada Pedestres', 'catraca');
         $operador = $this->operador(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL, ComandosAbertura::PERMISSAO_LIBERAR_OUTROS_RELES);
-        $this->assumir($operador, $this->posto(Posto::TIPO_VEICULOS, [$cancela], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_VEICULOS, [$cancela]));
         $this->liberar($operador, $catraca, ['pessoa_id' => null, 'excepcional' => true, 'confirmou_fora_do_posto' => true]);
 
         Livewire::actingAs($operador)->test(AccessHistory::class)
@@ -372,7 +382,7 @@ class LiberacaoManualTest extends TestCase
         config(['integracoes.liberacao_excepcional_observacao_obrigatoria' => true]);
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL);
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         $this->assertRegraViolada('sem_observacao', fn () => $this->liberar($operador, $equipamento, ['pessoa_id' => null, 'excepcional' => true]));
     }
@@ -381,7 +391,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         $this->assertRegraViolada('sem_permissao_excepcional', fn () => $this->liberar($operador, $equipamento, ['pessoa_id' => null, 'excepcional' => true]));
 
@@ -396,7 +406,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador(ComandosAbertura::PERMISSAO_LIBERACAO_EXCEPCIONAL);
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         Livewire::actingAs($operador)->test(LiberacaoManualPortaria::class)
             ->set('excepcional', true)
@@ -415,7 +425,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
         $pessoa = $this->pessoaAutorizada();
         $chave = 'liberacao-manual:'.Str::uuid7();
 
@@ -433,7 +443,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
         $this->simulador()->definirCenario($equipamento->id, CenarioSimulador::Timeout);
 
         $evento = $this->liberar($operador, $equipamento);
@@ -446,7 +456,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
         $pessoa = $this->pessoaAutorizada();
         $this->simulador()->definirCenario($equipamento->id, CenarioSimulador::Aceito);
 
@@ -467,7 +477,7 @@ class LiberacaoManualTest extends TestCase
     {
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
         $equipamento->forceFill(['rele_homologado_em' => null])->save();
 
         Livewire::actingAs($operador)->test(LiberacaoManualPortaria::class)
@@ -479,18 +489,26 @@ class LiberacaoManualTest extends TestCase
         $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/portaria')->assertOk()->assertDontSee('Liberação manual');
     }
 
-    public function test_tela_de_postos_exige_permissao_e_designacao_e_auditada(): void
+    public function test_tela_de_postos_exige_permissao_e_posto_ocupado_nao_e_desativado(): void
     {
         $this->actingAs($this->usuarioCom('validacao.registrar'))->get('/postos')->assertRedirect(route('home'));
-        $this->actingAs($this->usuarioCom('integracoes.gerenciar'))->get('/postos')->assertOk()->assertSee('Postos e operadores');
+        $this->actingAs($this->usuarioCom('integracoes.gerenciar'))->get('/postos')->assertOk()->assertSee('Como funcionam os postos');
+        $this->actingAs($this->usuarioCom(TurnosOperacionais::PERMISSAO_LIBERAR))->get('/postos')->assertOk();
 
         $operador = $this->operador();
-        $posto = $this->posto(Posto::TIPO_VEICULOS, [], $operador);
+        $posto = $this->posto(Posto::TIPO_VEICULOS, []);
         $this->assumir($operador, $posto);
-        app(CadastroPostos::class)->encerrarDesignacao($posto, $operador);
+        $cadastro = app(CadastroPostos::class);
 
-        $this->assertNull(app(TurnosOperacionais::class)->turnoAtivo($operador), 'Designação encerrada encerra o turno.');
-        $this->assertTrue(AuditoriaEvento::query()->where('action', 'operador_removido_do_posto')->exists());
+        $this->assertRegraViolada('posto_ocupado', fn () => $cadastro->alterarStatus($posto, false));
+        app(TurnosOperacionais::class)->encerrar($operador);
+        $cadastro->alterarStatus($posto, false);
+        $this->assertSame('inativo', $posto->refresh()->status);
+
+        $cadastro->editarPosto($posto, 'Guarita Veículos', Posto::TIPO_PEDESTRES);
+        $this->assertSame(Posto::TIPO_PEDESTRES, $posto->refresh()->tipo);
+        $this->assertTrue(AuditoriaEvento::query()->where('action', 'posto_desativado')->exists());
+        $this->assertTrue(AuditoriaEvento::query()->where('action', 'posto_editado')->exists());
     }
 
     public function test_nenhum_segredo_em_log_auditoria_ou_evento(): void
@@ -498,7 +516,7 @@ class LiberacaoManualTest extends TestCase
         Log::spy();
         $equipamento = $this->terminalOperacional('Facial Entrada Principal');
         $operador = $this->operador();
-        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, [], $operador));
+        $this->assumir($operador, $this->posto(Posto::TIPO_PRINCIPAL, []));
 
         $this->liberar($operador, $equipamento);
 

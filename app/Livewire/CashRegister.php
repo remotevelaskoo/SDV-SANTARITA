@@ -2,10 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Configuracao;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -69,13 +71,35 @@ class CashRegister extends Component
 
         $openingBalance = (float) str_replace(',', '.', $this->openingBalanceInput);
 
-        CaixaTurno::query()->create([
-            'terminal' => $this->terminal,
-            'operator_id' => Auth::id(),
-            'opened_at' => now(),
-            'opening_balance' => $openingBalance,
-            'status' => 'aberto',
-        ]);
+        // Cada posto tem o seu caixa (SDV-OPE-018 §14): abre no posto do turno.
+        $operador = Auth::user();
+        $turnos = app(TurnosOperacionais::class);
+        $posto = $operador ? $turnos->turnoAtivo($operador)?->posto : null;
+        if ($posto === null) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Escolha o posto', 'message' => 'Assuma o posto em que você está trabalhando para abrir o caixa dele.'];
+
+            return;
+        }
+        if ($turnos->caixaAberto($operador) !== null) {
+            $this->syncCurrentTurno();
+
+            return;
+        }
+
+        try {
+            CaixaTurno::query()->create([
+                'terminal' => $posto->nome,
+                'posto_id' => $posto->id,
+                'operator_id' => $operador->id,
+                'opened_at' => now(),
+                'opening_balance' => $openingBalance,
+                'status' => 'aberto',
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Caixa já aberto', 'message' => "O posto {$posto->nome} já tem um caixa aberto."];
+
+            return;
+        }
 
         $this->syncCurrentTurno();
         $this->feedback = [
@@ -208,7 +232,8 @@ class CashRegister extends Component
 
     private function syncCurrentTurno(): void
     {
-        $turno = CaixaTurno::query()->where('status', 'aberto')->latest('opened_at')->first();
+        // Só o caixa do próprio operador: o de outra guarita não é movimentado daqui.
+        $turno = CaixaTurno::query()->where('operator_id', Auth::id())->where('status', 'aberto')->latest('opened_at')->first();
 
         if ($turno) {
             $this->currentTurnoId = $turno->id;
@@ -259,7 +284,10 @@ class CashRegister extends Component
                 'status' => $sessao->closing_status,
             ])->values()->all();
 
+        $usuario = Auth::user();
+
         return view('livewire.cash-register', [
+            'postoAtivo' => $usuario ? app(TurnosOperacionais::class)->turnoAtivo($usuario)?->posto?->nome : null,
             'movements' => $movements,
             'closedSessions' => $closedSessions,
             'podeVerRelatorio' => Auth::user()?->hasPermission('validacao.registrar') ?? false,
