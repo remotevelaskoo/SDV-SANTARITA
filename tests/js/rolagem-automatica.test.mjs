@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    acaoParaAlvo,
     destinoDaRolagem,
     escolherAlvo,
     jaVisivel,
@@ -9,11 +10,12 @@ import {
 } from '../../resources/js/rolagem-automatica.js';
 
 /** Elemento falso: só o que a decisão usa (matches, closest, contains). */
-function el(nome, { seletores = [], dentroDe = null, ignorado = false } = {}) {
+function el(nome, { seletores = [], dentroDe = null, ignorado = false, contem = [] } = {}) {
     const elemento = {
         nome,
         pai: dentroDe,
         matches: (seletor) => seletores.some((s) => seletor.includes(s)),
+        querySelector: (seletor) => (contem.some((s) => seletor.includes(s)) ? {} : null),
         closest: (seletor) => (ignorado && seletor.includes('dialog') ? {} : null),
         contains(outro) {
             for (let atual = outro; atual; atual = atual.pai) {
@@ -39,11 +41,25 @@ test('etapa marcada que mudou (conferência → foto) é o alvo', () => {
     assert.deepEqual(marcadosNovos(new Set(['cadastro-rapido-foto']), [['cadastro-rapido-foto', foto]]), [], 'mesma etapa não rola de novo');
 });
 
-test('bloco novo vence o aviso; aviso sozinho também é alvo', () => {
+test('aviso novo vence bloco que mudou (ação terminou); sem aviso, o bloco é o alvo', () => {
     const aviso = el('toast', { seletores: ['.ui-toast'] });
     const formulario = el('form', { seletores: ['form'] });
-    assert.equal(escolherAlvo({ adicionados: [aviso, formulario] }).el, formulario);
-    assert.deepEqual(escolherAlvo({ adicionados: [aviso] }), { el: aviso, tipo: 'aviso' });
+    assert.deepEqual(escolherAlvo({ adicionados: [formulario, aviso] }), { el: aviso, tipo: 'aviso' });
+    assert.deepEqual(escolherAlvo({ adicionados: [formulario] }), { el: formulario, tipo: 'bloco' });
+});
+
+test('seção que só embrulha o aviso conta como aviso; formulário com alerta dentro continua bloco', () => {
+    const resultado = el('section-resultado', { seletores: ['section'], contem: ['.ui-toast'] });
+    assert.deepEqual(escolherAlvo({ adicionados: [resultado] }), { el: resultado, tipo: 'aviso' });
+    const cadastro = el('section-cadastro', { seletores: ['section'], contem: ['.ui-alert', 'input'] });
+    assert.deepEqual(escolherAlvo({ adicionados: [cadastro] }), { el: cadastro, tipo: 'bloco' });
+});
+
+test('aviso fora da tela flutua e nunca leva a tela para cima; à vista, nada acontece', () => {
+    assert.equal(acaoParaAlvo('aviso', false), 'flutuar');
+    assert.equal(acaoParaAlvo('aviso', true), 'nada');
+    assert.equal(acaoParaAlvo('marcado', false), 'rolar');
+    assert.equal(acaoParaAlvo('erro', true), 'nada');
 });
 
 test('só conta o elemento de nível mais alto do que entrou', () => {

@@ -3196,3 +3196,20 @@ body.has-drawer-open { overflow: hidden; }
 .relatorio-final__perfis ul { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .relatorio-final__perfis li { padding: 0.25rem 0.6rem; border-radius: 999px; background: var(--neutral-100, #f1f5f9); color: var(--navy-900); font-size: 0.66rem; }
 @media print { .relatorio-final__perfis { box-shadow: none; } }
+
+/* Aviso que aparece onde o operador está, sem levar a tela para cima
+   (resources/js/rolagem-automatica.js). Volta ao lugar depois de alguns segundos. */
+.aviso-flutuante {
+    position: fixed !important;
+    z-index: 80;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    max-width: 36rem;
+    margin: 0 auto !important;
+    box-shadow: var(--shadow-3, 0 18px 45px rgb(8 23 48 / 0.22));
+    animation: aviso-flutuante-entra 220ms ease-out;
+}
+@keyframes aviso-flutuante-entra { from { opacity: 0; transform: translateY(0.75rem); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .aviso-flutuante { animation: none; } }

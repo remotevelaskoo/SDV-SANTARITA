@@ -7,7 +7,10 @@
  * 2. bloco marcado com `data-rolar` que apareceu ou mudou de valor (ex.: a
  *    etapa "foto" do cadastro rápido) → rola até ele e foca o primeiro campo;
  * 3. bloco novo (formulário, seção, cartão) → rola até ele e foca o primeiro campo;
- * 4. só um aviso novo (sucesso/erro) → rola até ele se estiver fora da tela.
+ * 4. só um aviso novo (sucesso/erro) fora da tela → NÃO rola: o próprio aviso
+ *    aparece flutuando na parte de baixo da tela, onde o operador está, e
+ *    volta ao seu lugar depois de alguns segundos (pedido do PO: o aviso
+ *    aparece na seção em que estou, sem me levar para cima).
  *
  * Nada rola se o alvo já estiver à vista, se a atualização não veio de uma
  * ação do usuário (atualização periódica) ou dentro de `data-sem-rolagem`.
@@ -37,6 +40,19 @@ export function nivelMaisAlto(elementos) {
 }
 
 /**
+ * Aviso: o próprio aviso, ou um bloco que só embrulha avisos (ex.: a seção
+ * "Resultado do atendimento" com o aviso e o protocolo), sem campos para
+ * preencher. Um formulário novo com um alerta dentro continua sendo bloco.
+ */
+export function ehAviso(el) {
+    if (el.matches?.(SELETOR_AVISO)) {
+        return true;
+    }
+
+    return Boolean(el.querySelector?.(SELETOR_AVISO)) && !el.querySelector?.(SELETOR_CAMPO);
+}
+
+/**
  * Decide o alvo da rolagem.
  *
  * @returns {{ el: object, tipo: 'erro'|'marcado'|'bloco'|'aviso' } | null}
@@ -54,15 +70,17 @@ export function escolherAlvo({ errosNovos = [], marcados = [], adicionados = [] 
         return { el: marcado, tipo: 'marcado' };
     }
 
+    // Aviso novo = a ação terminou (salvou, confirmou): o operador fica onde
+    // está e o aviso vem até ele, mesmo que outros blocos tenham mudado.
     const topo = nivelMaisAlto(adicionados.filter(valido));
-    const bloco = topo.find((el) => el.matches?.(SELETOR_BLOCO) && !el.matches?.(SELETOR_AVISO));
-    if (bloco) {
-        return { el: bloco, tipo: 'bloco' };
-    }
-
-    const aviso = topo.find((el) => el.matches?.(SELETOR_AVISO));
+    const aviso = topo.find(ehAviso);
     if (aviso) {
         return { el: aviso, tipo: 'aviso' };
+    }
+
+    const bloco = topo.find((el) => el.matches?.(SELETOR_BLOCO));
+    if (bloco) {
+        return { el: bloco, tipo: 'bloco' };
     }
 
     return null;
@@ -71,6 +89,23 @@ export function escolherAlvo({ errosNovos = [], marcados = [], adicionados = [] 
 /** Já está à vista: o topo aparece entre o cabeçalho fixo e 3/4 da tela. */
 export function jaVisivel(topo, alturaTela, alturaCabecalho) {
     return topo >= alturaCabecalho && topo <= alturaTela * 0.75;
+}
+
+/** Tempo, em ms, que o aviso fica flutuando antes de voltar ao lugar. */
+export const AVISO_FLUTUANTE_MS = 8000;
+
+/**
+ * O que fazer com o alvo: aviso nunca leva a tela embora (flutua se estiver
+ * fora da vista); os demais rolam se não estiverem à vista.
+ *
+ * @returns {'nada'|'rolar'|'flutuar'}
+ */
+export function acaoParaAlvo(tipo, visivelNaTela) {
+    if (visivelNaTela) {
+        return 'nada';
+    }
+
+    return tipo === 'aviso' ? 'flutuar' : 'rolar';
 }
 
 /** Posição final da janela para o alvo ficar logo abaixo do cabeçalho fixo. */
@@ -110,12 +145,36 @@ function alturaCabecalho() {
     return estilo.position === 'sticky' || estilo.position === 'fixed' ? cabecalho.getBoundingClientRect().height : 0;
 }
 
+/**
+ * Mostra o próprio aviso (com os botões funcionando) flutuando embaixo da
+ * tela. Some do flutuante depois de alguns segundos, ao fechar com Esc ou
+ * ao clicar fora; com o ponteiro em cima, espera.
+ */
+function flutuar(el) {
+    el.classList.add('aviso-flutuante');
+    let prazo;
+    const voltar = () => {
+        clearTimeout(prazo);
+        el.classList.remove('aviso-flutuante');
+        el.removeEventListener('pointerenter', pausar);
+        el.removeEventListener('pointerleave', agendar);
+        document.removeEventListener('keydown', aoTeclar, true);
+        document.removeEventListener('pointerdown', aoClicarFora, true);
+    };
+    const agendar = () => { clearTimeout(prazo); prazo = setTimeout(voltar, AVISO_FLUTUANTE_MS); };
+    const pausar = () => clearTimeout(prazo);
+    const aoTeclar = (evento) => { if (evento.key === 'Escape') voltar(); };
+    const aoClicarFora = (evento) => { if (!el.contains(evento.target)) voltar(); };
+    el.addEventListener('pointerenter', pausar);
+    el.addEventListener('pointerleave', agendar);
+    document.addEventListener('keydown', aoTeclar, true);
+    document.addEventListener('pointerdown', aoClicarFora, true);
+    agendar();
+}
+
 function rolarAte(el) {
     const cabecalho = alturaCabecalho();
     const { top } = el.getBoundingClientRect();
-    if (jaVisivel(top, window.innerHeight, cabecalho)) {
-        return;
-    }
     const suave = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({ top: destinoDaRolagem(top, window.scrollY, cabecalho), behavior: suave ? 'smooth' : 'auto' });
 }
@@ -173,7 +232,13 @@ export function iniciarRolagemAutomatica(livewire = window.Livewire) {
         // Uma ação, uma rolagem: atualizações periódicas seguintes não mexem na tela.
         ultimaAcao = 0;
         // No erro, o campo inteiro (com o rótulo) fica à vista, não só a mensagem.
-        rolarAte(alvo.tipo === 'erro' ? (alvo.el.closest('.ui-field, .form-field, label') ?? alvo.el) : alvo.el);
+        const destino = alvo.tipo === 'erro' ? (alvo.el.closest('.ui-field, .form-field, label') ?? alvo.el) : alvo.el;
+        const acao = acaoParaAlvo(alvo.tipo, jaVisivel(destino.getBoundingClientRect().top, window.innerHeight, alturaCabecalho()));
+        if (acao === 'rolar') {
+            rolarAte(destino);
+        } else if (acao === 'flutuar') {
+            flutuar(destino);
+        }
         if (alvo.tipo !== 'aviso') {
             focar(alvo);
         }
