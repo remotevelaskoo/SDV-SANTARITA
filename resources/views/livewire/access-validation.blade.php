@@ -91,13 +91,13 @@
                 </x-ui.alert>
 
                 @if ($quickEtapa === 'documento' && $this->podeCapturarDocumento())
-                    <div class="quick-registration__etapa">
+                    <div class="quick-registration__etapa" data-rolar="cadastro-rapido-documento">
                         @include('livewire.partials.captura-documento')
                     </div>
                 @endif
 
                 @unless ($quickEtapa === 'documento' && $this->podeCapturarDocumento())
-                <form wire:submit="saveQuickRegistration">
+                <form wire:submit="saveQuickRegistration" data-rolar="cadastro-rapido-{{ $quickEtapa }}">
                     @if ($quickEtapa !== 'foto')
                         @if (($analiseDocumento['status'] ?? null) === 'sugestao')
                             <x-ui.alert variant="info" title="Dados sugeridos pela leitura">

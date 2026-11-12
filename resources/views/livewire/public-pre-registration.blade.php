@@ -60,7 +60,7 @@
             </section>
         @else
             <section class="pre-registration-flow" aria-labelledby="pre-registration-step-title">
-                <header class="pre-registration-flow__header">
+                <header class="pre-registration-flow__header" data-rolar="pre-cadastro-etapa-{{ $step }}">
                     <div>
                         <a class="pre-registration-mobile-brand" href="{{ route('login') }}"><span aria-hidden="true">SDV</span> SDV Access</a>
                         <small>Etapa {{ $step }} de 6</small>

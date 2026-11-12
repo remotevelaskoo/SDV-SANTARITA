@@ -3,7 +3,7 @@
     x-data="camerasDoPosto({ implantacaoId: @js($cameras['implantacao']), postoId: @js($cameras['posto']), modo: 'captura' })"
     x-on:cadastro-rapido-encerrado.window="encerrar()">
     {{-- Duas entradas claras logo na abertura (docs/021 §13). --}}
-    <div class="captura-documento__escolha" role="group" aria-label="Como cadastrar" x-init="$nextTick(() => $el.scrollIntoView({ block: 'center' }))">
+    <div class="captura-documento__escolha" role="group" aria-label="Como cadastrar">
         <button type="button" class="ui-button ui-button--primary ui-button--lg" x-on:click="fotografarDocumento()">
             <span class="ui-button__content">Fotografar documento</span>
         </button>
