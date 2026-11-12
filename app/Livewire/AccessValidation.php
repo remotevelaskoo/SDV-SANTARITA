@@ -347,6 +347,10 @@ class AccessValidation extends Component
 
     public function deny(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validate([
             'denialReason' => ['required', Rule::in($this->denialReasonCodigos())],
             'denialDetails' => ['nullable', 'string', 'max:200'],
@@ -364,6 +368,10 @@ class AccessValidation extends Component
 
     public function savePending(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validateCommonFields();
 
         $historico = $this->recordHistoricoComContribuicao('pendente');
@@ -378,6 +386,10 @@ class AccessValidation extends Component
 
     public function release(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validateCommonFields();
 
         if ($this->quickPersonRegistered) {
@@ -675,6 +687,22 @@ class AccessValidation extends Component
         ];
     }
 
+    /**
+     * Um atendimento registrado encerra esta tela: novo clique não grava outro
+     * atendimento nem outra contribuição (o mesmo ticket apareceria como
+     * "já registrado" no próprio atendimento). Segue em "Iniciar nova validação".
+     */
+    private function atendimentoJaRegistrado(): bool
+    {
+        if ($this->protocol === null) {
+            return false;
+        }
+
+        $this->addError('atendimento', 'Este atendimento já foi registrado ('.$this->protocol.'). Use "Iniciar nova validação" para atender outra pessoa.');
+
+        return true;
+    }
+
     public function updatedTicketNumero(): void
     {
         $this->ticketDuplicadoConfirmado = false;
@@ -686,7 +714,11 @@ class AccessValidation extends Component
     public function ticketDuplicado(): ?array
     {
         $ticket = ContribuicoesAtendimento::normalizarTicket($this->ticketNumero);
-        $existente = $ticket !== null ? Contribuicao::ticketJaUsado($ticket) : null;
+        // A contribuição deste mesmo atendimento, já registrado, não é "outro atendimento".
+        $propria = $this->protocol !== null
+            ? Contribuicao::query()->whereHas('historicoAcesso', fn ($q) => $q->where('protocol', $this->protocol))->value('id')
+            : null;
+        $existente = $ticket !== null ? Contribuicao::ticketJaUsado($ticket, $propria) : null;
 
         return $existente ? [
             'quando' => $existente->registrada_em->format('d/m/Y H:i'),

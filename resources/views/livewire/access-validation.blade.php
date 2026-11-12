@@ -731,6 +731,18 @@
             <x-ui.badge variant="info">Protótipo P06 + P07</x-ui.badge>
         </header>
 
+        @if ($protocol)
+            <x-ui.alert :variant="$feedback['variant'] ?? 'info'" :title="'Atendimento registrado: '.$protocol">
+                {{ $feedback['title'] ?? '' }}. {{ $feedback['message'] ?? '' }}
+            </x-ui.alert>
+            @error('atendimento')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
+            <div class="validation-decision__actions">
+                <div>
+                    <x-ui.button variant="primary" wire:click="startNewValidation">Iniciar nova validação</x-ui.button>
+                    <small>Limpa a tela para atender a próxima pessoa.</small>
+                </div>
+            </div>
+        @else
         <div class="validation-decision__actions">
             <div class="validation-decision__modal">
                 <x-ui.modal
@@ -778,6 +790,7 @@
                 <small>Simula a autorização, sem acionar portão real.</small>
             </div>
         </div>
+        @endif
 
         <p><x-icon name="info" /> P06 + P07 em demonstração: cadastro rápido não autoriza entrada e nenhuma das ações desta página envia comandos para equipamentos físicos.</p>
     </section>

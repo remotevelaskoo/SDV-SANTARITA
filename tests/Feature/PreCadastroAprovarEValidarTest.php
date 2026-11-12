@@ -6,6 +6,8 @@ use App\Livewire\AccessValidation;
 use App\Livewire\PreRegistrationReview;
 use App\Models\AuditoriaEvento;
 use App\Models\AutorizacaoAcesso;
+use App\Models\Contribuicao;
+use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
 use App\Models\Implantacao;
 use App\Models\Pessoa;
@@ -273,5 +275,33 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->test(AccessValidation::class)
             ->assertSet('currentPessoaId', $pessoa->id)
             ->assertSee('Sem contribuição');
+    }
+
+    public function test_atendimento_registrado_nao_acusa_o_proprio_ticket_nem_grava_de_novo(): void
+    {
+        $registro = PreRegistration::factory()->tourist()->withStatus('aprovado')->create(['document' => '123.456.789-09']);
+
+        $tela = Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar'))
+            ->test(AccessValidation::class)
+            ->call('saveQuickRegistration')
+            ->set('contribution', 'yes')
+            ->set('ticketNumero', '7777777777')
+            ->call('release')
+            ->assertHasNoErrors();
+
+        $protocolo = $tela->get('protocol');
+        $this->assertNotNull($protocolo);
+        $this->assertNull($tela->instance()->ticketDuplicado());
+        $tela->assertDontSee('Ticket já registrado')->assertSee('Atendimento registrado: '.$protocolo);
+
+        // Clique repetido não grava outro atendimento nem outra contribuição.
+        $tela->call('release')->assertHasErrors(['atendimento']);
+        $this->assertSame(1, HistoricoAcesso::query()->count());
+        $this->assertSame(1, Contribuicao::query()->count());
+
+        // Próximo atendimento com o mesmo ticket: aí sim é duplicado.
+        $tela->call('startNewValidation')->set('ticketNumero', '7777777777');
+        $this->assertSame($protocolo, $tela->instance()->ticketDuplicado()['protocolo']);
     }
 }
