@@ -61,6 +61,7 @@ class CameraPlacasTest extends TestCase
         $pessoa = Pessoa::factory()->create();
 
         $tela = Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')->set('veioDeCarro', true)
             ->assertSee('(SIMULADOR)')
             ->call('selecionarPessoa', $pessoa->id)
             ->set('cameraPlacaId', $camera->id)
@@ -111,6 +112,7 @@ class CameraPlacasTest extends TestCase
         $operador = $this->usuarioCom('validacao.registrar');
 
         $html = Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')->set('veioDeCarro', true)
             ->set('cameraPlacaId', $camera->id)
             ->call('capturarPlaca')
             ->assertSet('capturaPlacaFalha', null)
@@ -133,6 +135,7 @@ class CameraPlacasTest extends TestCase
 
         Http::fake(['*' => Http::response('<html>login</html>', 200, ['Content-Type' => 'text/html'])]);
         Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')->set('veioDeCarro', true)
             ->set('cameraPlacaId', $camera->id)
             ->call('capturarPlaca')
             ->assertSet('capturaPlacaId', null)
@@ -142,6 +145,7 @@ class CameraPlacasTest extends TestCase
         Cache::flush();
         Http::fake(['*' => fn () => throw new ConnectionException('cURL error 7: falha')]);
         Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')->set('veioDeCarro', true)
             ->set('cameraPlacaId', $camera->id)
             ->call('capturarPlaca')
             ->assertSee('A câmera não respondeu.');
@@ -157,6 +161,7 @@ class CameraPlacasTest extends TestCase
         $pessoa = Pessoa::factory()->create();
 
         Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')->set('veioDeCarro', true)
             ->assertSee('Nenhuma câmera de placas neste posto')
             ->call('selecionarPessoa', $pessoa->id)
             ->set('placaInformada', 'AB12')

@@ -3213,3 +3213,44 @@ body.has-drawer-open { overflow: hidden; }
 }
 @keyframes aviso-flutuante-entra { from { opacity: 0; transform: translateY(0.75rem); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .aviso-flutuante { animation: none; } }
+
+/* Atendimento guiado da Validação (Dados → Foto → Placa → Pagamento → Concluir). */
+.sdv-one-validation .atendimento-passo .validation-section__header { grid-template-columns: minmax(0, 1fr) auto; }
+.atendimento-passos { padding: 0.75rem; border: 1px solid var(--neutral-200); border-radius: 1rem; background: var(--white); }
+.atendimento-passos ol { display: flex; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.atendimento-passos__item { flex: 1 1 0; min-width: 0; }
+.atendimento-passos__item > span, .atendimento-passos__item > button {
+    display: flex; align-items: center; gap: 0.45rem; width: 100%; padding: 0.45rem 0.55rem; border: 0; border-radius: 0.7rem;
+    background: var(--neutral-050); color: var(--neutral-600); font: inherit; font-size: 0.74rem; font-weight: 700; text-align: left;
+}
+.atendimento-passos__item > button { cursor: pointer; }
+.atendimento-passos__item > button:hover { background: #e8f1ff; }
+.atendimento-passos__numero { display: inline-grid; flex: none; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; background: var(--white); border: 1px solid var(--neutral-200); font-size: 0.7rem; }
+.atendimento-passos__numero .app-icon { width: 0.9rem; height: 0.9rem; }
+.atendimento-passos__item.is-atual > span { background: #e8f1ff; color: #0b4fb8; }
+.atendimento-passos__item.is-atual .atendimento-passos__numero { background: #126bff; border-color: #126bff; color: var(--white); }
+.atendimento-passos__item.is-feito > button { color: var(--success); }
+.atendimento-passos__item.is-feito .atendimento-passos__numero { border-color: #b9dfc2; color: var(--success); }
+@media (max-width: 40rem) {
+    .atendimento-passos__item:not(.is-atual) > span > span:last-child, .atendimento-passos__item:not(.is-atual) > button > span:last-child { display: none; }
+    .atendimento-passos__item:not(.is-atual) { flex: 0 0 auto; }
+}
+.atendimento-passo { display: grid; gap: 1rem; }
+.atendimento-navegacao {
+    position: sticky; z-index: 15; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    margin: 0 -0.25rem; padding: 0.75rem; border: 1px solid var(--neutral-200); border-radius: 1rem 1rem 0 0; background: rgb(255 255 255 / 0.96);
+    box-shadow: 0 -8px 24px rgb(23 35 58 / 0.08);
+}
+.atendimento-navegacao > .ui-button--primary { min-width: 12rem; }
+.atendimento-escolha { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; padding: 0.9rem; }
+.atendimento-escolha .ui-button { justify-content: center; min-height: 3.5rem; }
+.atendimento-resumo { display: grid; gap: 0; margin: 0; padding: 0.4rem 0.9rem; }
+.atendimento-resumo > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--neutral-200); }
+.atendimento-resumo > div:last-child { border-bottom: 0; }
+.atendimento-resumo dt { color: var(--neutral-600); font-size: 0.72rem; font-weight: 700; }
+.atendimento-resumo dd { margin: 0; font-weight: 700; }
+.quick-registration__acoes { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+.sdv-one-validation .atendimento-passo .foto-pessoa, .sdv-one-validation .atendimento-passo .validation-notes-field { margin: 0.9rem; }
+.atendimento-passos__item.is-pulado > span { opacity: 0.5; font-weight: 600; }
+.atendimento-passos__item.is-pulado .atendimento-passos__numero { border-style: dashed; }
+.atendimento-navegacao.is-final { position: static; border-radius: 1rem; box-shadow: none; }

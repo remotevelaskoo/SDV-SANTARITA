@@ -131,6 +131,7 @@ class CadastroRapidoFotoTest extends TestCase
             ->assertSet('ticketNumero', '000777')
             ->assertSet('placaInformada', 'ABC1D23')
             ->assertSet('notes', 'Observação do atendimento.')
+            ->set('passo', 'concluir')
             ->assertSee('Cadastro no SDV: Cadastro salvo');
 
         $pessoa = Pessoa::query()->sole();
@@ -242,7 +243,7 @@ class CadastroRapidoFotoTest extends TestCase
 
         $tela->call('usarCadastroExistente')
             ->assertSet('quickPessoaExistenteId', $existente->id)
-            ->call('irParaEtapa', 'foto')
+            ->set('passo', 'foto')
             ->assertSee('Substituir a foto atual do cadastro')
             ->set('fotoPessoa', $this->imagem(ImagensPessoaSinteticas::boa(), 'nova.jpg'))
             ->call('saveQuickRegistration')

@@ -532,16 +532,13 @@ class ExampleTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Validação de entrada')
-            ->assertSee('Identificação da pessoa')
+            ->assertSee('Quem está sendo atendido?')
             ->assertSee('Buscar pessoa')
             ->assertDontSee('Marcos Vinicius da Silva')
-            ->assertSee('Veículo e leitura da placa')
-            ->assertSee('Contribuição / taxa de acesso')
-            ->assertSee('Observações')
-            ->assertSee('Negar entrada')
-            ->assertSee('Salvar sem liberar')
-            ->assertSee('Validar e liberar')
-            ->assertSee('nenhuma das ações desta página envia comandos para equipamentos físicos');
+            // Atendimento guiado: uma etapa por vez, começando em Dados.
+            ->assertSeeInOrder(['Dados', 'Foto', 'Placa', 'Pagamento', 'Concluir'])
+            ->assertSee('Continuar')
+            ->assertDontSee('Negar entrada');
     }
 
     public function test_the_access_validation_decisions_produce_safe_demo_feedback(): void

@@ -7,6 +7,7 @@ use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CadastroRapidoAtendimento;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
 use App\Livewire\Concerns\ConferenciaDadosIdentificacao;
+use App\Livewire\Concerns\FluxoGuiadoAtendimento;
 use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
 use App\Models\Catalogo;
@@ -42,7 +43,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AccessValidation extends Component
 {
-    use CadastroRapidoAtendimento, CapturaDocumentoAssistida, ConferenciaDadosIdentificacao {
+    use CadastroRapidoAtendimento, CapturaDocumentoAssistida, ConferenciaDadosIdentificacao, FluxoGuiadoAtendimento {
         CadastroRapidoAtendimento::avancarParaConferencia insteadof CapturaDocumentoAssistida;
     }
 
@@ -209,6 +210,7 @@ class AccessValidation extends Component
 
         if ($pre->vehicle_plate) {
             $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
+            $this->veioDeCarro = true;
         }
 
         $this->checkQuickDocument();
@@ -241,6 +243,7 @@ class AccessValidation extends Component
 
     public function trocarPessoa(): void
     {
+        $this->passo = 'dados';
         $this->currentPessoaId = null;
         $this->quickPersonRegistered = false;
         $this->quickResultado = null;
@@ -512,6 +515,7 @@ class AccessValidation extends Component
         $this->busca = '';
         $this->documentRevealed = false;
         $this->encerrarFotoIdentificacao();
+        $this->reiniciarFluxoGuiado();
     }
 
     public function toggleDocumentReveal(AuditService $audit): void
