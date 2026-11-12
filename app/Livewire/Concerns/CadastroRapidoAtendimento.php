@@ -5,6 +5,7 @@ namespace App\Livewire\Concerns;
 use App\Acesso\Aplicacao\AutorizacoesAcesso;
 use App\Acesso\Aplicacao\EnvioFacial;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
+use App\Models\Arquivo;
 use App\Models\AutorizacaoAcesso;
 use App\Models\Imovel;
 use App\Models\Pessoa;
@@ -83,6 +84,13 @@ trait CadastroRapidoAtendimento
 
     /** Foto atual da pessoa (captura própria, não é o documento nem o recorte dele). */
     public ?TemporaryUploadedFile $fotoPessoa = null;
+
+    /**
+     * Selfie do pré-cadastro aprovado que abriu este cadastro (Arquivo). Vira a
+     * foto da pessoa ao salvar, salvo se o operador fotografar de novo.
+     */
+    #[Locked]
+    public ?string $quickSelfiePreCadastroId = null;
 
     /** Para cadastro reutilizado que já tem foto: trocar exige marcação explícita. */
     public bool $quickSubstituirFoto = false;
@@ -571,9 +579,25 @@ trait CadastroRapidoAtendimento
         ]);
     }
 
+    /** Selfie do pré-cadastro que será usada como foto, se ainda disponível. */
+    public function selfieDoPreCadastro(): ?Arquivo
+    {
+        if ($this->quickSelfiePreCadastroId === null) {
+            return null;
+        }
+
+        $arquivo = Arquivo::query()->find($this->quickSelfiePreCadastroId);
+
+        return $arquivo?->isAvailable() ? $arquivo : null;
+    }
+
     /** @return array{variant: string, title: string, message: string} */
     private function gravarFoto(Pessoa $pessoa): array
     {
+        if ($this->fotoPessoa === null && ($selfie = $this->selfieDoPreCadastro()) !== null) {
+            return $this->gravarSelfieDoPreCadastro($pessoa, $selfie);
+        }
+
         if ($this->fotoPessoa === null) {
             return ['variant' => 'info', 'title' => 'Sem foto da pessoa', 'message' => 'Nenhuma foto foi capturada neste atendimento.'];
         }
@@ -594,6 +618,29 @@ trait CadastroRapidoAtendimento
         }
 
         return ['variant' => 'success', 'title' => 'Foto salva', 'message' => 'Foto atual guardada no armazenamento privado da pessoa, separada do documento.'];
+    }
+
+    /** @return array{variant: string, title: string, message: string} */
+    private function gravarSelfieDoPreCadastro(Pessoa $pessoa, Arquivo $selfie): array
+    {
+        if ($pessoa->fotoVigente() !== null && ! $this->quickSubstituirFoto) {
+            return ['variant' => 'info', 'title' => 'Foto do cadastro mantida', 'message' => 'A pessoa já tinha foto e você não pediu a troca; a selfie do pré-cadastro não foi usada.'];
+        }
+
+        $arquivos = app(PrivateFileService::class);
+        $conteudo = $arquivos->conteudo($selfie);
+        $problema = $conteudo === null ? 'A selfie do pré-cadastro não está disponível.' : app(ValidadorFotoPessoa::class)->problema($conteudo);
+        if ($problema !== null) {
+            return ['variant' => 'warning', 'title' => 'Selfie do pré-cadastro não usada', 'message' => $problema.' O cadastro foi salvo; fotografe a pessoa no cadastro dela.'];
+        }
+
+        try {
+            $arquivos->copiarParaFotoPessoa($pessoa, $conteudo, 'pre_cadastro_aprovado');
+        } catch (Throwable) {
+            return ['variant' => 'danger', 'title' => 'Foto não salva', 'message' => 'O cadastro foi salvo, mas a selfie do pré-cadastro não pôde ser copiada. Fotografe novamente no cadastro da pessoa.'];
+        }
+
+        return ['variant' => 'success', 'title' => 'Foto do pré-cadastro usada', 'message' => 'A selfie enviada no pré-cadastro virou a foto da pessoa, guardada no armazenamento privado.'];
     }
 
     /** @return array<string, mixed> */
@@ -686,6 +733,7 @@ trait CadastroRapidoAtendimento
         $this->quickBirthDate = '';
         $this->quickEtapa = 'documento';
         $this->quickPessoaExistenteId = null;
+        $this->quickSelfiePreCadastroId = null;
         $this->quickToken = null;
         $this->quickTerminalId = '';
         $this->quickTerminalConfirmado = false;

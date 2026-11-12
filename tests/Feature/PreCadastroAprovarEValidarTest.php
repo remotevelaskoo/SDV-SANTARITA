@@ -11,11 +11,15 @@ use App\Models\Implantacao;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
+use App\Models\Vinculo;
+use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\Support\DestinosDeTeste;
+use Tests\Support\ImagensPessoaSinteticas;
 use Tests\Support\OperadorComPermissoes;
 use Tests\TestCase;
 
@@ -183,5 +187,91 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->assertSee('Abrir na validação de entrada')
             ->call('openValidation')
             ->assertRedirect(route('validation', ['pre-cadastro' => $registro->id]));
+    }
+
+    private function comSelfie(PreRegistration $registro, string $conteudo): void
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'selfie');
+        file_put_contents($caminho, $conteudo);
+        app(PrivateFileService::class)->storePreRegistrationFiles($registro, ['selfie' => new UploadedFile($caminho, 'selfie.jpg', 'image/jpeg', null, true)]);
+    }
+
+    public function test_selfie_do_pre_cadastro_vira_a_foto_do_cadastro_sem_pedir_de_novo(): void
+    {
+        $registro = $this->preCadastro();
+        $registro->update(['status' => 'aprovado']);
+        $this->comSelfie($registro, ImagensPessoaSinteticas::boa());
+
+        $tela = Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar', 'arquivos.sensiveis.visualizar'))
+            ->test(AccessValidation::class)
+            ->assertSee('Dados conferidos: conferir foto')
+            ->call('irParaEtapa', 'foto')
+            ->assertSee('Selfie do pré-cadastro: será a foto do cadastro')
+            ->call('saveQuickRegistration')
+            ->assertHasNoErrors()
+            ->assertSet('quickResultado.foto.title', 'Foto do pré-cadastro usada');
+
+        $pessoa = Pessoa::query()->findOrFail($tela->get('currentPessoaId'));
+        $foto = $pessoa->fotoVigente();
+        $this->assertNotNull($foto);
+        $this->assertSame('pre_cadastro_aprovado', $foto->file->origin);
+        // O original continua no pré-cadastro.
+        $this->assertNotNull($registro->fresh()->currentFileLink('selfie')?->file);
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+    }
+
+    public function test_selfie_ruim_nao_vira_foto_e_o_cadastro_e_salvo(): void
+    {
+        $registro = $this->preCadastro();
+        $registro->update(['status' => 'aprovado']);
+        $this->comSelfie($registro, ImagensPessoaSinteticas::escura());
+
+        $tela = Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar'))
+            ->test(AccessValidation::class)
+            ->call('saveQuickRegistration')
+            ->assertSet('quickPersonRegistered', true)
+            ->assertSet('quickResultado.foto.title', 'Selfie do pré-cadastro não usada');
+
+        $this->assertNull(Pessoa::query()->findOrFail($tela->get('currentPessoaId'))->fotoVigente());
+    }
+
+    public function test_turista_do_pre_cadastro_mostra_a_contribuicao(): void
+    {
+        $registro = PreRegistration::factory()->tourist()->withStatus('aprovado')->create(['document' => '123.456.789-09']);
+        $operador = $this->operador('validacao.registrar', 'pessoas.gerenciar');
+
+        // Ainda no cadastro rápido e depois de salvo: a contribuição de turista aparece.
+        Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($operador)
+            ->test(AccessValidation::class)
+            ->assertSet('quickAccessType', 'turista')
+            ->assertSee('Entrada paga neste acesso')
+            ->call('saveQuickRegistration')
+            ->assertSet('quickPersonRegistered', true)
+            ->assertDontSee('Sem contribuição');
+
+        // Pessoa já cadastrada, sem vínculo nem visita: vale o tipo do pré-cadastro.
+        Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($operador)
+            ->test(AccessValidation::class)
+            ->assertSet('quickRegistrationOpen', false)
+            ->assertDontSee('Sem contribuição')
+            ->assertSee('Entrada paga neste acesso');
+    }
+
+    public function test_morador_com_vinculo_nao_vira_turista_pelo_pre_cadastro(): void
+    {
+        $registro = PreRegistration::factory()->tourist()->withStatus('aprovado')->create(['document' => '123.456.789-09']);
+        $pessoa = Pessoa::factory()->create();
+        PessoaDocumento::factory()->for($pessoa)->create(['valor_normalizado' => '12345678909', 'valor_apresentacao' => '123.456.789-09']);
+        Vinculo::factory()->create(['pessoa_id' => $pessoa->id, 'imovel_id' => Imovel::query()->first()->id, 'tipo' => 'morador']);
+
+        Livewire::withQueryParams(['pre-cadastro' => $registro->id])
+            ->actingAs($this->operador('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->assertSet('currentPessoaId', $pessoa->id)
+            ->assertSee('Sem contribuição');
     }
 }

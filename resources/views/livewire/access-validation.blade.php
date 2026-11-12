@@ -188,7 +188,7 @@
                             @if ($this->podeCapturarDocumento())
                                 <x-ui.button type="button" variant="ghost" wire:click="irParaEtapa('documento')">Fotografar documento de novo</x-ui.button>
                             @endif
-                            <x-ui.button type="button" variant="primary" wire:click="irParaEtapa('foto')" wire:loading.attr="disabled">Dados conferidos: fotografar pessoa</x-ui.button>
+                            <x-ui.button type="button" variant="primary" wire:click="irParaEtapa('foto')" wire:loading.attr="disabled">{{ $quickSelfiePreCadastroId ? 'Dados conferidos: conferir foto' : 'Dados conferidos: fotografar pessoa' }}</x-ui.button>
                         </footer>
                     @else
                         @php($cameras = $this->contextoCameras())
@@ -200,6 +200,14 @@
                             </div>
 
                             <p class="foto-pessoa__aviso">Foto atual do rosto, separada do documento. Não é prova de vida nem reconhecimento facial.</p>
+                            @if ($selfiePre = $this->selfieDoPreCadastro())
+                                <figure class="foto-pessoa__previa" x-show="!previa && !ativa">
+                                    @if (auth()->user()?->hasPermission('arquivos.sensiveis.visualizar'))
+                                        <img src="{{ route('protected-files.show', ['arquivo' => $selfiePre, 'contexto' => 'validacao']) }}" alt="Selfie enviada no pré-cadastro">
+                                    @endif
+                                    <figcaption>Selfie do pré-cadastro: será a foto do cadastro. Abra a câmera só se ela não servir.</figcaption>
+                                </figure>
+                            @endif
                             <p class="equipamento-management-aviso" x-show="aviso" x-text="aviso"></p>
 
                             <label class="ui-field" x-show="cameras.length > 1">

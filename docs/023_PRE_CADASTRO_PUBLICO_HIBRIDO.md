@@ -267,3 +267,8 @@ Na Validação de entrada (`/validacao?pre-cadastro={id}`):
 - se o operador não pode cadastrar pessoas, o protocolo fica na busca e o aviso pede quem possa cadastrar.
 
 Nada é gravado ao abrir: o operador confere com o documento original, tira a foto e salva. Abrir **não** libera a entrada, **não** cria autorização e **não** envia à facial; essas decisões seguem as regras da validação. A abertura é auditada (`abriu_validacao_pelo_pre_cadastro`, com protocolo e resultado).
+
+### 15.1 Ajustes após o primeiro uso (12/11/2026)
+
+- **Foto:** a selfie aprovada no pré-cadastro vira a foto do cadastro ao salvar (cópia protegida, origem `pre_cadastro_aprovado`; o original fica no pré-cadastro). A etapa de foto mostra a selfie e só pede câmera se ela não servir. Selfie fora do padrão (escura, pequena) não é usada e o cadastro é salvo com aviso. Pessoa que já tem foto mantém a dela, salvo se o operador marcar a troca.
+- **Contribuição do turista:** pessoa sem visita vigente e sem vínculo passa a valer pelo tipo declarado no atendimento (cadastro rápido ou pré-cadastro aprovado). Assim o turista vê a contribuição já no cadastro rápido e depois de salvar. Quem tem vínculo (morador, proprietário etc.) nunca vira turista por declaração. A contribuição continua exigindo caixa aberto.

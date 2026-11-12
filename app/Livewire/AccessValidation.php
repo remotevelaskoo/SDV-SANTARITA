@@ -107,6 +107,10 @@ class AccessValidation extends Component
     #[Locked]
     public ?array $avisoPreCadastro = null;
 
+    /** Tipo de acesso do pré-cadastro aprovado que abriu este atendimento. */
+    #[Locked]
+    public ?string $tipoPreCadastro = null;
+
     /**
      * "Aprovar e validar entrada" na análise abre esta tela com
      * ?pre-cadastro={id}. Só traz dados para conferência: não libera a
@@ -137,6 +141,7 @@ class AccessValidation extends Component
             return;
         }
 
+        $this->tipoPreCadastro = $pre->access_type;
         $cpf = preg_replace('/\D/', '', (string) $pre->document) ?? '';
         $pessoaId = strlen($cpf) === 11 ? PessoaDocumento::query()
             ->where('tipo', 'cpf')
@@ -197,6 +202,10 @@ class AccessValidation extends Component
             $imovelId = app(CatalogoDestinos::class)->imovelId($pre->destination_property);
             $this->quickPropertyCode = $imovelId !== null ? (string) Imovel::query()->whereKey($imovelId)->value('codigo') : '';
         }
+
+        // A selfie enviada no pré-cadastro vira a foto da pessoa: não se pede de novo.
+        $selfie = $pre->currentFileLink('selfie')?->file;
+        $this->quickSelfiePreCadastroId = $selfie?->isAvailable() ? $selfie->id : null;
 
         if ($pre->vehicle_plate) {
             $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
@@ -480,7 +489,7 @@ class AccessValidation extends Component
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
             'ticketNumero', 'ticketDuplicadoConfirmado', 'capturaPlacaId', 'capturaPlacaFalha', 'placaInformada',
-            'quickDuplicateFound', 'quickResultado', 'avisoPreCadastro',
+            'quickDuplicateFound', 'quickResultado', 'avisoPreCadastro', 'tipoPreCadastro',
         ]);
         // Novo atendimento: nenhuma captura, prévia ou dado do cadastro anterior sobrevive.
         $this->resetQuickRegistrationFields();
@@ -698,7 +707,21 @@ class AccessValidation extends Component
      */
     public function perfilAtual(): array
     {
-        return app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+        $perfil = app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+
+        // Pessoa sem visita nem vínculo (ou ainda no cadastro rápido): vale o tipo
+        // declarado neste atendimento (cadastro rápido ou pré-cadastro aprovado).
+        // Quem tem vínculo nunca vira turista por declaração.
+        if (! $perfil['turista'] && $perfil['perfil'] === 'Sem vínculo' && $this->tipoDeclarado() === 'turista') {
+            return ['perfil' => PerfilAtendimento::TURISTA, 'local' => PerfilAtendimento::PRAIA, 'turista' => true];
+        }
+
+        return $perfil;
+    }
+
+    private function tipoDeclarado(): ?string
+    {
+        return $this->quickRegistrationOpen || $this->quickPersonRegistered ? $this->quickAccessType : $this->tipoPreCadastro;
     }
 
     /** Regra do PO (11/11/2026): só turista contribui; os demais não têm contribuição. */
