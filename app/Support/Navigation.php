@@ -43,7 +43,7 @@ class Navigation
                 ['label' => 'Terminais', 'icon' => 'shield', 'route' => 'equipment'],
                 ['label' => 'Pontos de acesso', 'icon' => 'door', 'route' => 'access-points'],
                 ['label' => 'Câmeras de placas', 'icon' => 'car', 'route' => 'plate-cameras'],
-                ['label' => 'Postos e operadores', 'icon' => 'users', 'route' => 'posts'],
+                ['label' => 'Postos', 'icon' => 'users', 'route' => 'posts'],
             ],
         ];
 

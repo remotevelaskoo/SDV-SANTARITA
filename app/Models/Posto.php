@@ -53,12 +53,6 @@ class Posto extends Model
             ->wherePivotNull('ended_at');
     }
 
-    /** @return HasMany<OperadorPosto, $this> */
-    public function operadores(): HasMany
-    {
-        return $this->hasMany(OperadorPosto::class);
-    }
-
     public function ativo(): bool
     {
         return $this->status === 'ativo';

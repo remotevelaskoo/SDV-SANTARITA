@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // implantacao_id é fillable pelo mesmo motivo documentado em PreRegistration.
 #[Fillable([
-    'implantacao_id', 'terminal', 'operator_id', 'opened_at', 'opening_balance',
+    'implantacao_id', 'terminal', 'posto_id', 'operator_id', 'opened_at', 'opening_balance',
     'closed_at', 'informed_amount', 'expected_amount', 'difference',
     'closing_notes', 'status', 'closing_status',
 ])]
@@ -38,6 +38,17 @@ class CaixaTurno extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operator_id');
+    }
+
+    /**
+     * Posto do caixa: um caixa aberto por posto (SDV-OPE-018 §14). Nulo em
+     * caixas abertos antes da regra.
+     *
+     * @return BelongsTo<Posto, $this>
+     */
+    public function posto(): BelongsTo
+    {
+        return $this->belongsTo(Posto::class);
     }
 
     /** @return HasMany<CaixaMovimentacao, $this> */

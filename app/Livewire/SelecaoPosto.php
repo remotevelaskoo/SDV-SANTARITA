@@ -11,11 +11,15 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Escolha do posto do turno (SDV-OPE-018 §2). O operador assume um posto em
- * que está designado; trocar de posto encerra o anterior; tudo é auditado.
+ * Escolha do posto do turno (SDV-OPE-018 §2 e §14). Qualquer operador assume
+ * qualquer posto livre; um posto ocupado mostra quem está nele. Trocar de
+ * posto ou encerrar o turno exige o caixa fechado; tudo é auditado.
  */
 class SelecaoPosto extends Component
 {
+    /** Supervisor que preferiu usar o Modo Portaria sem ocupar um posto. */
+    public const SESSAO_SEM_POSTO = 'posto.seguiu_sem_posto';
+
     #[Url(as: 'voltar')]
     public string $voltar = '';
 
@@ -31,12 +35,28 @@ class SelecaoPosto extends Component
             return null;
         }
 
+        session()->forget(self::SESSAO_SEM_POSTO);
+
         return $this->redirect($this->destino(), navigate: false);
     }
 
     public function encerrar(TurnosOperacionais $turnos): void
     {
-        $turnos->encerrar($this->operador());
+        try {
+            $turnos->encerrar($this->operador());
+            $this->erro = null;
+        } catch (RegraIntegracaoViolada $e) {
+            $this->erro = $e->getMessage();
+        }
+    }
+
+    /** Só para quem supervisiona (caixa consolidado): entra no Modo Portaria sem ocupar um posto. */
+    public function seguirSemPosto(): mixed
+    {
+        abort_unless($this->operador()->hasPermission('caixa.consolidado.consultar'), 403);
+        session()->put(self::SESSAO_SEM_POSTO, true);
+
+        return $this->redirect($this->destino(), navigate: false);
     }
 
     public function render(TurnosOperacionais $turnos): View
@@ -44,8 +64,11 @@ class SelecaoPosto extends Component
         $operador = $this->operador();
 
         return view('livewire.selecao-posto', [
-            'postos' => $turnos->postosAutorizados($operador),
+            'postos' => $turnos->postosAtivos(),
+            'ocupacoes' => $turnos->ocupacoes(),
             'turno' => $turnos->turnoAtivo($operador),
+            'caixaAberto' => $turnos->caixaAberto($operador) !== null,
+            'podeSeguirSemPosto' => $operador->hasPermission('caixa.consolidado.consultar'),
         ])->layout('components.layouts.app', [
             'title' => 'Posto de trabalho',
             'heading' => 'Posto de trabalho',

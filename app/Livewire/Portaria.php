@@ -33,15 +33,23 @@ class Portaria extends Component
     ];
 
     /**
-     * Ao iniciar a operação, quem libera relés escolhe o posto do turno
-     * (SDV-OPE-018 §2) antes de usar o Modo Portaria.
+     * Ao iniciar a operação, quem opera caixa ou libera relés escolhe o posto
+     * do turno (SDV-OPE-018 §2 e §14) antes de usar o Modo Portaria. Quem
+     * supervisiona (caixa consolidado) pode seguir sem posto, para não ocupar
+     * uma guarita só para consultar.
      */
     public function mount(TurnosOperacionais $turnos): mixed
     {
         $usuario = auth()->user();
-        if ($usuario?->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL)
-            && $turnos->turnoAtivo($usuario) === null
-            && $turnos->postosAutorizados($usuario)->isNotEmpty()) {
+        if ($usuario === null || $turnos->turnoAtivo($usuario) !== null || $turnos->postosAtivos()->isEmpty()) {
+            return null;
+        }
+
+        $operaPosto = $usuario->hasPermission('caixa.proprio.gerenciar')
+            || $usuario->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL);
+        $seguiuSemPosto = $usuario->hasPermission('caixa.consolidado.consultar') && session(SelecaoPosto::SESSAO_SEM_POSTO) === true;
+
+        if ($operaPosto && ! $seguiuSemPosto) {
             return $this->redirect(route('posto.selecionar', ['voltar' => '/portaria']));
         }
 
@@ -67,10 +75,15 @@ class Portaria extends Component
         ]];
     }
 
-    /** @return array{status: string, code: string, openedAt: string, openedBy: string, total: float} */
+    /**
+     * Caixa do próprio operador: cada posto tem o seu (SDV-OPE-018 §14), então
+     * o Modo Portaria não mostra o caixa de outra guarita.
+     *
+     * @return array{status: string, code: string, openedAt: string, openedBy: string, total: float}
+     */
     public function cashRegister(): array
     {
-        $turno = CaixaTurno::query()->where('status', 'aberto')->latest('opened_at')->with('operator')->first();
+        $turno = CaixaTurno::query()->where('operator_id', auth()->id())->where('status', 'aberto')->latest('opened_at')->with('operator')->first();
 
         if (! $turno) {
             return [

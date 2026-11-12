@@ -12,7 +12,7 @@ Especificar os postos operacionais, a seleção contextual de equipamentos, a li
 
 O posto é o contexto operacional assumido pelo usuário durante o turno; não substitui perfil, permissão, ponto de acesso ou equipamento.
 
-Após autenticar-se, o operador escolhe um posto autorizado. O sistema registra início, término e troca de posto, mantém o posto ativo visível e carrega suas câmeras, pontos e equipamentos preferenciais.
+Após autenticar-se, o operador escolhe um posto livre (qualquer operador assume qualquer posto, um por vez; ver §14). O sistema registra início, término e troca de posto, mantém o posto ativo visível e carrega suas câmeras, pontos e equipamentos preferenciais.
 
 ## 3. Equipamentos preferenciais e alcance
 
@@ -175,3 +175,23 @@ origem, resultado, códigos de qualidade e nomes de campos, nunca imagem, CPF ou
 O Product Owner solicitou a experiência integrada: fotografar documento, extrair e conferir os dados, fotografar a pessoa e salvar/enviar para o terminal facial no próprio cadastro rápido. A especificação está em [SDV-OPE-021](021_CADASTRO_RAPIDO_FOTO_OCR_E_FACIAL.md). É escopo para implementação; não é evidência de função já entregue. Reutilizar o leitor interno e os serviços de foto existentes, preservando a análise temporária dos documentos. O envio atual de cadastro sem foto não atende, sozinho, ao envio de credencial facial solicitado; a extensão depende de implementação, revisão do ADR-013 e homologação específica.
 
 **Atualização da implementação (06/11/2026):** entregue no PR #74. O cadastro rápido agora tem as etapas Documento → Conferência → Foto, leitura automática após a captura, câmera própria para o rosto e envio da foto ao terminal implementado mas desligado até homologação. Detalhes e pendências em [SDV-OPE-021 §10](021_CADASTRO_RAPIDO_FOTO_OCR_E_FACIAL.md).
+
+## 14. Um operador por posto e um caixa por posto (12/11/2026)
+
+Decisões do Product Owner ao validar a tela de postos. Substituem a designação de operadores por posto descrita no §2 e nas notas do §12.
+
+**Quem assume qual posto.** Todos os operadores podem trabalhar em todos os postos. A designação por posto (`operador_postos`) deixou de ser usada: a tela de escolha lista todos os postos ativos. A tabela fica no banco só como histórico.
+
+**Um posto, uma pessoa.** Um posto só pode estar com um operador por vez (índice único parcial em `operador_turnos (posto_id)` com o turno aberto). Posto ocupado aparece como "Ocupado por *nome* desde *hora*" e a tentativa de assumir é recusada (`posto_ocupado`). Para liberar o posto, o operador fecha o caixa e encerra o turno.
+
+**Um caixa por posto.** `caixa_turnos.posto_id` liga o caixa ao posto do turno; só um caixa aberto por posto. Abrir o caixa exige ter assumido um posto, e o caixa recebe o nome do posto. O Caixa e o Modo Portaria mostram só o caixa do próprio operador. Caixas abertos antes da regra ficam sem posto e continuam com o seu operador.
+
+**Caixa aberto prende o operador ao posto.** Com o caixa aberto não se troca de posto, não se encerra o turno e o botão Sair é recusado com o aviso "Feche o caixa antes de sair". Sem caixa aberto, sair do sistema encerra o turno e libera o posto (como antes).
+
+**Posto preso.** Gestor e Administrador (permissão `postos.liberar`) liberam o posto na tela Equipamentos › Postos, com motivo obrigatório. O turno é encerrado (`liberado_pelo_gestor`) e o caixa aberto do operador é fechado como `aguardando_conferencia`, sem valor informado e com o saldo esperado registrado, para conferência posterior. Tudo vai para a auditoria (`posto_operacional_liberado`).
+
+**Quem é levado à escolha do posto.** Ao abrir o Modo Portaria sem posto, quem opera caixa (`caixa.proprio.gerenciar`) ou libera relés é levado à escolha. Quem também consulta o caixa consolidado (Gestor, Administrador) pode "Continuar sem assumir posto (supervisão)", para não ocupar uma guarita só para consultar.
+
+**Tela Postos.** A antiga "Postos e operadores" virou "Postos": mostra quem está em cada posto agora, permite editar nome e tipo, desativar e reativar (posto ocupado não é desativado), os pontos de acesso de cada posto num bloco recolhido e o botão "Liberar posto". Cadastro e pontos continuam com `integracoes.gerenciar`.
+
+Testes em `tests/Feature/PostosCaixaPorPostoTest.php` e `tests/Feature/Integracoes/LiberacaoManualTest.php`.

@@ -114,13 +114,18 @@
         <article class="cash-register-closed-card">
             <span class="cash-register-closed-card__icon"><x-icon name="wallet" /></span>
             <strong>Caixa fechado</strong>
-            <p>Nenhuma movimentação pode ser registrada até a abertura de um novo turno (RN-084).</p>
-            <x-ui.modal id="open-register-modal" title="Abrir caixa" description="Informe o saldo inicial para iniciar o turno." trigger-label="Abrir caixa" trigger-variant="success">
+            @if (! $postoAtivo)
+                <p>Cada posto tem o seu caixa. Assuma o posto em que você está trabalhando para abrir o caixa dele.</p>
+                <x-ui.button variant="primary" :href="route('posto.selecionar', ['voltar' => '/caixa'])">Escolher o posto</x-ui.button>
+            @else
+            <p>Nenhuma movimentação pode ser registrada até a abertura de um novo turno (RN-084). O caixa será aberto no posto <b>{{ $postoAtivo }}</b>.</p>
+            <x-ui.modal id="open-register-modal" title="Abrir caixa" description="Informe o saldo inicial para iniciar o turno em {{ $postoAtivo }}." trigger-label="Abrir caixa" trigger-variant="success">
                 <div class="cash-register-form-fields">
                     <x-ui.field id="opening-balance" label="Saldo inicial" wire:model="openingBalanceInput" placeholder="0,00" :error="$errors->first('openingBalanceInput')" required />
                 </div>
                 <x-slot:confirm><form method="dialog"><x-ui.button type="submit" variant="success" wire:click="openRegister">Confirmar abertura</x-ui.button></form></x-slot:confirm>
             </x-ui.modal>
+            @endif
         </article>
     @endif
 
@@ -144,7 +149,7 @@
                             <td class="numeric">R$ {{ number_format($session['expected'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['informed'], 2, ',', '.') }}</td>
                             <td class="numeric">R$ {{ number_format($session['difference'], 2, ',', '.') }}</td>
-                            <td><x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença registrada' }}</x-ui.badge></td>
+                            <td><x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ match ($session['status']) { 'conferido' => 'Conferido', 'aguardando_conferencia' => 'Aguardando conferência', default => 'Diferença registrada' } }}</x-ui.badge></td>
                             @if ($podeVerRelatorio)
                                 <td><a class="reports-clear" href="{{ route('portaria.relatorio-final', ['turno' => $session['id']]) }}">Relatório final</a></td>
                             @endif
@@ -163,7 +168,7 @@
                                 @if ($podeVerRelatorio)<a class="reports-clear" href="{{ route('portaria.relatorio-final', ['turno' => $session['id']]) }}">Relatório final</a>@endif
                             </div>
                             <time>R$ {{ number_format($session['difference'], 2, ',', '.') }}</time>
-                            <x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ $session['status'] === 'conferido' ? 'Conferido' : 'Diferença' }}</x-ui.badge>
+                            <x-ui.badge :variant="$session['status'] === 'conferido' ? 'success' : 'warning'">{{ match ($session['status']) { 'conferido' => 'Conferido', 'aguardando_conferencia' => 'A conferir', default => 'Diferença' } }}</x-ui.badge>
                         </li>
                     @endforeach
                 </ul>
