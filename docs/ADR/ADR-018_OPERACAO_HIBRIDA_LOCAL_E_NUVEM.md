@@ -235,3 +235,8 @@ O SDV Access não terá a internet como ponto único de falha da operação da p
 ## Situação do ADR
 
 **Aprovado.**
+
+
+## Implementação parcial em 11/11/2026 — pré-cadastro público
+
+O [documento 023](../023_PRE_CADASTRO_PUBLICO_HIBRIDO.md) registra a primeira fatia: portal separado, banco Supabase isolado, imagens privadas e ponte de saída para a fila Laravel existente. Apenas essa fatia foi implementada em branch; a conexão ao nó físico e a publicação ainda estão pendentes. Não equivale à homologação de todos os fluxos offline, replicação do banco operacional ou plano de backup/restauração. `certificados` permanece separado.

@@ -9,7 +9,7 @@ use App\Models\PessoaDocumento;
 use Illuminate\Database\Seeder;
 
 /**
- * Reaproveita os mesmos nomes de responsável já usados como dado de
+ * demonstração na antiga lista fixa de destinos e nos seeders de
  * demonstração em App\Support\DestinationDirectory e nos seeders de
  * pré-cadastro/imóveis, para manter o conjunto de dados de demonstração
  * consistente entre os módulos.

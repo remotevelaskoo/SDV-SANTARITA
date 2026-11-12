@@ -13,6 +13,7 @@ use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Models\Contribuicao;
 use App\Models\HistoricoAcesso;
+use App\Models\Imovel;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
@@ -24,6 +25,7 @@ use App\Services\BuscaPessoasValidacao;
 use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
 use App\Services\PerfilAtendimento;
+use App\Services\PreCadastro\CatalogoDestinos;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\NormalizadorBusca;
@@ -100,6 +102,117 @@ class AccessValidation extends Component
     public ?TemporaryUploadedFile $fotoIdentificacao = null;
 
     public bool $fotoIdentificacaoSalva = false;
+
+    /** Aviso de que o atendimento veio de um pré-cadastro aprovado (some no novo atendimento). */
+    #[Locked]
+    public ?array $avisoPreCadastro = null;
+
+    /** Tipo de acesso do pré-cadastro aprovado que abriu este atendimento. */
+    #[Locked]
+    public ?string $tipoPreCadastro = null;
+
+    /**
+     * "Aprovar e validar entrada" na análise abre esta tela com
+     * ?pre-cadastro={id}. Só traz dados para conferência: não libera a
+     * entrada, não cria autorização e não envia à facial.
+     */
+    public function mount(AuditService $audit): void
+    {
+        $id = request()->query('pre-cadastro');
+        if (is_string($id) && $id !== '' && strlen($id) <= 64) {
+            $this->carregarPreCadastroAprovado($id, $audit);
+        }
+    }
+
+    private function carregarPreCadastroAprovado(string $id, AuditService $audit): void
+    {
+        $usuario = Auth::user();
+        abort_unless($usuario?->hasPermission('validacao.registrar'), 403);
+
+        // Escopo da implantação ativa: id de outra implantação não existe aqui.
+        $pre = PreRegistration::query()->whereKey($id)->first();
+        if ($pre === null || $pre->status !== 'aprovado') {
+            $this->avisoPreCadastro = [
+                'variant' => 'warning',
+                'title' => 'Pré-cadastro não disponível',
+                'message' => 'Só um pré-cadastro aprovado abre a validação. Busque a pessoa pelo nome ou CPF.',
+            ];
+
+            return;
+        }
+
+        $this->tipoPreCadastro = $pre->access_type;
+        $cpf = preg_replace('/\D/', '', (string) $pre->document) ?? '';
+        $pessoaId = strlen($cpf) === 11 ? PessoaDocumento::query()
+            ->where('tipo', 'cpf')
+            ->where('valor_normalizado', $cpf)
+            ->whereNull('ended_at')
+            ->value('pessoa_id') : null;
+
+        if ($pessoaId !== null) {
+            $this->currentPessoaId = $pessoaId;
+            $resultado = 'cadastro_existente';
+            $this->avisoPreCadastro = [
+                'variant' => 'info',
+                'title' => 'Pessoa do pré-cadastro '.$pre->protocol,
+                'message' => 'O CPF já tem cadastro no SDV e ele foi aberto. Confira o documento original e a autorização antes de decidir.',
+            ];
+        } elseif ($usuario->hasPermission('pessoas.gerenciar')) {
+            $this->openQuickRegistration();
+            $this->preencherCadastroRapido($pre);
+            $resultado = 'cadastro_rapido';
+            $this->avisoPreCadastro = [
+                'variant' => 'info',
+                'title' => 'Dados do pré-cadastro '.$pre->protocol,
+                'message' => 'Os dados aprovados já estão no cadastro rápido. Confira com o documento original, tire a foto e salve. Nada foi gravado e a entrada não foi liberada.',
+            ];
+        } else {
+            $this->busca = $pre->protocol;
+            $resultado = 'sem_permissao_cadastro';
+            $this->avisoPreCadastro = [
+                'variant' => 'warning',
+                'title' => 'Pessoa ainda sem cadastro',
+                'message' => 'O pré-cadastro '.$pre->protocol.' foi aprovado, mas a pessoa ainda não tem cadastro no SDV. Peça a quem pode cadastrar pessoas para concluir o cadastro.',
+            ];
+        }
+
+        $audit->record(
+            action: 'abriu_validacao_pelo_pre_cadastro',
+            module: 'validacao',
+            entityType: 'pre_registrations',
+            entityId: $pre->id,
+            metadata: ['protocolo' => $pre->protocol, 'resultado' => $resultado],
+        );
+    }
+
+    /** Só copia o que o pré-cadastro aprovado traz; imóvel só entra se ainda estiver no catálogo. */
+    private function preencherCadastroRapido(PreRegistration $pre): void
+    {
+        $this->quickName = (string) $pre->name;
+        $this->quickDocument = (string) $pre->document;
+        $this->quickPhone = (string) $pre->phone;
+        $this->quickBirthDate = (string) $pre->birth_date?->format('Y-m-d');
+        $this->quickAccessType = in_array($pre->access_type, ['visitante', 'prestador', 'turista'], true) ? $pre->access_type : 'visitante';
+        $this->quickNotes = mb_substr('Pré-cadastro '.$pre->protocol, 0, 200);
+        $this->quickEtapa = 'conferencia';
+
+        // Prestador e turista: sem responsável nem vínculo com imóvel criados aqui (docs/021).
+        if ($this->quickAccessType === 'visitante') {
+            $this->quickResponsible = (string) $pre->responsible_name;
+            $imovelId = app(CatalogoDestinos::class)->imovelId($pre->destination_property);
+            $this->quickPropertyCode = $imovelId !== null ? (string) Imovel::query()->whereKey($imovelId)->value('codigo') : '';
+        }
+
+        // A selfie enviada no pré-cadastro vira a foto da pessoa: não se pede de novo.
+        $selfie = $pre->currentFileLink('selfie')?->file;
+        $this->quickSelfiePreCadastroId = $selfie?->isAvailable() ? $selfie->id : null;
+
+        if ($pre->vehicle_plate) {
+            $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
+        }
+
+        $this->checkQuickDocument();
+    }
 
     public function selecionarPessoa(string $pessoaId, AuditService $audit): void
     {
@@ -234,6 +347,10 @@ class AccessValidation extends Component
 
     public function deny(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validate([
             'denialReason' => ['required', Rule::in($this->denialReasonCodigos())],
             'denialDetails' => ['nullable', 'string', 'max:200'],
@@ -251,6 +368,10 @@ class AccessValidation extends Component
 
     public function savePending(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validateCommonFields();
 
         $historico = $this->recordHistoricoComContribuicao('pendente');
@@ -265,6 +386,10 @@ class AccessValidation extends Component
 
     public function release(): void
     {
+        if ($this->atendimentoJaRegistrado()) {
+            return;
+        }
+
         $this->validateCommonFields();
 
         if ($this->quickPersonRegistered) {
@@ -376,7 +501,7 @@ class AccessValidation extends Component
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
             'ticketNumero', 'ticketDuplicadoConfirmado', 'capturaPlacaId', 'capturaPlacaFalha', 'placaInformada',
-            'quickDuplicateFound', 'quickResultado',
+            'quickDuplicateFound', 'quickResultado', 'avisoPreCadastro', 'tipoPreCadastro',
         ]);
         // Novo atendimento: nenhuma captura, prévia ou dado do cadastro anterior sobrevive.
         $this->resetQuickRegistrationFields();
@@ -562,6 +687,22 @@ class AccessValidation extends Component
         ];
     }
 
+    /**
+     * Um atendimento registrado encerra esta tela: novo clique não grava outro
+     * atendimento nem outra contribuição (o mesmo ticket apareceria como
+     * "já registrado" no próprio atendimento). Segue em "Iniciar nova validação".
+     */
+    private function atendimentoJaRegistrado(): bool
+    {
+        if ($this->protocol === null) {
+            return false;
+        }
+
+        $this->addError('atendimento', 'Este atendimento já foi registrado ('.$this->protocol.'). Use "Iniciar nova validação" para atender outra pessoa.');
+
+        return true;
+    }
+
     public function updatedTicketNumero(): void
     {
         $this->ticketDuplicadoConfirmado = false;
@@ -573,7 +714,11 @@ class AccessValidation extends Component
     public function ticketDuplicado(): ?array
     {
         $ticket = ContribuicoesAtendimento::normalizarTicket($this->ticketNumero);
-        $existente = $ticket !== null ? Contribuicao::ticketJaUsado($ticket) : null;
+        // A contribuição deste mesmo atendimento, já registrado, não é "outro atendimento".
+        $propria = $this->protocol !== null
+            ? Contribuicao::query()->whereHas('historicoAcesso', fn ($q) => $q->where('protocol', $this->protocol))->value('id')
+            : null;
+        $existente = $ticket !== null ? Contribuicao::ticketJaUsado($ticket, $propria) : null;
 
         return $existente ? [
             'quando' => $existente->registrada_em->format('d/m/Y H:i'),
@@ -594,7 +739,21 @@ class AccessValidation extends Component
      */
     public function perfilAtual(): array
     {
-        return app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+        $perfil = app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+
+        // Pessoa sem visita nem vínculo (ou ainda no cadastro rápido): vale o tipo
+        // declarado neste atendimento (cadastro rápido ou pré-cadastro aprovado).
+        // Quem tem vínculo nunca vira turista por declaração.
+        if (! $perfil['turista'] && $perfil['perfil'] === 'Sem vínculo' && $this->tipoDeclarado() === 'turista') {
+            return ['perfil' => PerfilAtendimento::TURISTA, 'local' => PerfilAtendimento::PRAIA, 'turista' => true];
+        }
+
+        return $perfil;
+    }
+
+    private function tipoDeclarado(): ?string
+    {
+        return $this->quickRegistrationOpen || $this->quickPersonRegistered ? $this->quickAccessType : $this->tipoPreCadastro;
     }
 
     /** Regra do PO (11/11/2026): só turista contribui; os demais não têm contribuição. */

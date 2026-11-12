@@ -7,10 +7,10 @@ use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Services\AuditService;
+use App\Services\PreCadastro\CatalogoDestinos;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\ComparacaoOcrPreCadastro;
-use App\Support\DestinationDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -166,13 +166,7 @@ class PreRegistrationReview extends Component
     {
         $this->authorizeDecision('pre-registro.aprovar');
 
-        if ($this->editing) {
-            $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
-
-            return;
-        }
-
-        if (! $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.')) {
+        if (! $this->aprovar()) {
             return;
         }
 
@@ -181,6 +175,43 @@ class PreRegistrationReview extends Component
             'title' => 'Pré-cadastro aprovado',
             'message' => 'A entrada ainda será validada pela portaria conforme as regras vigentes.',
         ];
+    }
+
+    /**
+     * Aprova e já abre a Validação de entrada com esta pessoa (pedido do PO
+     * de 12/11/2026). Aprovar continua sem liberar a entrada, sem criar
+     * autorização e sem enviar à facial: a decisão segue na validação.
+     */
+    public function approveAndValidate(): void
+    {
+        $this->authorizeDecision('pre-registro.aprovar');
+        $this->authorizeDecision('validacao.registrar');
+
+        if (! $this->aprovar()) {
+            return;
+        }
+
+        $this->redirectRoute('validation', ['pre-cadastro' => $this->preRegistrationId]);
+    }
+
+    /** Pré-cadastro já aprovado: abre a validação sem nova decisão. */
+    public function openValidation(): void
+    {
+        $this->authorizeDecision('validacao.registrar');
+        abort_unless($this->record()->status === 'aprovado', 404);
+
+        $this->redirectRoute('validation', ['pre-cadastro' => $this->preRegistrationId]);
+    }
+
+    private function aprovar(): bool
+    {
+        if ($this->editing) {
+            $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
+
+            return false;
+        }
+
+        return $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.');
     }
 
     public function reject(): void
@@ -328,10 +359,9 @@ class PreRegistrationReview extends Component
         ];
 
         if ($record->access_type === 'visitante') {
-            $rules['editDestinationProperty'] = ['required', Rule::in(DestinationDirectory::options())];
+            $rules['editDestinationProperty'] = ['required', Rule::in(app(CatalogoDestinos::class)->opcoes('visitante'))];
         } elseif ($record->access_type === 'prestador') {
             $rules['editDestinationLabel'] = ['required', 'string', 'max:120'];
-            $rules['editResponsibleName'] = ['required', 'string', 'max:120'];
         }
 
         $this->validate($rules, [
@@ -490,7 +520,7 @@ class PreRegistrationReview extends Component
         }
 
         if ($record->access_type === 'visitante') {
-            $responsible = DestinationDirectory::responsibleFor($this->editDestinationProperty);
+            $responsible = app(CatalogoDestinos::class)->responsavel($this->editDestinationProperty);
 
             $this->diffAndQueue($changes, 'destination_property', 'Imóvel de destino', $record->destination_property, $this->editDestinationProperty);
             $record->destination_property = $this->editDestinationProperty;
@@ -498,9 +528,10 @@ class PreRegistrationReview extends Component
             $record->responsible_name = $responsible;
         } elseif ($record->access_type === 'prestador') {
             $this->diffAndQueue($changes, 'destination_label', 'Destino', $record->destination_label, $this->editDestinationLabel);
-            $this->diffAndQueue($changes, 'responsible_name', 'Responsável', $record->responsible_name, $this->editResponsibleName);
+            // Prestador não tem responsável (revisão do PO de 08/11/2026).
+            $this->diffAndQueue($changes, 'responsible_name', 'Responsável', $record->responsible_name, '');
             $record->destination_label = $this->editDestinationLabel;
-            $record->responsible_name = $this->editResponsibleName;
+            $record->responsible_name = null;
         }
 
         $newStart = Carbon::parse($this->editPeriodStart);
@@ -671,6 +702,7 @@ class PreRegistrationReview extends Component
                 'aprovar' => (bool) $user?->hasPermission('pre-registro.aprovar'),
                 'rejeitar' => (bool) $user?->hasPermission('pre-registro.rejeitar'),
                 'corrigir' => (bool) $user?->hasPermission('pre-registro.solicitar-correcao'),
+                'validar' => (bool) $user?->hasPermission('validacao.registrar'),
             ],
         ])->layout('components.layouts.app', [
             'title' => 'Análise do pré-cadastro',

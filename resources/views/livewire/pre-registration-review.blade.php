@@ -217,13 +217,12 @@
                             <x-ui.field id="edit-destination" label="Destino" value="Praia do Santa Rita" readonly help="Turista não exige imóvel nem responsável." />
                         @elseif ($record->access_type === 'visitante')
                             <x-ui.select id="edit-destination-property" label="Imóvel de destino" wire:model="editDestinationProperty" :error="$errors->first('editDestinationProperty')" required>
-                                @foreach (\App\Support\DestinationDirectory::options() as $option)
+                                @foreach (app(\App\Services\PreCadastro\CatalogoDestinos::class)->opcoes('visitante') as $option)
                                     <option value="{{ $option }}">{{ $option }}</option>
                                 @endforeach
                             </x-ui.select>
                         @else
                             <x-ui.field id="edit-destination-label" label="Destino" wire:model="editDestinationLabel" :error="$errors->first('editDestinationLabel')" required />
-                            <x-ui.field id="edit-responsible" label="Responsável" wire:model="editResponsibleName" :error="$errors->first('editResponsibleName')" required />
                         @endif
 
                         <x-ui.field id="edit-period-start" type="datetime-local" label="Início do período" wire:model="editPeriodStart" :error="$errors->first('editPeriodStart')" required />
@@ -347,7 +346,10 @@
                         <x-ui.button variant="danger" wire:click="chooseDecision('rejeitar')" :disabled="$editing">Rejeitar</x-ui.button>
                     @endif
                     @if ($pode['aprovar'])
-                        <x-ui.button variant="success" wire:click="approve" wire:loading.attr="disabled" :disabled="$editing">Aprovar pré-cadastro</x-ui.button>
+                        <x-ui.button :variant="$pode['validar'] ? 'secondary' : 'success'" wire:click="approve" wire:loading.attr="disabled" :disabled="$editing">Aprovar pré-cadastro</x-ui.button>
+                        @if ($pode['validar'])
+                            <x-ui.button variant="success" wire:click="approveAndValidate" wire:loading.attr="disabled" :disabled="$editing">Aprovar e validar entrada</x-ui.button>
+                        @endif
                     @endif
                     @unless ($podeDecidir)
                         <p class="pre-cadastro-analise__nota">Seu perfil permite consultar, mas não decidir este pré-cadastro.</p>
@@ -358,6 +360,11 @@
             <x-ui.alert variant="info" title="Decisão já registrada">
                 Consulte o histórico. Uma nova decisão exigirá um fluxo autorizado.
             </x-ui.alert>
+            @if ($record->status === 'aprovado' && $pode['validar'])
+                <div class="pre-cadastro-analise__acoes">
+                    <x-ui.button variant="success" wire:click="openValidation" wire:loading.attr="disabled">Abrir na validação de entrada</x-ui.button>
+                </div>
+            @endif
         @endif
     </section>
 </div>

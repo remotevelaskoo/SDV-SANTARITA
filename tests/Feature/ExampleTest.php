@@ -71,6 +71,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Support\DestinosDeTeste;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -561,7 +562,10 @@ class ExampleTest extends TestCase
             'notes' => 'Visitante conferido pela portaria.',
         ]);
 
+        // Cada decisão é um atendimento: depois de registrado, segue em "Iniciar nova validação".
         $test
+            ->call('startNewValidation')
+            ->call('selecionarPessoa', $pessoa->id)
             ->set('ticketNumero', '000103')
             ->call('release')
             ->assertSet('feedback.variant', 'success')
@@ -570,6 +574,8 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('historico_acessos', ['pessoa_id' => $pessoa->id, 'resultado' => 'liberado']);
 
         $test
+            ->call('startNewValidation')
+            ->call('selecionarPessoa', $pessoa->id)
             ->set('denialReason', 'documento_invalido')
             ->set('denialDetails', 'Documento apresentado não confere.')
             ->call('deny')
@@ -744,6 +750,7 @@ class ExampleTest extends TestCase
 
     public function test_the_public_pre_registration_persists_a_visitor_with_vehicle_and_destination(): void
     {
+        DestinosDeTeste::criar();
         Storage::fake('private-files');
 
         Livewire::test(PublicPreRegistration::class)
@@ -904,6 +911,7 @@ class ExampleTest extends TestCase
 
     public function test_the_gate_operator_can_edit_submitted_data_with_an_audit_reason_before_approval(): void
     {
+        DestinosDeTeste::criar();
         $operator = $this->portariaOperator();
         $record = PreRegistration::factory()->visitor()->create(['phone' => '(12) 99876-4321']);
 
@@ -928,6 +936,7 @@ class ExampleTest extends TestCase
 
     public function test_editing_preserves_the_original_value_in_the_audit_trail(): void
     {
+        DestinosDeTeste::criar();
         $operator = $this->portariaOperator();
         $record = PreRegistration::factory()->visitor()->create(['name' => 'Camila Andrade']);
 
@@ -949,6 +958,7 @@ class ExampleTest extends TestCase
 
     public function test_editing_records_a_persistent_audit_entry_with_operator_and_timestamp(): void
     {
+        DestinosDeTeste::criar();
         $operator = $this->portariaOperator();
         $record = PreRegistration::factory()->visitor()->create();
 
@@ -1022,6 +1032,7 @@ class ExampleTest extends TestCase
 
     public function test_saving_an_edit_fails_on_a_version_conflict_instead_of_overwriting(): void
     {
+        DestinosDeTeste::criar();
         $operator = $this->portariaOperator();
         $record = PreRegistration::factory()->visitor()->create(['phone' => '(12) 90000-0000']);
 
@@ -2078,12 +2089,14 @@ class ExampleTest extends TestCase
 
     public function test_the_public_pre_registration_asks_for_the_property_when_visitor(): void
     {
+        DestinosDeTeste::criar();
         Livewire::test(PublicPreRegistration::class)
             ->call('start')
             ->set('accessType', 'visitante')
             ->set('step', 2)
             ->assertDontSee('Praia do Santa Rita')
             ->assertSee('Imóvel de destino')
+            ->set('destinationProperty', 'Bloco B — Apto 304')
             ->assertSee('Responsável: Mariana Souza')
             ->set('destinationProperty', 'Bloco A — Apto 208')
             ->assertSee('Responsável: Bianca Moretti');

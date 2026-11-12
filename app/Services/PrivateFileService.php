@@ -262,6 +262,44 @@ class PrivateFileService
         }
     }
 
+    /** Conteúdo de um arquivo protegido (null se indisponível). */
+    public function conteudo(Arquivo $arquivo): ?string
+    {
+        if (! $arquivo->isAvailable()) {
+            return null;
+        }
+
+        $conteudo = Storage::disk($arquivo->disk)->get($arquivo->object_key);
+
+        return is_string($conteudo) && $conteudo !== '' ? $conteudo : null;
+    }
+
+    /**
+     * Reaproveita uma imagem já guardada (ex.: selfie do pré-cadastro aprovado)
+     * como foto da pessoa. O original continua no pré-cadastro; a cópia é uma
+     * nova versão da foto da pessoa, com a mesma auditoria do envio normal.
+     */
+    public function copiarParaFotoPessoa(Pessoa $pessoa, string $conteudo, string $origin): Arquivo
+    {
+        $mime = @getimagesizefromstring($conteudo)['mime'] ?? null;
+        if (! in_array($mime, ['image/jpeg', 'image/png'], true)) {
+            throw new RuntimeException('A imagem não é JPEG nem PNG.');
+        }
+
+        $temporaryPath = tempnam(storage_path('framework/cache'), 'sdv-foto-');
+        if ($temporaryPath === false || file_put_contents($temporaryPath, $conteudo) === false) {
+            throw new RuntimeException('Não foi possível preparar a foto para armazenamento privado.');
+        }
+
+        try {
+            $extensao = $mime === 'image/png' ? 'png' : 'jpg';
+
+            return $this->storePessoaFoto($pessoa, new UploadedFile($temporaryPath, 'foto-pessoa.'.$extensao, $mime, null, true), $origin);
+        } finally {
+            @unlink($temporaryPath);
+        }
+    }
+
     /**
      * Imagem da câmera de placas como evidência privada (AJ-006). Só o
      * catálogo é criado aqui; a captura que aponta para ele fica com o

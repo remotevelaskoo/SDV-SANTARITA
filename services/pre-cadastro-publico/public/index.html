@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Pré-cadastro · SDV One</title>
+        <link rel="stylesheet" href="/portal.css" />
+        <script src="/portal.js" type="module"></script>
+    </head>
+    <body>
+        <header>
+            <a href="#inicio" class="brand"
+                ><span class="mark">S</span
+                ><span
+                    >SDV <b>One</b
+                    ><small
+                        >Condomínio
+                        <span id="condominio">Santa Rita</span></small
+                    ></span
+                ></a
+            ><span class="badge">Pré-cadastro online</span>
+        </header>
+        <main id="inicio">
+            <div class="intro">
+                <p class="eyebrow">ANTES DA SUA CHEGADA</p>
+                <h1>Uma chegada mais tranquila.</h1>
+                <p>
+                    Preencha seus dados e envie as imagens para conferência da
+                    portaria.
+                </p>
+                <p class="notice">
+                    O envio deste formulário não autoriza a entrada. Aguarde a
+                    análise da portaria.
+                </p>
+            </div>
+            <section id="loading" role="status">
+                Conferindo seu convite…
+            </section>
+            <form id="cadastro" hidden>
+                <section>
+                    <h2><span>01</span> Dados pessoais</h2>
+                    <div class="grid">
+                        <label class="wide"
+                            >Nome completo<input
+                                name="name"
+                                required
+                                minlength="3"
+                                maxlength="120"
+                                autocomplete="name" /></label
+                        ><label
+                            >CPF<input
+                                name="cpf"
+                                required
+                                maxlength="14"
+                                inputmode="numeric" /></label
+                        ><label
+                            >Tipo de acesso<select name="accessType">
+                                <option value="turista">Turista · praia</option>
+                                <option value="visitante">Visitante</option>
+                                <option value="prestador">Prestador</option>
+                            </select></label
+                        ><label
+                            >Telefone <small>opcional</small
+                            ><input
+                                name="phone"
+                                type="tel"
+                                maxlength="20"
+                                autocomplete="tel" /></label
+                        ><label
+                            >E-mail <small>opcional</small
+                            ><input
+                                name="email"
+                                type="email"
+                                maxlength="120"
+                                autocomplete="email" /></label
+                        ><label
+                            >Nascimento <small>opcional</small
+                            ><input
+                                name="birthDate"
+                                type="date"
+                                autocomplete="bday" /></label
+                        ><label
+                            >Data prevista da visita<input
+                                name="visitDate"
+                                type="date"
+                                required /></label
+                        ><label id="destino" hidden
+                            >Imóvel de destino<select
+                                name="destinationProperty"
+                            >
+                                <option value="">Selecione o imóvel</option>
+                            </select></label
+                        ><p id="destino-vazio" class="wide" role="status" hidden>
+                            Nenhum imóvel disponível para este tipo de acesso
+                            no momento. Procure a administração do condomínio.
+                        </p
+                        ><label class="wide"
+                            >Endereço <small>opcional</small
+                            ><input
+                                name="address"
+                                maxlength="500"
+                                autocomplete="street-address"
+                        /></label>
+                    </div>
+                </section>
+                <section>
+                    <h2><span>02</span> Documento</h2>
+                    <p>
+                        Envie uma imagem nítida, com os dados legíveis. Nesta
+                        validação, a portaria fará a conferência manual.
+                    </p>
+                    <label
+                        >Tipo de documento<select name="documentType">
+                            <option value="cnh">CNH</option>
+                            <option value="rg_cin">RG/CIN</option>
+                        </select></label
+                    >
+                    <div class="grid">
+                        <div class="file">
+                            <label
+                                >Frente do documento<input
+                                    name="documento"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    capture="environment"
+                                    required
+                            /></label>
+                            <button
+                                type="button"
+                                class="camera-open"
+                                data-camera="documento"
+                                aria-label="Abrir câmera: frente do documento"
+                            >
+                                Abrir câmera
+                            </button>
+                            <small
+                                >Ou selecione uma imagem já salva acima.</small
+                            >
+                            <img alt="Prévia: frente do documento" hidden />
+                        </div>
+                        <div class="file" id="verso" hidden>
+                            <label
+                                >Verso do RG/CIN<input
+                                    name="documento_verso"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    capture="environment"
+                            /></label>
+                            <button
+                                type="button"
+                                class="camera-open"
+                                data-camera="documento_verso"
+                                aria-label="Abrir câmera: verso do rg/cin"
+                            >
+                                Abrir câmera
+                            </button>
+                            <small
+                                >Ou selecione uma imagem já salva acima.</small
+                            >
+                            <img alt="Prévia: verso do rg/cin" hidden />
+                        </div>
+                    </div>
+                    <small
+                        >JPG, PNG ou WebP, até 8 MB por imagem. Não envie
+                        arquivos de terceiros.</small
+                    >
+                </section>
+                <section>
+                    <h2><span>03</span> Sua fotografia</h2>
+                    <p>
+                        Rosto de frente, bem iluminado e sem acessórios que
+                        dificultem a identificação. A imagem será conferida pela
+                        portaria; esta captura não comprova identidade nem prova
+                        de vida.
+                    </p>
+                    <div class="file">
+                        <label
+                            >Sua fotografia<input
+                                name="selfie"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                capture="user"
+                                required
+                        /></label>
+                        <button
+                            type="button"
+                            class="camera-open"
+                            data-camera="selfie"
+                            aria-label="Abrir câmera: sua fotografia"
+                        >
+                            Abrir câmera
+                        </button>
+                        <small>Ou selecione uma imagem já salva acima.</small>
+                        <img alt="Prévia: sua fotografia" hidden />
+                    </div>
+                </section>
+                <section>
+                    <h2><span>04</span> Veículo</h2>
+                    <label class="check"
+                        ><input name="hasVehicle" type="checkbox" /> Vou chegar
+                        com veículo</label
+                    >
+                    <div id="veiculo" class="grid" hidden>
+                        <label
+                            >Placa<input
+                                name="plate"
+                                maxlength="8"
+                                autocapitalize="characters" /></label
+                        ><label
+                            >Modelo <small>opcional</small
+                            ><input
+                                name="vehicleModel"
+                                maxlength="100" /></label
+                        ><label
+                            >Cor <small>opcional</small
+                            ><input name="vehicleColor" maxlength="40"
+                        /></label>
+                    </div>
+                </section>
+                <section>
+                    <h2><span>05</span> Confira e envie</h2>
+                    <p id="privacidade"></p>
+                    <label class="check"
+                        ><input
+                            name="privacyAccepted"
+                            type="checkbox"
+                            required
+                        />
+                        Li o aviso de privacidade e conferi os dados e imagens
+                        enviados.</label
+                    >
+                    <p>
+                        A solicitação continuará aguardando análise mesmo se o
+                        condomínio estiver temporariamente sem internet.
+                    </p>
+                    <button id="enviar" type="submit">
+                        Enviar pré-cadastro <span aria-hidden="true">→</span>
+                    </button>
+                    <p id="resultado" role="status" aria-live="polite"></p>
+                </section>
+            </form>
+            <section id="receipt" hidden>
+                <p class="eyebrow">SOLICITAÇÃO RECEBIDA</p>
+                <h2>Acompanhe sua solicitação</h2>
+                <p id="protocol"></p>
+                <p id="status" role="status"></p>
+                <button id="refresh" type="button">Atualizar situação</button
+                ><button id="copy" class="secondary" type="button">
+                    Copiar link de acompanhamento
+                </button>
+                <p id="copy-message" role="status"></p>
+                <small
+                    >Guarde o link em local privado. Ele permite consultar a
+                    situação, sem exibir documentos ou fotografias. Aprovação do
+                    pré-cadastro não substitui autorização de acesso.</small
+                >
+            </section>
+        </main>
+        <dialog
+            id="camera-dialog"
+            aria-labelledby="camera-title"
+            aria-describedby="camera-status"
+        >
+            <h2 id="camera-title">Tirar fotografia</h2>
+            <video id="camera-video" autoplay muted playsinline></video>
+            <p id="camera-status" role="status" aria-live="polite"></p>
+            <div class="camera-actions">
+                <button type="button" id="camera-capture" disabled>
+                    Tirar foto
+                </button>
+                <button type="button" id="camera-cancel" class="secondary">
+                    Cancelar
+                </button>
+            </div>
+            <small
+                >A câmera será encerrada ao fotografar ou cancelar. Você poderá
+                conferir e refazer antes de enviar.</small
+            >
+        </dialog>
+        <footer>
+            SDV One · Soluções do Vale<br />Se precisar de ajuda, procure a
+            administração do condomínio.
+        </footer>
+    </body>
+</html>
