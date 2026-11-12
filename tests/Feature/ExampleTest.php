@@ -562,7 +562,10 @@ class ExampleTest extends TestCase
             'notes' => 'Visitante conferido pela portaria.',
         ]);
 
+        // Cada decisão é um atendimento: depois de registrado, segue em "Iniciar nova validação".
         $test
+            ->call('startNewValidation')
+            ->call('selecionarPessoa', $pessoa->id)
             ->set('ticketNumero', '000103')
             ->call('release')
             ->assertSet('feedback.variant', 'success')
@@ -571,6 +574,8 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('historico_acessos', ['pessoa_id' => $pessoa->id, 'resultado' => 'liberado']);
 
         $test
+            ->call('startNewValidation')
+            ->call('selecionarPessoa', $pessoa->id)
             ->set('denialReason', 'documento_invalido')
             ->set('denialDetails', 'Documento apresentado não confere.')
             ->call('deny')
