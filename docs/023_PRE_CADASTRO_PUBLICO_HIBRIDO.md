@@ -254,3 +254,16 @@ Na homologação local, o agendador não importou sozinho e o comando manual tro
 - Testes: dois novos em `PreCadastroNuvemTest` (resultado e clique repetido; permissão, configuração desligada e nuvem fora do ar). Suíte completa: 588 aprovados.
 
 **Se a busca automática não rodar:** confirmar que `php artisan schedule:work` está ativo depois da atualização do código (reiniciar o processo), rodar `php artisan config:clear` se houver cache de configuração e conferir `php artisan schedule:list`. O agendamento usa `withoutOverlapping(60)`: se um processo for interrompido no meio de uma sincronização, o próximo ciclo automático pode esperar até 60 minutos; o botão e o comando manual continuam funcionando.
+
+## 15. Aprovar e validar entrada (pedido do PO de 12/11/2026)
+
+Na análise do pré-cadastro, quem tem `pre-registro.aprovar` **e** `validacao.registrar` vê o botão **Aprovar e validar entrada**. Ele aprova (mesma regra e histórico do "Aprovar pré-cadastro") e abre a Validação de entrada já com a pessoa, sem trocar de menu nem buscar. Um pré-cadastro já aprovado mostra **Abrir na validação de entrada**.
+
+Na Validação de entrada (`/validacao?pre-cadastro={id}`):
+
+- só um pré-cadastro **aprovado** da implantação ativa é carregado; qualquer outro mostra "Pré-cadastro não disponível";
+- se o CPF já tem cadastro no SDV, essa pessoa é aberta;
+- se não tem e o operador pode cadastrar pessoas (`pessoas.gerenciar`), o cadastro rápido abre na etapa de conferência com nome, CPF, telefone, nascimento, tipo e placa do pré-cadastro. Visitante leva imóvel (se ainda estiver no catálogo) e responsável; prestador e turista não ganham responsável nem imóvel;
+- se o operador não pode cadastrar pessoas, o protocolo fica na busca e o aviso pede quem possa cadastrar.
+
+Nada é gravado ao abrir: o operador confere com o documento original, tira a foto e salva. Abrir **não** libera a entrada, **não** cria autorização e **não** envia à facial; essas decisões seguem as regras da validação. A abertura é auditada (`abriu_validacao_pelo_pre_cadastro`, com protocolo e resultado).

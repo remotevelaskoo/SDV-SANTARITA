@@ -346,7 +346,10 @@
                         <x-ui.button variant="danger" wire:click="chooseDecision('rejeitar')" :disabled="$editing">Rejeitar</x-ui.button>
                     @endif
                     @if ($pode['aprovar'])
-                        <x-ui.button variant="success" wire:click="approve" wire:loading.attr="disabled" :disabled="$editing">Aprovar pré-cadastro</x-ui.button>
+                        <x-ui.button :variant="$pode['validar'] ? 'secondary' : 'success'" wire:click="approve" wire:loading.attr="disabled" :disabled="$editing">Aprovar pré-cadastro</x-ui.button>
+                        @if ($pode['validar'])
+                            <x-ui.button variant="success" wire:click="approveAndValidate" wire:loading.attr="disabled" :disabled="$editing">Aprovar e validar entrada</x-ui.button>
+                        @endif
                     @endif
                     @unless ($podeDecidir)
                         <p class="pre-cadastro-analise__nota">Seu perfil permite consultar, mas não decidir este pré-cadastro.</p>
@@ -357,6 +360,11 @@
             <x-ui.alert variant="info" title="Decisão já registrada">
                 Consulte o histórico. Uma nova decisão exigirá um fluxo autorizado.
             </x-ui.alert>
+            @if ($record->status === 'aprovado' && $pode['validar'])
+                <div class="pre-cadastro-analise__acoes">
+                    <x-ui.button variant="success" wire:click="openValidation" wire:loading.attr="disabled">Abrir na validação de entrada</x-ui.button>
+                </div>
+            @endif
         @endif
     </section>
 </div>

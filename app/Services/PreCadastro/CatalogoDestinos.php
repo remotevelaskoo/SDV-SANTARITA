@@ -63,6 +63,18 @@ class CatalogoDestinos
         return null;
     }
 
+    /** Id do imóvel com este rótulo no catálogo atual (null se não estiver mais ativo). */
+    public function imovelId(?string $label): ?string
+    {
+        foreach ($this->itens() as $item) {
+            if ($item['label'] === $label) {
+                return $item['ref'];
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Versão enviada ao portal: só rótulo e responsável, sem identificadores internos.
      *

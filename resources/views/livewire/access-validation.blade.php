@@ -57,6 +57,12 @@
             </div>
         </header>
 
+        @if ($avisoPreCadastro)
+            <x-ui.alert :variant="$avisoPreCadastro['variant']" :title="$avisoPreCadastro['title']">
+                {{ $avisoPreCadastro['message'] }}
+            </x-ui.alert>
+        @endif
+
         @if ($quickRegistrationOpen)
             @php
                 $etapas = [

@@ -166,13 +166,7 @@ class PreRegistrationReview extends Component
     {
         $this->authorizeDecision('pre-registro.aprovar');
 
-        if ($this->editing) {
-            $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
-
-            return;
-        }
-
-        if (! $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.')) {
+        if (! $this->aprovar()) {
             return;
         }
 
@@ -181,6 +175,43 @@ class PreRegistrationReview extends Component
             'title' => 'Pré-cadastro aprovado',
             'message' => 'A entrada ainda será validada pela portaria conforme as regras vigentes.',
         ];
+    }
+
+    /**
+     * Aprova e já abre a Validação de entrada com esta pessoa (pedido do PO
+     * de 12/11/2026). Aprovar continua sem liberar a entrada, sem criar
+     * autorização e sem enviar à facial: a decisão segue na validação.
+     */
+    public function approveAndValidate(): void
+    {
+        $this->authorizeDecision('pre-registro.aprovar');
+        $this->authorizeDecision('validacao.registrar');
+
+        if (! $this->aprovar()) {
+            return;
+        }
+
+        $this->redirectRoute('validation', ['pre-cadastro' => $this->preRegistrationId]);
+    }
+
+    /** Pré-cadastro já aprovado: abre a validação sem nova decisão. */
+    public function openValidation(): void
+    {
+        $this->authorizeDecision('validacao.registrar');
+        abort_unless($this->record()->status === 'aprovado', 404);
+
+        $this->redirectRoute('validation', ['pre-cadastro' => $this->preRegistrationId]);
+    }
+
+    private function aprovar(): bool
+    {
+        if ($this->editing) {
+            $this->addError('editReason', 'Salve ou cancele a edição antes de aprovar.');
+
+            return false;
+        }
+
+        return $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.');
     }
 
     public function reject(): void
@@ -671,6 +702,7 @@ class PreRegistrationReview extends Component
                 'aprovar' => (bool) $user?->hasPermission('pre-registro.aprovar'),
                 'rejeitar' => (bool) $user?->hasPermission('pre-registro.rejeitar'),
                 'corrigir' => (bool) $user?->hasPermission('pre-registro.solicitar-correcao'),
+                'validar' => (bool) $user?->hasPermission('validacao.registrar'),
             ],
         ])->layout('components.layouts.app', [
             'title' => 'Análise do pré-cadastro',
