@@ -30,6 +30,7 @@ use App\Services\PreCadastro\CatalogoDestinos;
 use App\Services\PreCadastro\PessoaDoPreCadastro;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
+use App\Services\VeiculoDoAtendimento;
 use App\Support\NormalizadorBusca;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -164,6 +165,9 @@ class AccessValidation extends Component
             if ($pre->vehicle_plate) {
                 $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
                 $this->veioDeCarro = true;
+                $this->veiculoModelo = (string) $pre->vehicle_model;
+                $this->veiculoCor = (string) $pre->vehicle_color;
+                $this->preencherDadosDoVeiculo();
             }
             $this->avisoPreCadastro = [
                 'variant' => 'info',
@@ -223,6 +227,9 @@ class AccessValidation extends Component
         if ($pre->vehicle_plate) {
             $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
             $this->veioDeCarro = true;
+            $this->veiculoModelo = (string) $pre->vehicle_model;
+            $this->veiculoCor = (string) $pre->vehicle_color;
+            $this->preencherDadosDoVeiculo();
         }
 
         $this->checkQuickDocument();
@@ -501,6 +508,7 @@ class AccessValidation extends Component
     public function updatedPlacaInformada(): void
     {
         $this->placaInformada = NormalizadorBusca::documento($this->placaInformada);
+        $this->preencherDadosDoVeiculo();
     }
 
     /** @return list<array{id: string, nome: string, ponto: string, ponto_id: string, simulador: bool}> */
@@ -545,7 +553,7 @@ class AccessValidation extends Component
         $this->reset([
             'notes', 'denialDetails', 'feedback', 'protocol', 'quickRegistrationOpen', 'quickPersonRegistered',
             'ticketNumero', 'ticketDuplicadoConfirmado', 'capturaPlacaId', 'capturaPlacaFalha', 'placaInformada',
-            'quickDuplicateFound', 'quickResultado', 'avisoPreCadastro', 'tipoPreCadastro',
+            'veiculoMarca', 'veiculoModelo', 'veiculoCor', 'quickDuplicateFound', 'quickResultado', 'avisoPreCadastro', 'tipoPreCadastro',
         ]);
         // Novo atendimento: nenhuma captura, prévia ou dado do cadastro anterior sobrevive.
         $this->resetQuickRegistrationFields();
@@ -654,7 +662,7 @@ class AccessValidation extends Component
             ->filter(fn (VeiculoVinculo $vinculoVeiculo) => $vinculoVeiculo->veiculo !== null)
             ->map(fn (VeiculoVinculo $vinculoVeiculo) => [
                 'plate' => $vinculoVeiculo->veiculo->plate_display,
-                'description' => collect([$vinculoVeiculo->veiculo->brand, $vinculoVeiculo->veiculo->model, $vinculoVeiculo->veiculo->color])->filter()->join(' · ') ?: 'Sem descrição',
+                'description' => collect([$vinculoVeiculo->veiculo->brand, $vinculoVeiculo->veiculo->model, $vinculoVeiculo->veiculo->color])->filter()->join(' · ') ?: 'Sem marca, modelo e cor',
                 'status' => $vinculoVeiculo->veiculo->status,
             ])
             ->values()
@@ -894,7 +902,13 @@ class AccessValidation extends Component
         $pessoa = $this->currentPessoaId ? Pessoa::query()->find($this->currentPessoaId) : null;
         $vinculo = $pessoa ? Vinculo::query()->where('pessoa_id', $pessoa->id)->whereNull('ended_at')->first() : null;
 
+        // Marca, modelo e cor da etapa Placa vão para o cadastro da pessoa (PO, 13/11/2026).
+        $veiculo = $pessoa !== null && $placa !== '' && $this->veioDeCarro !== false
+            ? app(VeiculoDoAtendimento::class)->registrar($pessoa, $placa, $this->veiculoMarca, $this->veiculoModelo, $this->veiculoCor, Auth::user())
+            : null;
+
         return HistoricoAcesso::query()->create([
+            'veiculo_id' => $veiculo?->id,
             'placa_informada' => $placa !== '' ? $placa : null,
             'placa_origem' => $placa === '' ? null : ($captura !== null ? 'conferida' : 'manual'),
             'captura_placa_id' => $captura?->id,

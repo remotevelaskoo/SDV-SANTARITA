@@ -13,6 +13,7 @@ use App\Services\ContribuicoesAtendimento;
 use App\Services\PerfilAtendimento;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
+use App\Services\VeiculoDoAtendimento;
 use App\Support\NormalizadorBusca;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +44,13 @@ trait FluxoGuiadoAtendimento
 
     /** Etapa Placa: null = ainda não respondeu; false = veio a pé. */
     public ?bool $veioDeCarro = null;
+
+    /** Etapa Placa: dados do veículo (opcionais), gravados no cadastro da pessoa ao concluir. */
+    public string $veiculoMarca = '';
+
+    public string $veiculoModelo = '';
+
+    public string $veiculoCor = '';
 
     /** Concluir: enviar o cadastro rápido também ao terminal facial (com permissão). */
     public bool $enviarFacial = false;
@@ -132,8 +140,53 @@ trait FluxoGuiadoAtendimento
         $this->resetErrorBag(['veioDeCarro', 'placaInformada']);
         if ($this->veioDeCarro === false) {
             $this->placaInformada = '';
+            $this->limparDadosDoVeiculo();
             $this->descartarCapturaPlaca();
         }
+    }
+
+    /** Cartão de "Veículos no cadastro": usa a placa e traz marca, modelo e cor. */
+    public function usarVeiculoDoCadastro(string $placa): void
+    {
+        $this->placaInformada = NormalizadorBusca::documento($placa);
+        $this->limparDadosDoVeiculo();
+        $this->preencherDadosDoVeiculo();
+    }
+
+    /** Placa já cadastrada: completa os campos vazios com o que o cadastro tem. */
+    private function preencherDadosDoVeiculo(): void
+    {
+        $veiculo = VeiculoDoAtendimento::doCadastro($this->placaInformada);
+        if ($veiculo === null) {
+            return;
+        }
+        $this->veiculoMarca = $this->veiculoMarca !== '' ? $this->veiculoMarca : (string) $veiculo->brand;
+        $this->veiculoModelo = $this->veiculoModelo !== '' ? $this->veiculoModelo : (string) $veiculo->model;
+        $this->veiculoCor = $this->veiculoCor !== '' ? $this->veiculoCor : (string) $veiculo->color;
+    }
+
+    private function limparDadosDoVeiculo(): void
+    {
+        $this->veiculoMarca = '';
+        $this->veiculoModelo = '';
+        $this->veiculoCor = '';
+    }
+
+    /** @return list<string> */
+    public function modelosSugeridos(): array
+    {
+        $marcas = (array) config('veiculos.marcas');
+        $marca = collect(array_keys($marcas))->first(fn (string $m) => mb_strtolower($m) === mb_strtolower(trim($this->veiculoMarca)));
+
+        return $marca !== null ? $marcas[$marca] : [];
+    }
+
+    /** O que o cadastro já tem para esta placa (para marcar em verde). */
+    public function veiculoDoCadastroAtual(): ?array
+    {
+        $veiculo = VeiculoDoAtendimento::doCadastro($this->placaInformada);
+
+        return $veiculo === null ? null : ['marca' => (string) $veiculo->brand, 'modelo' => (string) $veiculo->model, 'cor' => (string) $veiculo->color];
     }
 
     /**
@@ -266,7 +319,9 @@ trait FluxoGuiadoAtendimento
             'tipo' => $novo ? ucfirst($this->quickAccessType) : $perfil['perfil'],
             'novo' => $novo,
             'foto' => $foto,
-            'veiculo' => $this->veioDeCarro ? NormalizadorBusca::documento($this->placaInformada) : 'Veio a pé',
+            'veiculo' => $this->veioDeCarro
+                ? collect([NormalizadorBusca::documento($this->placaInformada), trim($this->veiculoMarca), trim($this->veiculoModelo), trim($this->veiculoCor)])->filter()->join(' · ')
+                : 'Veio a pé',
             'pagamento' => $pagamento,
             'autorizacao' => $this->resumoAutorizacao(),
         ];
@@ -551,6 +606,7 @@ trait FluxoGuiadoAtendimento
     {
         $this->passo = 'dados';
         $this->veioDeCarro = null;
+        $this->limparDadosDoVeiculo();
         $this->enviarFacial = false;
         $this->autorizacaoTuristaLiberada = null;
         $this->envioFacialLiberacao = null;
