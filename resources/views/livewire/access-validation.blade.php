@@ -500,7 +500,7 @@
         </header>
 
         <div class="atendimento-escolha" role="group" aria-label="Veio de carro?">
-            <button type="button" @class(['ui-button', 'ui-button--lg', 'ui-button--primary' => $veioDeCarro === true, 'ui-button--secondary' => $veioDeCarro !== true]) wire:click="$set('veioDeCarro', true)" aria-pressed="{{ $veioDeCarro === true ? 'true' : 'false' }}">
+            <button type="button" @class(['ui-button', 'ui-button--lg', 'ui-button--primary' => $veioDeCarro === true, 'ui-button--secondary' => $veioDeCarro !== true]) wire:click="escolherCarro" aria-pressed="{{ $veioDeCarro === true ? 'true' : 'false' }}">
                 <span class="ui-button__content"><x-icon name="car" /> Sim, de carro</span>
             </button>
             <button type="button" @class(['ui-button', 'ui-button--lg', 'ui-button--primary' => $veioDeCarro === false, 'ui-button--secondary' => $veioDeCarro !== false]) wire:click="$set('veioDeCarro', false)" aria-pressed="{{ $veioDeCarro === false ? 'true' : 'false' }}">
@@ -513,51 +513,62 @@
         @php($placaDigitada = \App\Support\NormalizadorBusca::documento($placaInformada))
         @php($placasCadastro = collect($currentPerson['vehicles'] ?? [])->map(fn ($v) => \App\Support\NormalizadorBusca::documento($v['plate']))->all())
         @php($captura = $this->capturaPlaca)
-        <div class="validation-plate" data-rolar="placa-veiculo">
+        @php($cameras = $this->camerasPlaca)
+        <div @class(['validation-plate', 'validation-plate--com-camera' => $cameras !== []]) data-rolar="placa-veiculo">
+            @if ($cameras !== [])
+            {{-- Câmera de placas do posto (Integrações › Câmeras de placas) --}}
             <div class="validation-plate__capture">
-                @if ($this->camerasPlaca !== [])
-                    <div class="validation-plate__camera">
-                        <x-ui.select id="validation-plate-camera" label="Câmera de placas" wire:model="cameraPlacaId" :error="$errors->first('cameraPlacaId')">
-                            <option value="">Escolha a câmera</option>
-                            @foreach ($this->camerasPlaca as $camera)
-                                <option value="{{ $camera['id'] }}">{{ $camera['nome'] }} · {{ $camera['ponto'] }}{{ $camera['simulador'] ? ' (SIMULADOR)' : '' }}</option>
-                            @endforeach
-                        </x-ui.select>
-                        <x-ui.button variant="secondary" wire:click="capturarPlaca" wire:loading.attr="disabled" wire:target="capturarPlaca">
-                            <span wire:loading.remove wire:target="capturarPlaca">Capturar imagem</span>
-                            <span wire:loading wire:target="capturarPlaca">Capturando…</span>
-                        </x-ui.button>
-                    </div>
-                @else
-                    <x-ui.empty-state title="Nenhuma câmera de placas neste posto" description="Digite a placa ao lado. A administração cadastra câmeras em Integrações › Câmeras de placas." icon="car" />
-                @endif
+                <div class="validation-plate__visor">
+                    @if ($captura)
+                        <figure @class(['validation-plate__image', 'is-simulated' => $captura['simulada']])>
+                            @if ($captura['url'])
+                                <img src="{{ $captura['url'] }}" alt="Imagem capturada pela câmera {{ $captura['camera'] }}" referrerpolicy="no-referrer">
+                            @else
+                                <span class="validation-plate__hidden">Imagem guardada como evidência. Seu perfil não permite exibi-la.</span>
+                            @endif
+                        </figure>
+                    @else
+                        <div class="validation-plate__aguardando" wire:loading.class="is-loading" wire:target="capturarPlaca,escolherCarro">
+                            <x-icon name="car" />
+                            <span wire:loading.remove wire:target="capturarPlaca,escolherCarro">Imagem da câmera aparece aqui</span>
+                            <span wire:loading wire:target="capturarPlaca,escolherCarro">Capturando a imagem…</span>
+                        </div>
+                    @endif
+                </div>
 
                 @if ($capturaPlacaFalha)
                     <x-ui.alert variant="warning" title="Imagem não capturada">{{ $capturaPlacaFalha }}</x-ui.alert>
                 @endif
 
-                @if ($captura)
-                    <figure @class(['validation-plate__image', 'is-simulated' => $captura['simulada']])>
-                        @if ($captura['url'])
-                            <img src="{{ $captura['url'] }}" alt="Imagem capturada pela câmera {{ $captura['camera'] }}" referrerpolicy="no-referrer">
-                        @else
-                            <span class="validation-plate__hidden">Imagem guardada como evidência. Seu perfil não permite exibi-la.</span>
-                        @endif
-                        <figcaption>
-                            @if ($captura['simulada'])
-                                <x-ui.badge variant="danger">SIMULADOR · imagem sintética</x-ui.badge>
-                            @endif
-                            <strong>{{ $captura['camera'] }}</strong>
-                            <small>{{ $captura['ponto'] ?? 'Ponto não informado' }} · capturada em {{ $captura['capturada_em'] }}</small>
-                            <button type="button" class="sensitive-reveal" wire:click="descartarCapturaPlaca">Descartar e capturar de novo</button>
-                        </figcaption>
-                    </figure>
-                @endif
+                <div class="validation-plate__camera">
+                    @if (count($cameras) > 1)
+                        <x-ui.select id="validation-plate-camera" label="Câmera de placas" wire:model="cameraPlacaId" :error="$errors->first('cameraPlacaId')">
+                            <option value="">Escolha a câmera</option>
+                            @foreach ($cameras as $camera)
+                                <option value="{{ $camera['id'] }}">{{ $camera['nome'] }} · {{ $camera['ponto'] }}{{ $camera['simulador'] ? ' (SIMULADOR)' : '' }}</option>
+                            @endforeach
+                        </x-ui.select>
+                    @else
+                        <p class="validation-plate__camera-nome">
+                            <strong>{{ $cameras[0]['nome'] }}{{ $cameras[0]['simulador'] ? ' (SIMULADOR)' : '' }}</strong>
+                            <small>{{ $cameras[0]['ponto'] }}</small>
+                        </p>
+                    @endif
+                    @if ($captura)
+                        <p class="validation-plate__camera-nome">
+                            @if ($captura['simulada'])<x-ui.badge variant="danger">SIMULADOR · imagem sintética</x-ui.badge>@endif
+                            <small>{{ $captura['camera'] }} · {{ $captura['ponto'] ?? 'Ponto não informado' }} · capturada em {{ $captura['capturada_em'] }}</small>
+                        </p>
+                    @endif
+                    <x-ui.button :variant="$captura ? 'secondary' : 'primary'" wire:click="{{ $captura ? 'descartarCapturaPlaca' : 'capturarPlaca' }}" wire:loading.attr="disabled" wire:target="capturarPlaca,escolherCarro,descartarCapturaPlaca">
+                        <x-icon name="camera" /> {{ $captura ? 'Capturar de novo' : 'Capturar placa' }}
+                    </x-ui.button>
+                </div>
             </div>
+            @endif
 
             <div class="validation-plate__reading">
-                <x-ui.field id="validation-plate" label="Placa do veículo" wire:model.live.debounce.400ms="placaInformada" placeholder="ABC1D23" maxlength="8" :error="$errors->first('placaInformada')" help="Confira na imagem e digite. Sem câmera, digite a placa informada pelo motorista." />
-                <p class="validation-plate__note">Leitura automática da placa: não configurada. A captura e a leitura são etapas separadas; nada é preenchido sem conferência.</p>
+                <x-ui.field id="validation-plate" label="Placa do veículo" wire:model.live.debounce.400ms="placaInformada" placeholder="ABC1D23" maxlength="8" :error="$errors->first('placaInformada')" :help="$cameras !== [] ? 'Confira na imagem da câmera e digite a placa.' : 'Este posto não tem câmera de placas: digite a placa informada pelo motorista.'" />
                 @if ($placaDigitada !== '')
                     @if (in_array($placaDigitada, $placasCadastro, true))
                         <x-ui.badge variant="success" icon="check-circle">Placa confere com o cadastro da pessoa</x-ui.badge>
@@ -566,11 +577,23 @@
                     @endif
                 @endif
                 @if (($currentPerson['vehicles'] ?? []) !== [])
-                    <dl class="validation-plate__registered">
-                        @foreach ($currentPerson['vehicles'] as $vehicle)
-                            <div><dt>Cadastrada</dt><dd>{{ $vehicle['plate'] }} · {{ $vehicle['description'] }}</dd></div>
-                        @endforeach
-                    </dl>
+                    <div class="validation-plate__registered">
+                        <h3>Veículos no cadastro <small>toque para usar</small></h3>
+                        <ul>
+                            @foreach ($currentPerson['vehicles'] as $vehicle)
+                                @php($placaVeiculo = \App\Support\NormalizadorBusca::documento($vehicle['plate']))
+                                <li>
+                                    <button type="button" @class(['validation-plate__veiculo', 'is-selected' => $placaVeiculo === $placaDigitada]) wire:click="$set('placaInformada', '{{ $placaVeiculo }}')">
+                                        <span class="validation-plate__chapa">{{ $vehicle['plate'] }}</span>
+                                        <span class="validation-plate__descricao">{{ $vehicle['description'] }}</span>
+                                    </button>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                @if ($cameras === [])
+                    <p class="validation-plate__note">Câmeras de placas são cadastradas pela administração em Integrações › Câmeras de placas e aparecem aqui sozinhas.</p>
                 @endif
             </div>
         </div>

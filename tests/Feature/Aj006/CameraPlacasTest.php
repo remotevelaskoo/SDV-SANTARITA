@@ -128,6 +128,24 @@ class CameraPlacasTest extends TestCase
         $this->assertSame('camera', CapturaPlaca::query()->sole()->origem);
     }
 
+    public function test_sim_de_carro_puxa_a_camera_do_posto_e_captura_sozinho(): void
+    {
+        $camera = $this->cameraSimulada();
+        $operador = $this->usuarioCom('validacao.registrar', 'arquivos.sensiveis.visualizar');
+
+        Livewire::actingAs($operador)->test(AccessValidation::class)
+            ->set('passo', 'placa')
+            ->call('escolherCarro')
+            ->assertSet('veioDeCarro', true)
+            ->assertSet('cameraPlacaId', $camera->id)
+            ->assertSet('capturaPlacaFalha', null)
+            ->assertSee('SIMULADOR · imagem sintética')
+            ->assertSee('Capturar de novo')
+            ->call('escolherCarro');
+
+        $this->assertSame(1, CapturaPlaca::query()->count(), 'Tocar de novo em "Sim, de carro" não captura outra imagem.');
+    }
+
     public function test_resposta_que_nao_e_imagem_ou_camera_fora_do_ar_nao_vira_evidencia(): void
     {
         $camera = $this->cameraHttp();
@@ -162,7 +180,7 @@ class CameraPlacasTest extends TestCase
 
         Livewire::actingAs($operador)->test(AccessValidation::class)
             ->set('passo', 'placa')->set('veioDeCarro', true)
-            ->assertSee('Nenhuma câmera de placas neste posto')
+            ->assertSee('Este posto não tem câmera de placas')
             ->call('selecionarPessoa', $pessoa->id)
             ->set('placaInformada', 'AB12')
             ->set('contribution', 'no')

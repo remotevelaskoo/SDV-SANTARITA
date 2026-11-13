@@ -2314,22 +2314,35 @@ body.has-drawer-open { overflow: hidden; }
 .leitura-diagnostico .ui-alert__action { display: grid; gap: 0.4rem; justify-items: start; }
 
 /* AJ-006 — câmera de placas na validação */
-.validation-plate { display: grid; gap: 1rem; }
-.validation-plate__capture, .validation-plate__reading { display: grid; align-content: start; gap: 0.7rem; }
-.validation-plate__camera { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem; }
-.validation-plate__camera > :first-child { flex: 1 1 14rem; }
-.validation-plate__image { display: grid; gap: 0.4rem; margin: 0; }
-.validation-plate__image img { width: 100%; max-height: 22rem; object-fit: contain; border-radius: var(--radius-md); background: #111827; }
-.validation-plate__image.is-simulated img { outline: 3px dashed var(--danger); outline-offset: 2px; }
-.validation-plate__image figcaption { display: grid; justify-items: start; gap: 0.2rem; font-size: 0.64rem; }
-.validation-plate__image figcaption small { color: var(--neutral-600); }
-.validation-plate__hidden { display: block; padding: 1rem; border: 1px dashed var(--neutral-300); border-radius: var(--radius-md); color: var(--neutral-600); font-size: 0.62rem; }
+.validation-plate { display: grid; gap: 1.25rem; padding: 0 0.9rem 0.9rem; min-width: 0; }
+.validation-plate:not(.validation-plate--com-camera) { max-width: 34rem; }
+.validation-plate__capture, .validation-plate__reading { display: grid; align-content: start; gap: 0.7rem; min-width: 0; }
+.validation-plate__camera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.validation-plate__camera > :first-child { flex: 1 1 12rem; }
+.validation-plate__camera .ui-button { min-height: 3rem; }
+.validation-plate__camera-nome { display: grid; justify-items: start; gap: 0.15rem; margin: 0; font-size: 0.7rem; }
+.validation-plate__camera-nome small { color: var(--neutral-600); }
+.validation-plate__visor { display: grid; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--radius-md); background: #111827; }
+.validation-plate__aguardando { display: grid; place-content: center; justify-items: center; gap: 0.5rem; color: #cbd5e1; font-size: 0.72rem; }
+.validation-plate__aguardando svg { width: 2.2rem; height: 2.2rem; opacity: 0.7; }
+.validation-plate__aguardando.is-loading svg { animation: validation-plate-pulso 0.8s ease-in-out infinite alternate; }
+@keyframes validation-plate-pulso { from { opacity: 0.25; } to { opacity: 1; } }
+.validation-plate__image { display: grid; margin: 0; min-height: 0; }
+.validation-plate__image img { width: 100%; height: 100%; object-fit: contain; background: #111827; }
+.validation-plate__image.is-simulated img { outline: 3px dashed var(--danger); outline-offset: -3px; }
+.validation-plate__hidden { display: grid; place-content: center; padding: 1rem; color: #cbd5e1; font-size: 0.66rem; text-align: center; }
 .validation-plate__note { margin: 0; color: var(--neutral-600); font-size: 0.6rem; line-height: 1.5; }
-.validation-plate__registered { margin: 0; }
-.validation-plate__registered > div { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--neutral-200); font-size: 0.63rem; }
-.validation-plate__registered dd { margin: 0; font-weight: 700; }
+.validation-plate__reading #validation-plate { min-height: 3.4rem; font-size: 1.4rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.validation-plate__registered h3 { margin: 0.4rem 0; color: var(--neutral-700); font-size: 0.72rem; }
+.validation-plate__registered h3 small { margin-left: 0.3rem; color: var(--neutral-500); font-weight: 400; }
+.validation-plate__registered ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.validation-plate__veiculo { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.validation-plate__veiculo:hover { border-color: var(--primary-500, #0b6bd3); }
+.validation-plate__veiculo.is-selected { border-color: var(--success, #15803d); background: #f0fdf4; }
+.validation-plate__chapa { flex: none; padding: 0.2rem 0.5rem; border: 2px solid #1f2937; border-radius: 0.3rem; background: #fff; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; }
+.validation-plate__descricao { min-width: 0; color: var(--neutral-700); font-size: 0.68rem; overflow-wrap: anywhere; }
 @media (min-width: 60rem) {
-    .validation-plate { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+    .validation-plate--com-camera { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 }
 .camera-placas-teste { display: block; width: 100%; max-width: 40rem; margin-top: 0.6rem; border-radius: var(--radius-md); background: #111827; }
 
