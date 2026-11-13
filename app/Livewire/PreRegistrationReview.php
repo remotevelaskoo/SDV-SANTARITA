@@ -8,6 +8,7 @@ use App\Models\PreRegistration;
 use App\Models\PreRegistrationEdit;
 use App\Services\AuditService;
 use App\Services\PreCadastro\CatalogoDestinos;
+use App\Services\PreCadastro\PessoaDoPreCadastro;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\ComparacaoOcrPreCadastro;
@@ -172,15 +173,16 @@ class PreRegistrationReview extends Component
 
         $this->feedback = [
             'variant' => 'success',
-            'title' => 'Pré-cadastro aprovado',
-            'message' => 'A entrada ainda será validada pela portaria conforme as regras vigentes.',
+            'title' => 'Pré-cadastro aprovado e pessoa cadastrada',
+            'message' => 'A pessoa já aparece na busca da Validação de entrada. A autorização de 24 h e o envio ao terminal facial acontecem no "Liberar entrada", depois do pagamento.',
         ];
     }
 
     /**
      * Aprova e já abre a Validação de entrada com esta pessoa (pedido do PO
-     * de 12/11/2026). Aprovar continua sem liberar a entrada, sem criar
-     * autorização e sem enviar à facial: a decisão segue na validação.
+     * de 12/11/2026). Aprovar cria a pessoa (pedido de 13/11/2026), mas não
+     * libera a entrada, não cria autorização e não envia à facial: isso
+     * acontece no "Liberar entrada" da validação.
      */
     public function approveAndValidate(): void
     {
@@ -211,7 +213,30 @@ class PreRegistrationReview extends Component
             return false;
         }
 
-        return $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.');
+        // Pedido do PO de 13/11/2026: só turista, e a aprovação cria a pessoa.
+        $impedimento = PessoaDoPreCadastro::impedimento($this->record());
+        if ($impedimento !== null) {
+            $this->addError('state', $impedimento);
+
+            return false;
+        }
+
+        $servico = app(PessoaDoPreCadastro::class);
+        $pessoa = DB::transaction(function () use ($servico) {
+            if (! $this->transitionStatus('aprovado', 'Aprovação registrada pela portaria.')) {
+                return null;
+            }
+
+            return $servico->registrar(PreRegistration::query()->findOrFail($this->preRegistrationId))['pessoa'];
+        });
+
+        if ($pessoa === null) {
+            return false;
+        }
+
+        $servico->usarSelfieComoFoto($pessoa, PreRegistration::query()->findOrFail($this->preRegistrationId));
+
+        return true;
     }
 
     public function reject(): void
@@ -642,6 +667,9 @@ class PreRegistrationReview extends Component
     {
         $alerts = [];
 
+        if ($record->isEditable() && ($impedimento = PessoaDoPreCadastro::impedimento($record)) !== null) {
+            $alerts[] = ['variant' => 'warning', 'title' => 'Não pode ser aprovado assim', 'message' => $impedimento];
+        }
         if ($record->alert) {
             $alerts[] = ['variant' => 'warning', 'title' => 'Atenção', 'message' => $record->alert];
         }

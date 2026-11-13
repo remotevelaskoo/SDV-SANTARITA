@@ -90,7 +90,7 @@ class AnalisePreCadastroTest extends TestCase
 
     public function test_decisao_registrada_nao_aceita_outra_de_aba_desatualizada(): void
     {
-        $registro = PreRegistration::factory()->create(['status' => 'aguardando']);
+        $registro = PreRegistration::factory()->tourist()->create(['status' => 'aguardando', 'document' => '529.982.247-25']);
         $gestor = $this->operador('pre-registro.analisar', 'pre-registro.aprovar', 'pre-registro.rejeitar');
 
         $abaAntiga = Livewire::actingAs($gestor)->test(PreRegistrationReview::class, ['preRegistration' => $registro->id]);

@@ -206,17 +206,32 @@ class BuscaIdentificacaoValidacaoTest extends TestCase
             ->assertSet('quickName', 'Joana Inexistente');
     }
 
-    public function test_revelar_documento_continua_auditado_apos_a_selecao(): void
+    /** Pedido do PO (13/11/2026): ao selecionar, o CPF já aparece completo para conferir, com auditoria. */
+    public function test_cpf_aparece_completo_ao_selecionar_e_fica_auditado(): void
     {
         [$pessoa] = $this->pessoaComVinculo('Karina Revelada', '935.411.347-80');
 
         Livewire::actingAs($this->operador('validacao.registrar', 'dados-sensiveis.revelar'))
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
+            ->assertSet('currentPerson.document', '935.411.347-80')
+            ->assertSee('Ocultar documento')
             ->call('toggleDocumentReveal')
-            ->assertSet('currentPerson.document', '935.411.347-80');
+            ->assertSet('currentPerson.document', '***.***.347-**');
 
         $this->assertTrue(AuditoriaEvento::query()->where('action', 'revelou_dado_sensivel')->where('entity_id', $pessoa->id)->exists());
+    }
+
+    public function test_sem_permissao_de_revelar_o_cpf_continua_escondido(): void
+    {
+        [$pessoa] = $this->pessoaComVinculo('Karina Escondida', '935.411.347-80');
+
+        Livewire::actingAs($this->operador('validacao.registrar'))
+            ->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
+            ->assertSet('currentPerson.document', '***.***.347-**');
+
+        $this->assertFalse(AuditoriaEvento::query()->where('action', 'revelou_dado_sensivel')->exists());
     }
 
     public function test_nome_de_busca_acompanha_alteracoes_do_nome(): void

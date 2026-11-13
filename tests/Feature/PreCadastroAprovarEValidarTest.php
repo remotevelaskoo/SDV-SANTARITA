@@ -62,7 +62,8 @@ class PreCadastroAprovarEValidarTest extends TestCase
 
     public function test_aprovar_e_validar_aprova_e_abre_a_validacao_com_a_pessoa(): void
     {
-        $registro = $this->preCadastro();
+        // Só turista pode ser aprovado (13/11/2026), e a aprovação cria a pessoa.
+        $registro = PreRegistration::factory()->tourist()->create(['document' => '123.456.789-09']);
         $gestor = $this->operador('pre-registro.analisar', 'pre-registro.aprovar', 'validacao.registrar');
 
         Livewire::actingAs($gestor)->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
@@ -71,6 +72,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->assertRedirect(route('validation', ['pre-cadastro' => $registro->id]));
 
         $this->assertSame('aprovado', $registro->fresh()->status);
+        $this->assertSame(1, PessoaDocumento::query()->where('valor_normalizado', '12345678909')->count());
         $this->assertSame(0, AutorizacaoAcesso::query()->count());
     }
 
@@ -243,18 +245,18 @@ class PreCadastroAprovarEValidarTest extends TestCase
         $registro = PreRegistration::factory()->tourist()->withStatus('aprovado')->create(['document' => '123.456.789-09']);
         $operador = $this->operador('validacao.registrar', 'pessoas.gerenciar');
 
-        // Ainda no cadastro rápido e depois de salvo: a contribuição de turista aparece.
+        // Turista aprovado antes de 13/11/2026 (sem pessoa): abrir cria a pessoa e já vem como Turista.
         Livewire::withQueryParams(['pre-cadastro' => $registro->id])
             ->actingAs($operador)
             ->test(AccessValidation::class)
-            ->assertSet('quickAccessType', 'turista')
+            ->assertSet('quickRegistrationOpen', false)
+            ->assertSet('tipoAtendimento', 'turista')
             ->set('passo', 'pagamento')
             ->assertSee('Entrada paga neste acesso')
-            ->call('saveQuickRegistration')
-            ->assertSet('quickPersonRegistered', true)
             ->assertDontSee('Sem contribuição');
+        $this->assertSame(1, PessoaDocumento::query()->where('valor_normalizado', '12345678909')->count());
 
-        // Pessoa já cadastrada, sem vínculo nem visita: vale o tipo do pré-cadastro.
+        // Aberto de novo: a mesma pessoa, sem duplicar.
         Livewire::withQueryParams(['pre-cadastro' => $registro->id])
             ->actingAs($operador)
             ->test(AccessValidation::class)
