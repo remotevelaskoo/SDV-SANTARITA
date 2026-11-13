@@ -138,6 +138,7 @@ cameraCapture.addEventListener("click", async () => {
         invalidateAttempt();
         preview(category, file);
         conditionals();
+        if (form.querySelector(".is-pendente")) marcarPendencias(imagensPendentes());
         closeCamera();
         $("#resultado").textContent =
             "Foto capturada. Confira a prévia; você pode abrir a câmera novamente para refazer.";
@@ -240,8 +241,62 @@ $("#copy").addEventListener("click", async () => {
             "Copie o endereço desta página para guardar seu acompanhamento.";
     }
 });
+// Fotos obrigatórias que ainda faltam, com o nome que o visitante entende.
+const IMAGENS_OBRIGATORIAS = {
+    documento: "a foto da frente do documento",
+    documento_verso: "a foto do verso do RG/CIN",
+    selfie: "a sua fotografia (selfie)",
+};
+function imagensPendentes() {
+    const back = form.elements.documentType.value === "rg_cin";
+    return Object.keys(IMAGENS_OBRIGATORIAS).filter(
+        (name) => (name !== "documento_verso" || back) && !imageFile(name),
+    );
+}
+function marcarPendencias(pendentes) {
+    for (const name of Object.keys(IMAGENS_OBRIGATORIAS)) {
+        const caixa = form.elements[name].closest(".file");
+        const pendente = pendentes.includes(name);
+        caixa.classList.toggle("is-pendente", pendente);
+        let aviso = caixa.querySelector(".pendente-aviso");
+        if (pendente && !aviso) {
+            aviso = document.createElement("p");
+            aviso.className = "pendente-aviso";
+            aviso.setAttribute("role", "alert");
+            caixa.prepend(aviso);
+        }
+        if (aviso) {
+            aviso.hidden = !pendente;
+            aviso.textContent = pendente
+                ? `Pendente: falta ${IMAGENS_OBRIGATORIAS[name]}.`
+                : "";
+        }
+    }
+}
+form.addEventListener("change", () => {
+    if (form.querySelector(".is-pendente")) marcarPendencias(imagensPendentes());
+});
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const pendentes = imagensPendentes();
+    marcarPendencias(pendentes);
+    if (pendentes.length > 0) {
+        const lista = pendentes.map((name) => IMAGENS_OBRIGATORIAS[name]);
+        const texto =
+            lista.length > 1
+                ? lista.slice(0, -1).join(", ") + " e " + lista.at(-1)
+                : lista[0];
+        $("#resultado").classList.add("is-pendente");
+        $("#resultado").textContent =
+            "Envio pendente: falta " +
+            texto +
+            ". Tire a foto ou escolha a imagem para enviar.";
+        const primeira = form.elements[pendentes[0]].closest(".file");
+        primeira.scrollIntoView({ behavior: "smooth", block: "center" });
+        primeira.querySelector(".camera-open")?.focus({ preventScroll: true });
+        return;
+    }
+    $("#resultado").classList.remove("is-pendente");
     if (!form.reportValidity()) return;
     closeCamera();
     submitting = true;
