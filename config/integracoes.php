@@ -80,6 +80,12 @@ return [
             'gateway-video' => SnapshotHttpAdaptador::class,
             'simulador-camera' => SimuladorCameraPlacas::class,
         ],
+        // Caminho da foto (snapshot) por fabricante, conforme os manuais; a tela
+        // preenche ao escolher o fabricante e o administrador pode trocar.
+        'caminhos_conhecidos' => [
+            'Intelbras' => '/cgi-bin/snapshot.cgi?channel=1',
+            'Hikvision' => '/ISAPI/Streaming/channels/101/picture',
+        ],
         'tamanho_maximo_bytes' => 3 * 1024 * 1024,
         // Intervalo mínimo entre capturas da mesma câmera, contra cliques repetidos.
         'intervalo_minimo_segundos' => 2,

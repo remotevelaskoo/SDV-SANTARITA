@@ -38,7 +38,9 @@ use Throwable;
  * - a câmera é um equipamento com finalidade "placas", ligada a um ponto;
  * - o navegador conhece só o identificador interno: endereço, porta,
  *   caminho e credencial são resolvidos aqui e entregues ao adaptador;
- * - a credencial é sempre referência (env:NOME), nunca a senha;
+ * - a credencial é a referência (env:NOME) ou a senha digitada na tela,
+ *   gravada cifrada e nunca devolvida (fora de produção, ou com
+ *   SDV_INTEGRACAO_SEGREDO_CIFRADO=true);
  * - captura estática sob demanda; cada imagem vira evidência privada e
  *   auditada, sem a imagem em log;
  * - a leitura da placa é outra etapa: a captura não preenche nem decide nada.
@@ -151,6 +153,33 @@ class CamerasPlaca
         }
 
         $this->cadastro->definirCredencialTecnica($camera, $referencia, $usuario ?: null, $ator);
+    }
+
+    /**
+     * Usuário e senha digitados pelo administrador na tela. A senha é
+     * gravada cifrada com a chave da aplicação, nunca volta para a tela e
+     * não entra na auditoria (mesmo mecanismo dos terminais, ADR-009 §10).
+     */
+    public function definirSenha(Equipamento $camera, string $usuario, #[\SensitiveParameter] string $senha, User $ator): void
+    {
+        $this->exigirAdministracao($ator);
+        $camera = $this->camera($camera->id);
+        if ($this->ehSimulador($camera->adaptador)) {
+            throw new RegraIntegracaoViolada('simulador_sem_credencial', 'O simulador não usa usuário nem senha.');
+        }
+        if (! preg_match('/^[A-Za-z0-9._@-]{1,32}$/', $usuario)) {
+            throw new RegraIntegracaoViolada('usuario_tecnico_invalido', 'Informe o usuário da câmera (até 32 letras, números, ponto, hífen ou sublinhado).');
+        }
+        if (trim($senha) === '' || mb_strlen($senha) > 128) {
+            throw new RegraIntegracaoViolada('senha_tecnica_invalida', 'Informe a senha da câmera (até 128 caracteres).');
+        }
+
+        $this->cadastro->definirSenhaTecnica($camera, $usuario, $senha, $ator);
+    }
+
+    public function senhaNaTelaPermitida(): bool
+    {
+        return (bool) config('integracoes.segredos.cifrado_permitido');
     }
 
     public function vincularAoPonto(Equipamento $camera, PontoAcesso $ponto, User $ator): CameraPontoVinculo
