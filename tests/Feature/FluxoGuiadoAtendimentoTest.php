@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\AccessValidation;
+use App\Models\AutorizacaoAcesso;
 use App\Models\Catalogo;
 use App\Models\CatalogoItem;
 use App\Models\Contribuicao;
@@ -12,6 +13,7 @@ use App\Models\Pessoa;
 use App\Models\PessoaArquivo;
 use App\Models\User;
 use App\Models\Vinculo;
+use App\Services\PerfilAtendimento;
 use App\Services\PrivateFileService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -141,7 +143,8 @@ class FluxoGuiadoAtendimentoTest extends TestCase
         $this->assertSame(0, HistoricoAcesso::query()->count());
     }
 
-    public function test_pessoa_achada_com_foto_e_sem_ser_turista_pula_foto_e_pagamento(): void
+    /** Pedido do PO de 13/11/2026: quem já tem foto também passa pela etapa Foto, que já vem pronta. */
+    public function test_pessoa_achada_com_foto_e_vinculo_passa_pela_foto_com_tipo_travado(): void
     {
         $pessoa = Pessoa::factory()->create(['nome' => 'Mara Moradora']);
         app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto());
@@ -151,8 +154,13 @@ class FluxoGuiadoAtendimentoTest extends TestCase
             ->call('continuar')
             ->assertHasErrors('busca')
             ->call('selecionarPessoa', $pessoa->id)
-            ->assertSee('Foto (não se aplica)')
+            ->assertDontSee('Foto (não se aplica)')
             ->assertSee('Pagamento (não se aplica)')
+            ->assertSee('Definido pelo vínculo com o imóvel')
+            ->assertDontSee('Escolha o tipo')
+            ->call('continuar')
+            ->assertSet('passo', 'foto')
+            ->assertSee('Tirar nova foto')
             ->call('continuar')
             ->assertSet('passo', 'placa')
             ->set('veioDeCarro', false)
@@ -162,9 +170,117 @@ class FluxoGuiadoAtendimentoTest extends TestCase
             ->call('concluir', 'liberar')
             ->assertHasNoErrors();
 
-        $this->assertSame(['dados', 'placa', 'concluir'], array_keys($tela->instance()->passosDoAtendimento()));
+        $this->assertSame(['dados', 'foto', 'placa', 'concluir'], array_keys($tela->instance()->passosDoAtendimento()));
         $this->assertSame('liberado', HistoricoAcesso::query()->sole()->resultado);
         $this->assertSame(0, Contribuicao::query()->count());
+        $this->assertSame(0, AutorizacaoAcesso::query()->count(), 'Quem tem vínculo não ganha autorização pelo tipo.');
+        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count(), 'Sem nova foto, a do cadastro fica.');
+    }
+
+    public function test_nova_foto_de_quem_ja_tem_foto_substitui_no_concluir(): void
+    {
+        $pessoa = Pessoa::factory()->create();
+        app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto());
+        Vinculo::factory()->for($pessoa, 'pessoa')->for(Imovel::factory()->create(), 'imovel')->create(['ended_at' => null, 'tipo' => 'morador']);
+
+        Livewire::actingAs($this->operador)->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
+            ->call('continuar')
+            ->set('fotoIdentificacao', $this->foto())
+            ->call('continuar')
+            ->set('veioDeCarro', false)
+            ->call('continuar')
+            ->call('concluir', 'pendente')
+            ->assertHasNoErrors();
+
+        $this->assertSame(2, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count(), 'A anterior fica no histórico.');
+        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->where('is_current', true)->count());
+    }
+
+    public function test_pessoa_sem_vinculo_escolhe_turista_e_liberar_grava_24_horas(): void
+    {
+        $pessoa = Pessoa::factory()->create();
+        app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto());
+
+        $tela = Livewire::actingAs($this->operador)->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
+            ->assertSee('Esta pessoa não tem vínculo')
+            ->call('continuar')
+            ->assertHasErrors('tipoAtendimento')
+            ->assertSet('passo', 'dados')
+            ->set('tipoAtendimento', 'turista')
+            ->call('continuar')
+            ->assertSet('passo', 'foto')
+            ->call('continuar')
+            ->set('veioDeCarro', false)
+            ->call('continuar')
+            ->assertSet('passo', 'pagamento')
+            ->set('contribution', 'no')
+            ->call('continuar')
+            ->assertSee('Turista por 24 h')
+            ->call('concluir', 'liberar')
+            ->assertHasNoErrors();
+
+        $autorizacao = AutorizacaoAcesso::query()->sole();
+        $this->assertSame(AutorizacaoAcesso::TIPO_TURISTA, $autorizacao->tipo);
+        $this->assertNull($autorizacao->imovel_id);
+        $this->assertEqualsWithDelta(24 * 60, $autorizacao->inicio->diffInMinutes($autorizacao->fim), 1);
+        $this->assertSame('Turista', app(PerfilAtendimento::class)->daPessoa($pessoa->id, now())['perfil']);
+        $this->assertTrue($tela->instance()->tipoDoCadastro()['travado'], 'Depois de liberar, o tipo vem do cadastro.');
+    }
+
+    public function test_salvar_sem_liberar_nao_grava_o_tipo(): void
+    {
+        $pessoa = Pessoa::factory()->create();
+        app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto());
+
+        Livewire::actingAs($this->operador)->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
+            ->set('tipoAtendimento', 'prestador')
+            ->call('continuar')
+            ->call('continuar')
+            ->set('veioDeCarro', false)
+            ->call('continuar')
+            ->call('concluir', 'pendente')
+            ->assertHasNoErrors();
+
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+        $this->assertSame('pendente', HistoricoAcesso::query()->sole()->resultado);
+    }
+
+    public function test_visitante_sem_vinculo_tem_prazo_do_porteiro_imovel_e_responsavel(): void
+    {
+        $pessoa = Pessoa::factory()->create();
+        app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto());
+        $imovel = Imovel::factory()->create();
+        $fim = now()->addDays(3)->setSecond(0);
+
+        Livewire::actingAs($this->operador)->test(AccessValidation::class)
+            ->call('selecionarPessoa', $pessoa->id)
+            ->set('tipoAtendimento', 'visitante')
+            ->set('validoAte', now()->addDays(31)->format('Y-m-d\TH:i'))
+            ->call('continuar')
+            ->assertHasErrors(['validoAte', 'imovelAtendimento', 'responsavelAtendimento'])
+            ->set('validoAte', $fim->format('Y-m-d\TH:i'))
+            ->set('imovelAtendimento', strtolower($imovel->codigo))
+            ->set('responsavelAtendimento', 'Ana do 102')
+            ->call('continuar')
+            ->assertHasNoErrors()
+            ->assertSet('passo', 'foto')
+            ->call('continuar')
+            ->set('veioDeCarro', false)
+            ->call('continuar')
+            ->assertSet('passo', 'concluir')
+            ->call('concluir', 'liberar')
+            ->assertHasNoErrors();
+
+        $autorizacao = AutorizacaoAcesso::query()->sole();
+        $this->assertSame('visitante', $autorizacao->tipo);
+        $this->assertSame($imovel->id, $autorizacao->imovel_id);
+        $this->assertSame('Ana do 102', $autorizacao->responsavel);
+        $this->assertSame($fim->format('Y-m-d H:i'), $autorizacao->fim->format('Y-m-d H:i'));
+        $this->assertSame(0, Contribuicao::query()->count(), 'Só turista contribui.');
+        $this->assertSame('Visitante', app(PerfilAtendimento::class)->daPessoa($pessoa->id, now())['perfil']);
     }
 
     public function test_voltar_e_barra_de_etapas_so_levam_para_tras(): void

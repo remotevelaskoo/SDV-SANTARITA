@@ -35,7 +35,7 @@ class PerfilAtendimento
             ->whereIn('pessoa_id', $pessoaIds)->whereNull('ended_at')->orderBy('started_at')
             ->get()->groupBy('pessoa_id');
         $visitas = $pessoaIds->isEmpty() ? collect() : AutorizacaoAcesso::query()->with('imovel')
-            ->whereIn('pessoa_id', $pessoaIds)->where('tipo', AutorizacaoAcesso::TIPO_TURISTA)
+            ->whereIn('pessoa_id', $pessoaIds)->whereIn('tipo', [AutorizacaoAcesso::TIPO_TURISTA, ...AutorizacaoAcesso::TIPOS_COM_PRAZO])
             ->whereNotIn('status', ['cancelada'])->orderByDesc('inicio')
             ->get()->groupBy('pessoa_id');
 
@@ -46,6 +46,15 @@ class PerfilAtendimento
             $visita = ($visitas[$a['pessoa_id']] ?? collect())->first(
                 fn (AutorizacaoAcesso $v) => $v->inicio->lte($momento->copy()->addMinutes(10)) && ($v->fim === null || $v->fim->gte($momento))
             );
+
+            // Autorização com prazo dada pelo porteiro: o perfil é o tipo escolhido.
+            if ($visita !== null && in_array($visita->tipo, AutorizacaoAcesso::TIPOS_COM_PRAZO, true)) {
+                return [$a['chave'] => [
+                    'perfil' => ucfirst($visita->tipo),
+                    'local' => $imovelAtendimento ?? $visita->imovel?->label() ?? '—',
+                    'turista' => false,
+                ]];
+            }
 
             if ($visita !== null) {
                 $turista = $visita->imovel_id === null && ($a['imovel_id'] ?? null) === null;

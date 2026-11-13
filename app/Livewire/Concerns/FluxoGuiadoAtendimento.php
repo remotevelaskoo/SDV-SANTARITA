@@ -2,12 +2,22 @@
 
 namespace App\Livewire\Concerns;
 
+use App\Acesso\Aplicacao\AutorizacoesAcesso;
+use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
+use App\Models\AutorizacaoAcesso;
+use App\Models\Imovel;
+use App\Models\Pessoa;
+use App\Models\User;
 use App\Services\ContribuicoesAtendimento;
+use App\Services\PerfilAtendimento;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\NormalizadorBusca;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Atendimento guiado da Validação de entrada (pedido do PO de 12/11/2026):
@@ -34,6 +44,29 @@ trait FluxoGuiadoAtendimento
 
     /** Concluir: enviar o cadastro rápido também ao terminal facial (com permissão). */
     public bool $enviarFacial = false;
+
+    /**
+     * Pessoa já cadastrada e sem vínculo (pedido do PO de 13/11/2026): o
+     * porteiro escolhe o tipo na etapa Dados. No Liberar entrada o tipo vira
+     * autorização no cadastro: turista sempre 24 h; Visitante, Prestador e
+     * Outro até a data e hora escolhidas (no máximo 30 dias).
+     */
+    public string $tipoAtendimento = '';
+
+    /** Fim da autorização com prazo (datetime-local), começa em agora + 24 h. */
+    public string $validoAte = '';
+
+    /** Visitante: imóvel visitado e responsável (obrigatórios, docs/021 §14). */
+    public string $imovelAtendimento = '';
+
+    public string $responsavelAtendimento = '';
+
+    public const TIPOS_ATENDIMENTO = [
+        'turista' => 'Turista',
+        'visitante' => 'Visitante',
+        'prestador' => 'Prestador',
+        'outro' => 'Outro',
+    ];
 
     public const PASSOS = [
         'dados' => 'Dados',
@@ -133,6 +166,12 @@ trait FluxoGuiadoAtendimento
             }
         }
 
+        if ($decisao === 'liberar' && ! $this->gravarTipoNoCadastro()) {
+            $this->passo = 'dados';
+
+            return;
+        }
+
         match ($decisao) {
             'negar' => $this->deny(),
             'pendente' => $this->savePending(),
@@ -143,7 +182,7 @@ trait FluxoGuiadoAtendimento
     /**
      * Resumo do Concluir.
      *
-     * @return array{pessoa: string, tipo: string, novo: bool, foto: string, veiculo: string, pagamento: ?string}
+     * @return array{pessoa: string, tipo: string, novo: bool, foto: string, veiculo: string, pagamento: ?string, autorizacao: ?string}
      */
     public function resumoAtendimento(): array
     {
@@ -172,17 +211,184 @@ trait FluxoGuiadoAtendimento
             'foto' => $foto,
             'veiculo' => $this->veioDeCarro ? NormalizadorBusca::documento($this->placaInformada) : 'Veio a pé',
             'pagamento' => $pagamento,
+            'autorizacao' => $this->resumoAutorizacao(),
         ];
     }
 
-    /** Etapa Foto: cadastro novo sempre; pessoa achada na busca só se ainda não tem foto. */
+    /** Linha "Autorização" do Concluir: o que o Liberar entrada vai gravar no cadastro. */
+    private function resumoAutorizacao(): ?string
+    {
+        if ($this->quickRegistrationOpen || $this->quickPersonRegistered || $this->currentPessoaId === null
+            || ! isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento]) || $this->protocol !== null || $this->tipoDoCadastro()['travado']) {
+            return null;
+        }
+
+        if ($this->tipoAtendimento === 'turista') {
+            return 'Turista por 24 h, gravada ao liberar a entrada';
+        }
+
+        try {
+            $fim = CarbonImmutable::parse($this->validoAte)->format('d/m/Y H:i');
+        } catch (Throwable) {
+            $fim = '—';
+        }
+
+        return self::TIPOS_ATENDIMENTO[$this->tipoAtendimento].' até '.$fim.', gravada ao liberar a entrada';
+    }
+
+    /**
+     * Etapa Foto: cadastro novo sempre. Pessoa achada na busca também passa
+     * por ela (pedido do PO de 13/11/2026): a foto que já tem aparece em
+     * verde e o porteiro pode tirar outra.
+     */
     private function precisaEtapaFoto(): bool
     {
         if ($this->quickRegistrationOpen) {
             return true;
         }
 
-        return $this->currentPessoaId !== null && ($this->currentPerson['can_take_photo'] || $this->fotoIdentificacao !== null);
+        return $this->currentPessoaId !== null
+            && ($this->currentPerson['photo_url'] !== null || $this->currentPerson['can_take_photo'] || $this->fotoIdentificacao !== null);
+    }
+
+    /**
+     * Tipo de acesso da pessoa já cadastrada.
+     * Com vínculo ou autorização vigente o tipo vem do cadastro e fica travado;
+     * sem nada disso o porteiro escolhe.
+     *
+     * @return array{travado: bool, rotulo: string, detalhe: ?string}
+     */
+    public function tipoDoCadastro(): array
+    {
+        $perfil = app(PerfilAtendimento::class)->daPessoa($this->currentPessoaId, now());
+        if ($perfil['perfil'] === 'Sem vínculo') {
+            return ['travado' => false, 'rotulo' => 'Sem vínculo', 'detalhe' => null];
+        }
+
+        $autorizacao = $this->currentPessoaId === null ? null : AutorizacaoAcesso::query()
+            ->where('pessoa_id', $this->currentPessoaId)
+            ->whereIn('tipo', [AutorizacaoAcesso::TIPO_TURISTA, ...AutorizacaoAcesso::TIPOS_COM_PRAZO])
+            ->where('status', 'ativa')
+            ->where('fim', '>', now())
+            ->latest('inicio')
+            ->first();
+
+        return [
+            'travado' => true,
+            'rotulo' => $perfil['perfil'],
+            'detalhe' => $autorizacao !== null
+                ? 'Autorização vigente até '.$autorizacao->fim->format('d/m/Y H:i').'.'
+                : 'Definido pelo vínculo com o imóvel. Para mudar, altere o vínculo no cadastro da pessoa.',
+        ];
+    }
+
+    public function updatedTipoAtendimento(): void
+    {
+        $this->resetErrorBag(['tipoAtendimento', 'validoAte', 'imovelAtendimento', 'responsavelAtendimento']);
+        if ($this->tipoAtendimento !== 'visitante') {
+            $this->imovelAtendimento = '';
+            $this->responsavelAtendimento = '';
+        }
+    }
+
+    /** Liberar entrada: o tipo escolhido vira autorização no cadastro. Falha volta à etapa Dados. */
+    private function gravarTipoNoCadastro(): bool
+    {
+        if ($this->quickRegistrationOpen || $this->quickPersonRegistered || $this->currentPessoaId === null
+            || ! isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento]) || $this->tipoDoCadastro()['travado']) {
+            return true;
+        }
+
+        $pessoa = Pessoa::query()->findOrFail($this->currentPessoaId);
+        $usuario = Auth::user();
+        $usuario = $usuario instanceof User ? $usuario : null;
+        $autorizacoes = app(AutorizacoesAcesso::class);
+
+        try {
+            if ($this->tipoAtendimento === 'turista') {
+                $autorizacoes->registrarVisitaTurista($pessoa, null, '', null, null, $usuario);
+            } else {
+                $imovel = $this->tipoAtendimento === 'visitante'
+                    ? Imovel::query()->where('codigo', strtoupper(trim($this->imovelAtendimento)))->first()
+                    : null;
+                $autorizacoes->registrarAutorizacaoComPrazo(
+                    $pessoa,
+                    $this->tipoAtendimento,
+                    $imovel,
+                    $this->tipoAtendimento === 'visitante' ? $this->responsavelAtendimento : '',
+                    CarbonImmutable::parse($this->validoAte),
+                    $usuario,
+                );
+            }
+        } catch (RegraIntegracaoViolada $e) {
+            $this->addError($this->tipoAtendimento === 'turista' ? 'tipoAtendimento' : 'validoAte', $e->getMessage());
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function reiniciarTipoAtendimento(): void
+    {
+        $this->tipoAtendimento = '';
+        $this->validoAte = now()->addDay()->format('Y-m-d\TH:i');
+        $this->imovelAtendimento = '';
+        $this->responsavelAtendimento = '';
+    }
+
+    /** Etapa Dados de quem já tem cadastro e não tem vínculo: tipo escolhido e prazo válido. */
+    private function validarTipoAtendimento(): bool
+    {
+        $this->resetErrorBag(['tipoAtendimento', 'validoAte', 'imovelAtendimento', 'responsavelAtendimento']);
+        if ($this->tipoDoCadastro()['travado']) {
+            return true;
+        }
+
+        if (! isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento])) {
+            $this->addError('tipoAtendimento', 'Escolha o tipo de acesso desta pessoa.');
+
+            return false;
+        }
+        if ($this->tipoAtendimento === 'turista') {
+            return true;
+        }
+
+        $ok = true;
+        try {
+            $fim = $this->validoAte === '' ? null : CarbonImmutable::parse($this->validoAte);
+        } catch (Throwable) {
+            $fim = null;
+        }
+        if ($fim === null) {
+            $this->addError('validoAte', 'Informe até quando vale a autorização.');
+            $ok = false;
+        } elseif ($fim->lessThanOrEqualTo(now())) {
+            $this->addError('validoAte', 'A data final precisa ser depois de agora.');
+            $ok = false;
+        } elseif ($fim->greaterThan(now()->addDays(AutorizacaoAcesso::PRAZO_MAXIMO_DIAS))) {
+            $this->addError('validoAte', 'A autorização pode durar no máximo '.AutorizacaoAcesso::PRAZO_MAXIMO_DIAS.' dias.');
+            $ok = false;
+        }
+
+        if ($this->tipoAtendimento === 'visitante') {
+            if (trim($this->imovelAtendimento) === '') {
+                $this->addError('imovelAtendimento', 'Informe o imóvel que o visitante vai visitar.');
+                $ok = false;
+            } elseif (! Imovel::query()->where('codigo', strtoupper(trim($this->imovelAtendimento)))->exists()) {
+                $this->addError('imovelAtendimento', 'Imóvel não encontrado com este código.');
+                $ok = false;
+            }
+            if (trim($this->responsavelAtendimento) === '') {
+                $this->addError('responsavelAtendimento', 'Informe o responsável pelo visitante.');
+                $ok = false;
+            } elseif (mb_strlen($this->responsavelAtendimento) > 120) {
+                $this->addError('responsavelAtendimento', 'Use até 120 caracteres.');
+                $ok = false;
+            }
+        }
+
+        return $ok;
     }
 
     private function validarPasso(string $passo): bool
@@ -227,7 +433,7 @@ trait FluxoGuiadoAtendimento
             return false;
         }
 
-        return true;
+        return $this->quickPersonRegistered || $this->validarTipoAtendimento();
     }
 
     private function validarFoto(): bool
@@ -242,7 +448,7 @@ trait FluxoGuiadoAtendimento
             return false;
         }
 
-        if ($this->precisaEtapaFoto() && $this->fotoIdentificacao === null) {
+        if ($this->precisaEtapaFoto() && $this->fotoIdentificacao === null && ! $this->currentPerson['has_photo']) {
             $this->addError('fotoIdentificacao', 'Tire a foto da pessoa para continuar.');
 
             return false;
@@ -289,5 +495,6 @@ trait FluxoGuiadoAtendimento
         $this->passo = 'dados';
         $this->veioDeCarro = null;
         $this->enviarFacial = false;
+        $this->reiniciarTipoAtendimento();
     }
 }

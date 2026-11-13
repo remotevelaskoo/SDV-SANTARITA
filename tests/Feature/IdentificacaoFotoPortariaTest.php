@@ -48,6 +48,7 @@ class IdentificacaoFotoPortariaTest extends TestCase
         // Atendimento guiado: a foto é tirada na etapa Foto e só é gravada no Concluir.
         $tela = Livewire::actingAs($operador)->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
+            ->set('tipoAtendimento', 'prestador') // sem vínculo: o porteiro escolhe o tipo
             ->call('continuar')
             ->assertSet('passo', 'foto')
             ->assertSee('Pessoa sem foto')
@@ -89,19 +90,26 @@ class IdentificacaoFotoPortariaTest extends TestCase
         $this->assertFalse(PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->exists());
     }
 
-    public function test_pessoa_com_foto_nao_mostra_a_camera(): void
+    /** Pedido do PO de 13/11/2026: a foto atual aparece em verde e o porteiro pode tirar outra. */
+    public function test_pessoa_com_foto_mostra_a_atual_e_permite_tirar_nova(): void
     {
         $pessoa = Pessoa::factory()->create();
         app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto(ImagensPessoaSinteticas::boa()));
 
         Livewire::actingAs($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'arquivos.sensiveis.visualizar'))->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
-            ->assertDontSee('Pessoa sem foto: tire a foto agora')
+            ->set('tipoAtendimento', 'outro')
+            ->call('continuar')
+            ->assertSet('passo', 'foto')
+            ->assertSee('Foto atual de')
+            ->assertSee('Tirar nova foto')
+            ->assertDontSee('Pessoa sem foto')
             ->set('fotoIdentificacao', $this->foto(ImagensPessoaSinteticas::outra()))
             ->call('salvarFotoIdentificacao')
-            ->assertHasErrors('fotoIdentificacao');
+            ->assertHasNoErrors();
 
-        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count());
+        $this->assertSame(2, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count(), 'A anterior fica no histórico.');
+        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->where('is_current', true)->count());
     }
 
     public function test_sem_permissao_de_gerenciar_pessoas_nao_fotografa(): void

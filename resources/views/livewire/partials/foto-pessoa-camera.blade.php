@@ -25,7 +25,7 @@
 <input type="file" accept="image/*" capture="user" class="sr-only" x-ref="nativa" x-on:change="recebidaDaCameraNativa($event)" tabindex="-1" aria-hidden="true">
 
 <div class="equipamento-management-acoes">
-    <button type="button" class="ui-button ui-button--primary" x-show="!ativa && !previa" x-on:click="abrir()" :disabled="abrindo"><span class="ui-button__content">Abrir câmera</span></button>
+    <button type="button" class="ui-button ui-button--primary" x-show="!ativa && !previa" x-on:click="abrir()" :disabled="abrindo"><span class="ui-button__content">{{ $rotuloAbrir ?? 'Abrir câmera' }}</span></button>
     <button type="button" class="ui-button ui-button--primary" x-show="ativa" x-on:click="fotografar()"><span class="ui-button__content">Fotografar</span></button>
     <button type="button" class="ui-button ui-button--ghost ui-button--sm" x-show="ativa" x-on:click="fechar()"><span class="ui-button__content">Fechar câmera</span></button>
     <button type="button" class="ui-button ui-button--ghost ui-button--sm" x-show="previa" x-on:click="refazer()" :disabled="enviando"><span class="ui-button__content">Refazer foto</span></button>

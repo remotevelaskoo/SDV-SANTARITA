@@ -353,15 +353,51 @@
                         <x-ui.button variant="success" size="sm" wire:click="salvarIdentificacao" wire:loading.attr="disabled" wire:target="salvarIdentificacao">Salvar correção</x-ui.button>
                     </div>
                 @else
-                    <dl>
-                        <div><dt>Nome completo</dt><dd>{{ $dadosIdent['nome'] }}</dd></div>
-                        @if ($dadosIdent['nome_social'])<div><dt>Nome social</dt><dd>{{ $dadosIdent['nome_social'] }}</dd></div>@endif
-                        <div><dt>Data de nascimento</dt><dd>{{ $dadosIdent['nascimento'] ?? 'Não informada' }}</dd></div>
-                        <div><dt>CPF</dt><dd>{{ $dadosIdent['cpf'] ? ($documentRevealed ? $dadosIdent['cpf'] : \App\Support\NormalizadorBusca::mascararDocumento($dadosIdent['cpf'])) : 'Não informado' }}</dd></div>
-                        <div><dt>Telefone</dt><dd>{{ $dadosIdent['telefone'] ?? 'Não informado' }}</dd></div>
-                        <div><dt>E-mail</dt><dd>{{ $dadosIdent['email'] ?? 'Não informado' }}</dd></div>
+                    {{-- O que já está no cadastro fica em verde, como no cadastro novo. --}}
+                    <dl class="validation-person-data__campos">
+                        <div class="is-ok"><dt><x-icon name="check-circle" /> Nome completo</dt><dd>{{ $dadosIdent['nome'] }}</dd></div>
+                        @if ($dadosIdent['nome_social'])<div class="is-ok"><dt><x-icon name="check-circle" /> Nome social</dt><dd>{{ $dadosIdent['nome_social'] }}</dd></div>@endif
+                        <div @class(['is-ok' => $dadosIdent['nascimento']])><dt>@if ($dadosIdent['nascimento'])<x-icon name="check-circle" /> @endif Data de nascimento</dt><dd>{{ $dadosIdent['nascimento'] ?? 'Não informada' }}</dd></div>
+                        <div @class(['is-ok' => $dadosIdent['cpf']])><dt>@if ($dadosIdent['cpf'])<x-icon name="check-circle" /> @endif CPF</dt><dd>{{ $dadosIdent['cpf'] ? ($documentRevealed ? $dadosIdent['cpf'] : \App\Support\NormalizadorBusca::mascararDocumento($dadosIdent['cpf'])) : 'Não informado' }}</dd></div>
+                        <div @class(['is-ok' => $dadosIdent['telefone']])><dt>@if ($dadosIdent['telefone'])<x-icon name="check-circle" /> @endif Telefone</dt><dd>{{ $dadosIdent['telefone'] ?? 'Não informado' }}</dd></div>
+                        <div @class(['is-ok' => $dadosIdent['email']])><dt>@if ($dadosIdent['email'])<x-icon name="check-circle" /> @endif E-mail</dt><dd>{{ $dadosIdent['email'] ?? 'Não informado' }}</dd></div>
                     </dl>
                 @endif
+            </section>
+        @endif
+
+        @if (! $quickPersonRegistered)
+            @php($tipoCadastro = $this->tipoDoCadastro())
+            {{-- Tipo de acesso da pessoa já cadastrada (pedido do PO de 13/11/2026). --}}
+            <section class="validation-person-data validation-tipo-acesso" aria-labelledby="tipo-acesso-titulo" wire:key="tipo-acesso-{{ $currentPessoaId }}">
+                <header>
+                    <div>
+                        <h3 id="tipo-acesso-titulo">Tipo de acesso</h3>
+                        <p>{{ $tipoCadastro['travado'] ? $tipoCadastro['detalhe'] : 'Esta pessoa não tem vínculo. Escolha o tipo: ao liberar a entrada, ele fica gravado no cadastro.' }}</p>
+                    </div>
+                    @if ($tipoCadastro['travado'])
+                        <x-ui.badge variant="success" icon="check-circle">{{ $tipoCadastro['rotulo'] }}</x-ui.badge>
+                    @endif
+                </header>
+                @unless ($tipoCadastro['travado'])
+                    <div class="registration-fields">
+                        <x-ui.select id="tipo-atendimento" label="Tipo de acesso" wire:model.live="tipoAtendimento" :error="$errors->first('tipoAtendimento')" required>
+                            <option value="">Escolha…</option>
+                            @foreach (\App\Livewire\AccessValidation::TIPOS_ATENDIMENTO as $valorTipo => $rotuloTipo)
+                                <option value="{{ $valorTipo }}">{{ $rotuloTipo }}</option>
+                            @endforeach
+                        </x-ui.select>
+                        @if ($tipoAtendimento === 'turista')
+                            <p class="validation-tipo-acesso__prazo"><x-icon name="clock" /> Turista: autorização de 24 h a partir da liberação.</p>
+                        @elseif ($tipoAtendimento !== '')
+                            <x-ui.field id="valido-ate" type="datetime-local" label="Válido até" wire:model.blur="validoAte" :min="now()->format('Y-m-d\TH:i')" :max="now()->addDays(\App\Models\AutorizacaoAcesso::PRAZO_MAXIMO_DIAS)->format('Y-m-d\TH:i')" help="Data e hora em que a autorização acaba (até {{ \App\Models\AutorizacaoAcesso::PRAZO_MAXIMO_DIAS }} dias)." :error="$errors->first('validoAte')" required />
+                        @endif
+                        @if ($tipoAtendimento === 'visitante')
+                            <x-ui.field id="imovel-atendimento" label="Código do imóvel" wire:model.blur="imovelAtendimento" placeholder="SRA-A-102" help="Imóvel que o visitante vai visitar." :error="$errors->first('imovelAtendimento')" required />
+                            <x-ui.field id="responsavel-atendimento" label="Responsável pelo visitante" wire:model.blur="responsavelAtendimento" help="Quem recebe o visitante no imóvel." :error="$errors->first('responsavelAtendimento')" required />
+                        @endif
+                    </div>
+                @endunless
             </section>
         @endif
 
@@ -426,9 +462,21 @@
             >
                 <div class="foto-pessoa__resumo">
                     <strong>{{ $currentPerson['name'] }}</strong>
-                    <small>Pessoa sem foto: a foto vai para o cadastro no Concluir e aparece nos próximos atendimentos. Não é enviada ao terminal.</small>
+                    @if ($currentPerson['has_photo'])
+                        <small>Foto do cadastro. Se não estiver parecida, tire uma nova: ela substitui a atual no Concluir e a anterior fica no histórico. Não é enviada ao terminal.</small>
+                    @else
+                        <small>Pessoa sem foto: a foto vai para o cadastro no Concluir e aparece nos próximos atendimentos. Não é enviada ao terminal.</small>
+                    @endif
                 </div>
-                @include('livewire.partials.foto-pessoa-camera', ['erro' => 'fotoIdentificacao'])
+                @if ($currentPerson['photo_url'])
+                    <figure class="foto-pessoa__previa foto-pessoa__atual" x-show="!previa && !ativa">
+                        <img src="{{ $currentPerson['photo_url'] }}" alt="Foto atual de {{ $currentPerson['name'] }}">
+                        <figcaption><x-ui.badge variant="success" icon="check-circle">{{ $currentPerson['photo_origin'] ?? 'Foto do cadastro' }}</x-ui.badge></figcaption>
+                    </figure>
+                @endif
+                @if ($currentPerson['can_take_photo'])
+                    @include('livewire.partials.foto-pessoa-camera', ['erro' => 'fotoIdentificacao', 'rotuloAbrir' => $currentPerson['has_photo'] ? 'Tirar nova foto' : null])
+                @endif
             </div>
         @endif
     </section>
@@ -614,6 +662,9 @@
             <div><dt>Pessoa</dt><dd>{{ $resumo['pessoa'] }} · {{ $resumo['tipo'] }}{{ $resumo['novo'] ? ' · cadastro novo' : '' }}</dd>@unless ($protocol)<button type="button" class="sensitive-reveal" wire:click="irParaPasso('dados')">Alterar</button>@endunless</div>
             @if (isset($passos['foto']) || $resumo['novo'])
                 <div><dt>Foto</dt><dd>{{ $resumo['foto'] }}</dd>@if (! $protocol && isset($passos['foto']))<button type="button" class="sensitive-reveal" wire:click="irParaPasso('foto')">Alterar</button>@endif</div>
+            @endif
+            @if ($resumo['autorizacao'])
+                <div><dt>Autorização</dt><dd>{{ $resumo['autorizacao'] }}</dd>@unless ($protocol)<button type="button" class="sensitive-reveal" wire:click="irParaPasso('dados')">Alterar</button>@endunless</div>
             @endif
             <div><dt>Veículo</dt><dd>{{ $resumo['veiculo'] }}</dd>@unless ($protocol)<button type="button" class="sensitive-reveal" wire:click="irParaPasso('placa')">Alterar</button>@endunless</div>
             <div><dt>Pagamento</dt><dd>{{ $resumo['pagamento'] ?? 'Sem contribuição (só turista contribui)' }}</dd>@if (! $protocol && $resumo['pagamento'] !== null)<button type="button" class="sensitive-reveal" wire:click="irParaPasso('pagamento')">Alterar</button>@endif</div>

@@ -3146,6 +3146,14 @@ body.has-drawer-open { overflow: hidden; }
 .validation-person-data dl div { display: grid; gap: 0.1rem; min-width: 0; }
 .validation-person-data dt { color: var(--neutral-600); font-size: 0.62rem; }
 .validation-person-data dd { margin: 0; font-size: 0.75rem; font-weight: 700; overflow-wrap: anywhere; }
+/* Pessoa já cadastrada: o que já existe fica em verde, como no cadastro novo. */
+.validation-person-data__campos > div { padding: 0.45rem 0.55rem; border: 1px solid var(--neutral-200); border-radius: 0.6rem; }
+.validation-person-data__campos > div.is-ok { border-color: #b9dfc2; background: var(--success-surface); }
+.validation-person-data__campos > div.is-ok dt { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--success); }
+.validation-person-data__campos .app-icon { width: 0.8rem; height: 0.8rem; }
+.validation-tipo-acesso__prazo { display: flex; align-items: center; gap: 0.35rem; margin: 0; align-self: end; color: var(--success); font-size: 0.72rem; font-weight: 700; }
+.validation-tipo-acesso__prazo .app-icon { width: 0.9rem; height: 0.9rem; }
+.foto-pessoa__atual { border: 2px solid var(--success); }
 
 /* Relatório final do Modo Portaria (imprimível). */
 .relatorio-final { display: grid; gap: 1rem; }
@@ -3254,3 +3262,26 @@ body.has-drawer-open { overflow: hidden; }
 .atendimento-passos__item.is-pulado > span { opacity: 0.5; font-weight: 600; }
 .atendimento-passos__item.is-pulado .atendimento-passos__numero { border-style: dashed; }
 .atendimento-navegacao.is-final { position: static; border-radius: 1rem; box-shadow: none; }
+
+/* Consulta de pessoas (Cadastros → Pessoas). */
+.pessoa-consulta__filtros { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 48rem) { .pessoa-consulta__filtros { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); align-items: end; } .pessoa-consulta__marcas { grid-column: 1 / -1; } }
+.pessoa-consulta__marcas { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+.pessoa-consulta__nome { display: flex; align-items: center; gap: 0.6rem; }
+.pessoa-consulta__paginas { padding: 0.6rem 1rem; border-top: 1px solid var(--neutral-200); }
+.pessoa-ficha__topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; }
+.pessoa-ficha__identidade { display: flex; align-items: center; gap: 1rem; }
+.pessoa-ficha__identidade span { color: var(--neutral-600); font-size: 0.62rem; }
+.pessoa-ficha__identidade h2 { margin: 0.1rem 0; color: var(--navy-900); font-size: 1.05rem; }
+.pessoa-ficha__identidade p { margin: 0; color: var(--neutral-600); font-size: 0.68rem; }
+.pessoa-ficha__foto { display: grid; flex: none; width: 5.5rem; margin: 0; place-items: center; text-align: center; }
+.pessoa-ficha__foto img { width: 5.5rem; height: 5.5rem; border: 2px solid var(--success); border-radius: 0.8rem; object-fit: cover; }
+.pessoa-ficha__foto figcaption { margin-top: 0.2rem; color: var(--success); font-size: 0.55rem; font-weight: 700; }
+.pessoa-ficha__foto.is-empty { height: 5.5rem; border: 1px dashed var(--neutral-300); border-radius: 0.8rem; background: var(--neutral-050); color: var(--neutral-600); font-size: 1.2rem; font-weight: 800; }
+.pessoa-ficha__grade { margin-top: 1rem; }
+.pessoa-ficha__linha { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.65rem 1rem; border-top: 1px solid var(--neutral-100, #eef2f7); }
+.pessoa-ficha__linha:first-of-type { border-top: 0; }
+.pessoa-ficha__linha strong, .pessoa-ficha__linha small { display: block; }
+.pessoa-ficha__linha strong { font-size: 0.72rem; }
+.pessoa-ficha__linha small { color: var(--neutral-600); font-size: 0.6rem; }
+.pessoa-ficha__vazio { margin: 0; padding: 0.8rem 1rem; color: var(--neutral-600); font-size: 0.66rem; }
