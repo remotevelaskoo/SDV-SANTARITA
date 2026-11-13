@@ -420,12 +420,13 @@ class AccessValidation extends Component
 
         $this->validateCommonFields();
 
-        if ($this->quickPersonRegistered) {
+        // Sem nenhum acesso possível (ex.: morador sem imóvel): fica pendente, nada vai à facial.
+        if ($this->semAcessoNaLiberacao || ($this->quickPersonRegistered && ! $this->liberacaoComAcesso)) {
             $historico = $this->recordHistoricoComContribuicao('pendente');
             $this->feedback = [
                 'variant' => 'warning',
                 'title' => 'Liberação não realizada',
-                'message' => 'O cadastro rápido não possui autorização válida. Salve o atendimento ou confirme a autorização por outro fluxo.',
+                'message' => 'A pessoa não tem autorização nem vínculo com imóvel. O atendimento ficou salvo; vincule o imóvel no cadastro da pessoa para liberar.',
             ];
             $this->protocol = $historico->protocol;
 
@@ -436,8 +437,8 @@ class AccessValidation extends Component
 
         $this->feedback = [
             'variant' => 'success',
-            'title' => 'Validação concluída',
-            'message' => 'O registro foi salvo. Nenhum portão ou equipamento real foi acionado.',
+            'title' => 'Entrada liberada',
+            'message' => 'Atendimento salvo com a autorização. A pessoa passa no terminal facial para entrar; o SDV não abre portão.',
         ];
         $this->protocol = $historico->protocol;
     }

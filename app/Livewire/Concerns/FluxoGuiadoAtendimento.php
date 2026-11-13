@@ -9,6 +9,7 @@ use App\Models\AutorizacaoAcesso;
 use App\Models\Imovel;
 use App\Models\Pessoa;
 use App\Models\User;
+use App\Models\Vinculo;
 use App\Services\ContribuicoesAtendimento;
 use App\Services\PerfilAtendimento;
 use App\Services\PrivateFileService;
@@ -52,14 +53,19 @@ trait FluxoGuiadoAtendimento
 
     public string $veiculoCor = '';
 
-    /** Concluir: enviar o cadastro rápido também ao terminal facial (com permissão). */
-    public bool $enviarFacial = false;
-
-    /** Autorização de turista criada neste "Liberar entrada", para o envio ao terminal facial. */
+    /** Autorização gravada (ou vigente) neste "Liberar entrada", enviada ao terminal facial. */
     #[Locked]
-    public ?string $autorizacaoTuristaLiberada = null;
+    public ?string $autorizacaoLiberada = null;
 
-    /** Resultado do envio do turista liberado ao terminal facial (aparece junto do protocolo). */
+    /** "Liberar entrada" com acesso: autorização gravada/vigente ou vínculo com imóvel. */
+    #[Locked]
+    public bool $liberacaoComAcesso = false;
+
+    /** "Liberar entrada" sem nenhum acesso possível (morador sem imóvel): fica pendente. */
+    #[Locked]
+    public bool $semAcessoNaLiberacao = false;
+
+    /** Resultado do envio ao terminal facial no "Liberar entrada" (aparece junto da decisão). */
     #[Locked]
     public ?array $envioFacialLiberacao = null;
 
@@ -213,13 +219,17 @@ trait FluxoGuiadoAtendimento
         }
 
         if ($this->quickRegistrationOpen) {
-            $this->salvarCadastroRapido(enviar: $this->enviarFacial);
+            // Regra do PO (13/11/2026): o envio ao terminal facial é só do "Liberar entrada",
+            // depois de gravar a autorização; salvar o cadastro não envia nada.
+            $this->salvarCadastroRapido(enviar: false);
             if ($this->quickRegistrationOpen) {
-                // Não gravou (conflito de CPF, imóvel, terminal...): o erro está no campo.
-                $this->passo = $this->getErrorBag()->hasAny(['fotoPessoa']) ? 'foto' : ($this->enviarFacial && $this->getErrorBag()->hasAny(['quickTerminalId', 'quickTerminalConfirmado']) ? 'concluir' : 'dados');
+                // Não gravou (conflito de CPF, imóvel...): o erro está no campo.
+                $this->passo = $this->getErrorBag()->hasAny(['fotoPessoa']) ? 'foto' : 'dados';
 
                 return;
             }
+            // Se a autorização falhar depois, a pessoa já existe: a etapa Dados mostra o tipo para corrigir.
+            $this->tipoAtendimento = $this->quickAccessType;
         } elseif ($this->fotoIdentificacao !== null) {
             $this->salvarFotoIdentificacao(app(PrivateFileService::class), app(ValidadorFotoPessoa::class));
             if ($this->getErrorBag()->has('fotoIdentificacao')) {
@@ -229,7 +239,7 @@ trait FluxoGuiadoAtendimento
             }
         }
 
-        if ($decisao === 'liberar' && ! $this->gravarTipoNoCadastro()) {
+        if ($decisao === 'liberar' && ! $this->gravarAutorizacaoDaLiberacao()) {
             $this->passo = 'dados';
 
             return;
@@ -241,27 +251,31 @@ trait FluxoGuiadoAtendimento
             'liberar' => $this->release(),
         };
 
-        if ($decisao === 'liberar' && $this->autorizacaoTuristaLiberada !== null && $this->protocol !== null) {
-            $this->enviarTuristaAoFacial();
+        if ($decisao === 'liberar' && $this->liberacaoComAcesso && $this->protocol !== null) {
+            $this->enviarAoFacial();
         }
     }
 
     /**
-     * Turista liberado (pedido do PO de 13/11/2026): a autorização de 24 h vai
-     * ao terminal facial do posto, não à cancela. Sem permissão, sem terminal
-     * ou com terminal não homologado, a autorização fica gravada e o aviso
-     * diz que o envio está pendente.
+     * "Liberar entrada" (regra do PO, 13/11/2026): grava a autorização com o
+     * tempo do perfil e envia a pessoa ao terminal facial do posto. O SDV não
+     * abre nada: a pessoa passa na facial, e o terminal faz a liberação.
+     * Sem permissão, sem terminal ou com terminal não homologado, a
+     * autorização fica gravada e o aviso diz que o envio está pendente.
      */
-    private function enviarTuristaAoFacial(): void
+    private function enviarAoFacial(): void
     {
-        $autorizacao = AutorizacaoAcesso::query()->find($this->autorizacaoTuristaLiberada);
-        $this->autorizacaoTuristaLiberada = null;
+        $autorizacao = $this->autorizacaoLiberada !== null ? AutorizacaoAcesso::query()->find($this->autorizacaoLiberada) : null;
+        $this->autorizacaoLiberada = null;
         $usuario = Auth::user();
-        if ($autorizacao === null || ! $usuario instanceof User) {
+        $pessoa = $this->currentPessoaId !== null ? Pessoa::query()->find($this->currentPessoaId) : null;
+        if ($pessoa === null || ! $usuario instanceof User) {
             return;
         }
 
-        $validade = 'Autorização de turista gravada até '.$autorizacao->fim->format('d/m/Y H:i').'.';
+        $validade = $autorizacao !== null
+            ? self::TIPOS_ATENDIMENTO[$this->tipoDaAutorizacao($autorizacao)].': acesso até '.$autorizacao->fim->format('d/m/Y H:i').'.'
+            : 'Acesso pelo vínculo com o imóvel.';
         if (! $usuario->hasPermission('facial.enviar')) {
             $this->envioFacialLiberacao = ['variant' => 'warning', 'title' => 'Envio ao terminal facial pendente', 'message' => $validade.' Seu perfil não envia à facial: peça a quem tem a permissão.'];
 
@@ -280,13 +294,17 @@ trait FluxoGuiadoAtendimento
             return;
         }
 
-        $pessoa = Pessoa::query()->findOrFail($autorizacao->pessoa_id);
         $resultado = $envio->enviar($pessoa, $terminal['id'], $usuario, $autorizacao)->paraTela();
         $this->envioFacialLiberacao = [
             'variant' => $resultado['variant'],
             'title' => $resultado['title'].' · '.$terminal['nome'],
-            'message' => $validade.' '.$resultado['message'],
+            'message' => $validade.' '.$resultado['message'].($resultado['variant'] === 'success' ? ' A pessoa já pode passar na facial.' : ''),
         ];
+    }
+
+    private function tipoDaAutorizacao(AutorizacaoAcesso $autorizacao): string
+    {
+        return $autorizacao->tipo === AutorizacaoAcesso::TIPO_TURISTA ? 'turista' : (isset(self::TIPOS_ATENDIMENTO[$autorizacao->tipo]) ? $autorizacao->tipo : 'outro');
     }
 
     /**
@@ -327,16 +345,30 @@ trait FluxoGuiadoAtendimento
         ];
     }
 
-    /** Linha "Autorização" do Concluir: o que o Liberar entrada vai gravar no cadastro. */
+    /** Linha "Autorização" do Concluir: o que o "Liberar entrada" grava e envia ao terminal facial. */
     private function resumoAutorizacao(): ?string
     {
-        if ($this->quickRegistrationOpen || $this->quickPersonRegistered || $this->currentPessoaId === null
-            || ! isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento]) || $this->protocol !== null || $this->tipoDoCadastro()['travado']) {
+        if ($this->protocol !== null || ($this->currentPessoaId === null && ! $this->quickRegistrationOpen)) {
             return null;
         }
 
-        if ($this->tipoAtendimento === 'turista') {
-            return 'Turista por 24 h, gravada ao liberar a entrada e enviada ao terminal facial';
+        if (! $this->quickRegistrationOpen && $this->tipoDoCadastro()['travado']) {
+            $detalhe = $this->tipoDoCadastro()['detalhe'];
+
+            return 'Já autorizado'.($detalhe ? ' · '.$detalhe : '').' Liberar entrada envia ao terminal facial.';
+        }
+
+        $tipo = $this->quickRegistrationOpen ? $this->quickAccessType : $this->tipoAtendimento;
+        if ($tipo === 'morador') {
+            return trim($this->quickPropertyCode) !== ''
+                ? 'Morador pelo vínculo com o imóvel '.strtoupper(trim($this->quickPropertyCode)).'. Liberar entrada envia ao terminal facial.'
+                : 'Morador sem imóvel: sem autorização. Informe o imóvel para poder liberar.';
+        }
+        if (! isset(self::TIPOS_ATENDIMENTO[$tipo])) {
+            return null;
+        }
+        if ($tipo === 'turista') {
+            return 'Turista por 24 h, gravada e enviada ao terminal facial ao Liberar entrada';
         }
 
         try {
@@ -345,7 +377,7 @@ trait FluxoGuiadoAtendimento
             $fim = '—';
         }
 
-        return self::TIPOS_ATENDIMENTO[$this->tipoAtendimento].' até '.$fim.', gravada ao liberar a entrada';
+        return self::TIPOS_ATENDIMENTO[$tipo].' até '.$fim.', gravada e enviada ao terminal facial ao Liberar entrada';
     }
 
     /**
@@ -403,40 +435,82 @@ trait FluxoGuiadoAtendimento
         }
     }
 
-    /** Liberar entrada: o tipo escolhido vira autorização no cadastro. Falha volta à etapa Dados. */
-    private function gravarTipoNoCadastro(): bool
+    /**
+     * "Liberar entrada" (regra do PO, 13/11/2026), para cadastro novo e já existente:
+     * turista ganha 24 h; visitante, prestador e outro ganham a autorização até o
+     * "Válido até"; morador entra pelo vínculo com o imóvel; quem já tem vínculo ou
+     * autorização vigente usa a que tem. Falha volta à etapa Dados.
+     */
+    private function gravarAutorizacaoDaLiberacao(): bool
     {
-        if ($this->quickRegistrationOpen || $this->quickPersonRegistered || $this->currentPessoaId === null
-            || ! isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento]) || $this->tipoDoCadastro()['travado']) {
+        $this->autorizacaoLiberada = null;
+        $this->liberacaoComAcesso = false;
+        $this->semAcessoNaLiberacao = false;
+        if ($this->currentPessoaId === null) {
             return true;
         }
 
         $pessoa = Pessoa::query()->findOrFail($this->currentPessoaId);
+        $novo = $this->quickPersonRegistered;
+        $tipo = $novo ? $this->quickAccessType : $this->tipoAtendimento;
+        $autorizacoes = app(AutorizacoesAcesso::class);
+        $vigente = $autorizacoes->vigentePara($pessoa);
+
+        // Já cadastrado com vínculo ou autorização vigente: o tipo vem do cadastro.
+        if (! $novo && $this->tipoDoCadastro()['travado']) {
+            $this->autorizacaoLiberada = $vigente?->id;
+            $this->liberacaoComAcesso = true;
+
+            return true;
+        }
+
+        if ($tipo === 'morador') {
+            $this->liberacaoComAcesso = Vinculo::query()->where('pessoa_id', $pessoa->id)->where('status', 'ativo')
+                ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>', now()))->exists();
+            $this->semAcessoNaLiberacao = ! $this->liberacaoComAcesso;
+
+            return true;
+        }
+
+        if (! isset(self::TIPOS_ATENDIMENTO[$tipo])) {
+            return true;
+        }
+
+        // CPF reaproveitado que já tem visita ou prazo vigente: usa a que tem.
+        if ($vigente !== null && in_array($vigente->tipo, [AutorizacaoAcesso::TIPO_TURISTA, ...AutorizacaoAcesso::TIPOS_COM_PRAZO], true)) {
+            $this->autorizacaoLiberada = $vigente->id;
+            $this->liberacaoComAcesso = true;
+
+            return true;
+        }
+
         $usuario = Auth::user();
         $usuario = $usuario instanceof User ? $usuario : null;
-        $autorizacoes = app(AutorizacoesAcesso::class);
+        $codigoImovel = $novo ? $this->quickPropertyCode : $this->imovelAtendimento;
+        $responsavel = $novo ? $this->quickResponsible : $this->responsavelAtendimento;
 
         try {
-            if ($this->tipoAtendimento === 'turista') {
-                $this->autorizacaoTuristaLiberada = $autorizacoes->registrarVisitaTurista($pessoa, null, '', null, null, $usuario)->id;
+            if ($tipo === 'turista') {
+                $autorizacao = $autorizacoes->registrarVisitaTurista($pessoa, null, '', null, null, $usuario);
             } else {
-                $imovel = $this->tipoAtendimento === 'visitante'
-                    ? Imovel::query()->where('codigo', strtoupper(trim($this->imovelAtendimento)))->first()
-                    : null;
-                $autorizacoes->registrarAutorizacaoComPrazo(
+                $imovel = trim($codigoImovel) !== '' ? Imovel::query()->where('codigo', strtoupper(trim($codigoImovel)))->first() : null;
+                $autorizacao = $autorizacoes->registrarAutorizacaoComPrazo(
                     $pessoa,
-                    $this->tipoAtendimento,
-                    $imovel,
-                    $this->tipoAtendimento === 'visitante' ? $this->responsavelAtendimento : '',
+                    $tipo,
+                    $tipo === 'visitante' ? $imovel : null,
+                    $tipo === 'visitante' ? $responsavel : '',
                     CarbonImmutable::parse($this->validoAte),
                     $usuario,
                 );
             }
         } catch (RegraIntegracaoViolada $e) {
-            $this->addError($this->tipoAtendimento === 'turista' ? 'tipoAtendimento' : 'validoAte', $e->getMessage());
+            $this->addError($tipo === 'turista' ? 'tipoAtendimento' : 'validoAte', $e->getMessage());
 
             return false;
         }
+
+        $this->autorizacaoLiberada = $autorizacao->id;
+        $this->liberacaoComAcesso = true;
 
         return true;
     }
@@ -607,8 +681,9 @@ trait FluxoGuiadoAtendimento
         $this->passo = 'dados';
         $this->veioDeCarro = null;
         $this->limparDadosDoVeiculo();
-        $this->enviarFacial = false;
-        $this->autorizacaoTuristaLiberada = null;
+        $this->autorizacaoLiberada = null;
+        $this->liberacaoComAcesso = false;
+        $this->semAcessoNaLiberacao = false;
         $this->envioFacialLiberacao = null;
         $this->reiniciarTipoAtendimento();
     }
