@@ -7,6 +7,7 @@ use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CadastroRapidoAtendimento;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
 use App\Livewire\Concerns\ConferenciaDadosIdentificacao;
+use App\Livewire\Concerns\FluxoGuiadoAtendimento;
 use App\Models\CaixaTurno;
 use App\Models\CapturaPlaca;
 use App\Models\Catalogo;
@@ -42,7 +43,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AccessValidation extends Component
 {
-    use CadastroRapidoAtendimento, CapturaDocumentoAssistida, ConferenciaDadosIdentificacao {
+    use CadastroRapidoAtendimento, CapturaDocumentoAssistida, ConferenciaDadosIdentificacao, FluxoGuiadoAtendimento {
         CadastroRapidoAtendimento::avancarParaConferencia insteadof CapturaDocumentoAssistida;
     }
 
@@ -209,6 +210,7 @@ class AccessValidation extends Component
 
         if ($pre->vehicle_plate) {
             $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
+            $this->veioDeCarro = true;
         }
 
         $this->checkQuickDocument();
@@ -228,6 +230,7 @@ class AccessValidation extends Component
         $this->documentRevealed = false;
         $this->busca = '';
         $this->encerrarFotoIdentificacao();
+        $this->reiniciarTipoAtendimento();
         unset($this->currentPerson, $this->currentProtectedFiles);
 
         $audit->record(
@@ -241,11 +244,13 @@ class AccessValidation extends Component
 
     public function trocarPessoa(): void
     {
+        $this->passo = 'dados';
         $this->currentPessoaId = null;
         $this->quickPersonRegistered = false;
         $this->quickResultado = null;
         $this->documentRevealed = false;
         $this->encerrarFotoIdentificacao();
+        $this->reiniciarTipoAtendimento();
         unset($this->currentPerson, $this->currentProtectedFiles);
     }
 
@@ -281,20 +286,17 @@ class AccessValidation extends Component
         $this->resetErrorBag('fotoIdentificacao');
     }
 
-    /** Grava a foto como foto vigente do cadastro da pessoa selecionada (sem envio à facial). */
+    /**
+     * Grava a foto como foto vigente do cadastro da pessoa selecionada (sem
+     * envio à facial). Quem já tinha foto ganha a nova, e a anterior fica no
+     * histórico (pedido do PO de 13/11/2026: o porteiro pode tirar nova foto).
+     */
     public function salvarFotoIdentificacao(PrivateFileService $files, ValidadorFotoPessoa $validador): void
     {
         abort_unless($this->podeTirarFotoIdentificacao(), 403);
 
         $pessoa = Pessoa::query()->find($this->currentPessoaId);
         abort_if($pessoa === null, 404);
-
-        if (app(FotoPessoaResolver::class)->paraPessoa($pessoa) !== null) {
-            $this->refazerFotoIdentificacao();
-            $this->addError('fotoIdentificacao', 'Esta pessoa já tem foto. Atualize a tela para vê-la.');
-
-            return;
-        }
 
         if ($this->fotoIdentificacao === null) {
             $this->addError('fotoIdentificacao', 'Fotografe a pessoa antes de salvar.');
@@ -512,6 +514,7 @@ class AccessValidation extends Component
         $this->busca = '';
         $this->documentRevealed = false;
         $this->encerrarFotoIdentificacao();
+        $this->reiniciarFluxoGuiado();
     }
 
     public function toggleDocumentReveal(AuditService $audit): void
@@ -565,6 +568,7 @@ class AccessValidation extends Component
                 'photo_state' => 'sem_foto',
                 'photo_origin' => null,
                 'can_take_photo' => false,
+                'has_photo' => false,
                 'links' => [],
                 'vehicles' => [],
                 'alerts' => [],
@@ -629,7 +633,9 @@ class AccessValidation extends Component
             'photo_url' => $foto ? route('protected-files.show', ['arquivo' => $foto['arquivo'], 'contexto' => 'validacao']) : null,
             'photo_state' => $foto ? 'disponivel' : ($this->canViewImage() ? 'sem_foto' : 'sem_permissao'),
             'photo_origin' => $foto ? ($foto['origem'] === 'cadastro' ? 'Foto do cadastro' : 'Selfie do pré-cadastro aprovado') : null,
-            'can_take_photo' => $podeTirarFoto,
+            // Pode fotografar mesmo quem já tem foto: a nova substitui no Concluir.
+            'can_take_photo' => $this->podeTirarFotoIdentificacao(),
+            'has_photo' => $fotoExistente !== null,
             'links' => $vinculos->map(fn (Vinculo $item) => [
                 'type' => BuscaPessoasValidacao::rotuloVinculo($item->tipo),
                 'property' => $item->imovel?->label() ?? 'Sem imóvel',
@@ -748,12 +754,21 @@ class AccessValidation extends Component
             return ['perfil' => PerfilAtendimento::TURISTA, 'local' => PerfilAtendimento::PRAIA, 'turista' => true];
         }
 
+        // Pessoa já cadastrada, sem vínculo: o tipo escolhido pelo porteiro na etapa Dados.
+        if ($perfil['perfil'] === 'Sem vínculo' && ! $this->quickRegistrationOpen && ! $this->quickPersonRegistered && isset(self::TIPOS_ATENDIMENTO[$this->tipoAtendimento])) {
+            return ['perfil' => self::TIPOS_ATENDIMENTO[$this->tipoAtendimento], 'local' => '—', 'turista' => false];
+        }
+
         return $perfil;
     }
 
     private function tipoDeclarado(): ?string
     {
-        return $this->quickRegistrationOpen || $this->quickPersonRegistered ? $this->quickAccessType : $this->tipoPreCadastro;
+        if ($this->quickRegistrationOpen || $this->quickPersonRegistered) {
+            return $this->quickAccessType;
+        }
+
+        return $this->tipoAtendimento !== '' ? $this->tipoAtendimento : $this->tipoPreCadastro;
     }
 
     /** Regra do PO (11/11/2026): só turista contribui; os demais não têm contribuição. */

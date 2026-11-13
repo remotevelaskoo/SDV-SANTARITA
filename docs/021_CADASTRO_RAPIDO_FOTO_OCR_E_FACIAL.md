@@ -349,3 +349,20 @@ Partir da main atual e implementar esta seção, verificando onde o campo é apr
   - Testes anteriores ajustados à nova regra: `CadastroRapidoFotoTest` (combinações sem imóvel usam turista no lugar de visitante), `FotoFacialEnvioTest`, `NomePorVozTest` e `CadastroManualDestaqueTest`.
   - Suíte completa `php artisan test`: 496 testes passando; Pint sem pendências; `node --test tests/js/*.test.mjs`: 15 passando; `pnpm build` sem erros.
   - Navegador (Playwright, Chromium), computador 1366×900 e celular Pixel 7: campos corretos para visitante, turista, morador e prestador; visitante sem os dois campos mostra os dois erros ao avançar; sem rolagem horizontal e sem erro de JavaScript.
+
+## 15. Atendimento guiado — decisão do PO em 12/11/2026
+
+O PO achou o fluxo do cadastro rápido confuso e pediu algo mais fluido. A Validação de entrada passou a ser **um atendimento guiado, uma etapa por vez**:
+
+**Dados → Foto → Placa → Pagamento → Concluir**
+
+- **Vale para todo atendimento.** Quem é achado na busca segue sem digitar dados; a etapa Foto só aparece se a pessoa ainda não tem foto. As cinco etapas sempre aparecem na barra; a que não se aplica fica apagada, como "(não se aplica)", e é pulada.
+- **Dados:** busca da pessoa ou cadastro rápido (fotografar o documento, com a leitura preenchendo os campos, ou digitar). Valem as mesmas regras de antes: conferência humana, CPF duplicado oferece usar o cadastro existente, responsável só para morador (obrigatório para visitante, como no código atual), imóvel obrigatório para visitante e telefone opcional.
+- **Foto:** obrigatória para concluir. Vale a foto tirada agora, a selfie do pré-cadastro ou a foto que a pessoa já tem.
+- **Placa:** "Veio de carro?". Se sim, a placa é obrigatória (câmera do posto ou digitada); se veio a pé, segue.
+- **Pagamento:** só para turista (R$ 25,00, Dinheiro/PIX/Cartão; Contribui/Não contribui/Isento; ticket), no caixa do posto do operador.
+- **Concluir:** resumo com "Alterar" em cada linha, observação, envio opcional à facial (com permissão) e a decisão: Negar entrada, Salvar sem liberar ou Liberar entrada.
+- **Nada é gravado antes do Concluir.** Cadastro, foto e atendimento são gravados juntos na decisão, que confere todas as etapas de novo e volta à etapa com problema. Cancelar ou iniciar outro atendimento no meio não deixa cadastro pela metade.
+- **Sem mudança de política:** cadastro continua não sendo autorização. "Liberar entrada" de uma pessoa recém-cadastrada sem autorização válida continua registrando o atendimento como pendente, com o aviso "Liberação não realizada". O envio da foto ao terminal segue desligado até a homologação.
+
+Implementação em `app/Livewire/Concerns/FluxoGuiadoAtendimento.php` e na tela `access-validation.blade.php`. A barra Voltar/Continuar fica presa embaixo da tela. Testes em `tests/Feature/FluxoGuiadoAtendimentoTest.php`.

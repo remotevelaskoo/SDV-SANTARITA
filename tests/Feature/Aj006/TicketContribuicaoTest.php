@@ -91,6 +91,7 @@ class TicketContribuicaoTest extends TestCase
 
         Livewire::actingAs($operador)->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
+            ->set('passo', 'pagamento')
             ->set('ticketNumero', '0042')
             ->assertSee('Ticket já registrado')
             ->call('release')
@@ -111,7 +112,10 @@ class TicketContribuicaoTest extends TestCase
         Livewire::actingAs($this->operador('validacao.registrar'))
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $morador->id)
-            ->assertSee('Sem contribuição: Morador')
+            // Atendimento guiado: quem não é turista pula a etapa Pagamento.
+            ->assertSee('Pagamento (não se aplica)')
+            ->set('passo', 'concluir')
+            ->assertSee('Sem contribuição (só turista contribui)')
             ->assertDontSee('Número do ticket de acesso')
             ->call('release')
             ->assertHasNoErrors();
@@ -122,6 +126,7 @@ class TicketContribuicaoTest extends TestCase
         Livewire::actingAs($this->operador('validacao.registrar'))
             ->test(AccessValidation::class)
             ->call('selecionarPessoa', $this->pessoa()->id)
+            ->set('passo', 'pagamento')
             ->assertSee('R$ 25,00')
             ->assertSee('Número do ticket de acesso');
     }

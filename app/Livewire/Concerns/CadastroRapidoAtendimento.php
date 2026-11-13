@@ -128,6 +128,7 @@ trait CadastroRapidoAtendimento
 
     public function cancelQuickRegistration(): void
     {
+        $this->passo = 'dados';
         $this->quickRegistrationOpen = false;
         $this->quickDuplicateFound = false;
         $this->resetQuickRegistrationFields();

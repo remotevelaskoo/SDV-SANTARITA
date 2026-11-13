@@ -24,7 +24,7 @@ class Navigation
                 ['label' => 'Encomendas', 'icon' => 'package', 'route' => 'packages'],
             ],
             'Cadastros' => [
-                ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people.create'],
+                ['label' => 'Pessoas', 'icon' => 'users', 'route' => 'people'],
                 ['label' => 'Imóveis', 'icon' => 'building', 'route' => 'properties'],
                 ['label' => 'Veículos', 'icon' => 'car', 'route' => 'vehicles'],
                 ['label' => 'Empresas e prestadores', 'icon' => 'users-round', 'route' => 'companies'],

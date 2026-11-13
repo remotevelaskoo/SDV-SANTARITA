@@ -26,6 +26,16 @@ class AutorizacaoAcesso extends Model
 
     public const TIPO_TURISTA = 'turista_24h';
 
+    /**
+     * Autorizações com prazo definido pelo porteiro (pedido do PO de
+     * 13/11/2026) para quem já tem cadastro e não tem vínculo. O tipo
+     * guardado é o próprio tipo de acesso escolhido no atendimento.
+     */
+    public const TIPOS_COM_PRAZO = ['visitante', 'prestador', 'outro'];
+
+    /** Prazo máximo que o porteiro pode dar a uma autorização com prazo. */
+    public const PRAZO_MAXIMO_DIAS = 30;
+
     protected $table = 'autorizacoes_acesso';
 
     protected static function booted(): void

@@ -69,3 +69,14 @@ Branch `design/sdv-one-validacao-precadastros-v3`, derivada da v2.
 - As rotas, classes Livewire, banco, APIs e contratos de integração não foram modificados.
 - Testes de regressão: `tests/Feature/SdvOneOperationalPagesTest.php`.
 - **Obrigatório antes de integrar:** revisão visual real no Windows, testes de clique e comparação com o fluxo original. Os testes automatizados não equivalem à homologação de usabilidade nem do hardware.
+
+## Rolagem automática até o que mudou (12/11/2026)
+
+Pedido do PO: depois de uma ação, a tela não pode ficar "perdida". Regra única para todas as telas Livewire (`resources/js/rolagem-automatica.js`):
+
+1. erro de preenchimento novo → rola até o primeiro campo com erro (com o rótulo) e põe o cursor nele;
+2. bloco com `data-rolar` que apareceu ou mudou de valor → rola até ele e foca o primeiro campo. Marcados hoje: etapas do cadastro rápido na Validação (`cadastro-rapido-documento|conferencia|foto`) e etapas do pré-cadastro de demonstração;
+3. aviso novo (a ação terminou: salvou, confirmou) → a tela NÃO sai do lugar. Se o aviso estiver fora da vista, ele aparece flutuando embaixo da tela, na seção em que o operador está, com os botões funcionando, e volta ao seu lugar após 8 s, Esc ou clique fora (pedido do PO após o cadastro rápido). Conta como aviso também o bloco que só embrulha avisos, sem campos (ex.: "Resultado do atendimento");
+4. bloco novo sem aviso (formulário, seção, cartão que abriu) → rola até ele e foca o primeiro campo.
+
+Não rola se o alvo já está à vista, se a atualização não veio de clique/tecla/envio nos últimos 15 s (atualizações periódicas), nem dentro de `<dialog>` ou `data-sem-rolagem`. Respeita "reduzir movimento" do sistema. Para uma tela nova com etapas, basta pôr `data-rolar="<nome>-{{ $etapa }}"` no bloco da etapa. Testes em `tests/js/rolagem-automatica.test.mjs`.

@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ProtectedFileController extends Controller
 {
     /** Contextos aceitos no parâmetro `contexto`, gravados na auditoria (AJ-006). */
-    private const CONTEXTOS = ['busca_validacao', 'validacao', 'analise_pre_cadastro', 'fila_pre_cadastro', 'evidencia_placa'];
+    private const CONTEXTOS = ['busca_validacao', 'validacao', 'analise_pre_cadastro', 'fila_pre_cadastro', 'evidencia_placa', 'consulta_pessoas'];
 
     public function __invoke(Request $request, Arquivo $arquivo, AuditService $audit): StreamedResponse
     {

@@ -207,8 +207,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
         $tela = Livewire::withQueryParams(['pre-cadastro' => $registro->id])
             ->actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar', 'arquivos.sensiveis.visualizar'))
             ->test(AccessValidation::class)
-            ->assertSee('Dados conferidos: conferir foto')
-            ->call('irParaEtapa', 'foto')
+            ->set('passo', 'foto')
             ->assertSee('Selfie do pré-cadastro: será a foto do cadastro')
             ->call('saveQuickRegistration')
             ->assertHasNoErrors()
@@ -249,6 +248,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->actingAs($operador)
             ->test(AccessValidation::class)
             ->assertSet('quickAccessType', 'turista')
+            ->set('passo', 'pagamento')
             ->assertSee('Entrada paga neste acesso')
             ->call('saveQuickRegistration')
             ->assertSet('quickPersonRegistered', true)
@@ -259,6 +259,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->actingAs($operador)
             ->test(AccessValidation::class)
             ->assertSet('quickRegistrationOpen', false)
+            ->set('passo', 'pagamento')
             ->assertDontSee('Sem contribuição')
             ->assertSee('Entrada paga neste acesso');
     }
@@ -274,6 +275,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
             ->actingAs($this->operador('validacao.registrar'))
             ->test(AccessValidation::class)
             ->assertSet('currentPessoaId', $pessoa->id)
+            ->set('passo', 'concluir')
             ->assertSee('Sem contribuição');
     }
 
@@ -293,7 +295,7 @@ class PreCadastroAprovarEValidarTest extends TestCase
         $protocolo = $tela->get('protocol');
         $this->assertNotNull($protocolo);
         $this->assertNull($tela->instance()->ticketDuplicado());
-        $tela->assertDontSee('Ticket já registrado')->assertSee('Atendimento registrado: '.$protocolo);
+        $tela->set('passo', 'pagamento')->assertDontSee('Ticket já registrado')->set('passo', 'concluir')->assertSee('Atendimento registrado: '.$protocolo);
 
         // Clique repetido não grava outro atendimento nem outra contribuição.
         $tela->call('release')->assertHasErrors(['atendimento']);

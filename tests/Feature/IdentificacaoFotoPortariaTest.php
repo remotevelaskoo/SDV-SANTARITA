@@ -45,18 +45,30 @@ class IdentificacaoFotoPortariaTest extends TestCase
         $pessoa = Pessoa::factory()->create();
         $operador = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'arquivos.sensiveis.visualizar');
 
-        Livewire::actingAs($operador)->test(AccessValidation::class)
+        // Atendimento guiado: a foto é tirada na etapa Foto e só é gravada no Concluir.
+        $tela = Livewire::actingAs($operador)->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
-            ->assertSee('Pessoa sem foto: tire a foto agora')
+            ->set('tipoAtendimento', 'prestador') // sem vínculo: o porteiro escolhe o tipo
+            ->call('continuar')
+            ->assertSet('passo', 'foto')
+            ->assertSee('Pessoa sem foto')
             ->assertSee('Abrir câmera')
+            ->call('continuar')
+            ->assertHasErrors('fotoIdentificacao')
+            ->assertSet('passo', 'foto')
             ->set('fotoIdentificacao', $this->foto(ImagensPessoaSinteticas::boa()))
             ->assertHasNoErrors()
-            ->call('salvarFotoIdentificacao')
+            ->call('continuar')
+            ->assertSet('passo', 'placa');
+        $this->assertFalse(PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->exists(), 'Nada é gravado antes do Concluir.');
+
+        $tela->set('veioDeCarro', false)
+            ->call('continuar')
+            ->assertSet('passo', 'concluir')
+            ->call('concluir', 'pendente')
             ->assertHasNoErrors()
             ->assertSet('fotoIdentificacao', null)
-            ->assertSee('Foto adicionada ao cadastro')
-            ->assertDontSee('Pessoa sem foto: tire a foto agora')
-            ->assertSee('Foto do cadastro');
+            ->assertSee('Foto adicionada ao cadastro');
 
         $link = PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->where('category', 'foto')->where('is_current', true)->sole();
         $this->assertSame('validacao_portaria', $link->file->origin);
@@ -78,19 +90,26 @@ class IdentificacaoFotoPortariaTest extends TestCase
         $this->assertFalse(PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->exists());
     }
 
-    public function test_pessoa_com_foto_nao_mostra_a_camera(): void
+    /** Pedido do PO de 13/11/2026: a foto atual aparece em verde e o porteiro pode tirar outra. */
+    public function test_pessoa_com_foto_mostra_a_atual_e_permite_tirar_nova(): void
     {
         $pessoa = Pessoa::factory()->create();
         app(PrivateFileService::class)->storePessoaFoto($pessoa, $this->foto(ImagensPessoaSinteticas::boa()));
 
         Livewire::actingAs($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'arquivos.sensiveis.visualizar'))->test(AccessValidation::class)
             ->call('selecionarPessoa', $pessoa->id)
-            ->assertDontSee('Pessoa sem foto: tire a foto agora')
+            ->set('tipoAtendimento', 'outro')
+            ->call('continuar')
+            ->assertSet('passo', 'foto')
+            ->assertSee('Foto atual de')
+            ->assertSee('Tirar nova foto')
+            ->assertDontSee('Pessoa sem foto')
             ->set('fotoIdentificacao', $this->foto(ImagensPessoaSinteticas::outra()))
             ->call('salvarFotoIdentificacao')
-            ->assertHasErrors('fotoIdentificacao');
+            ->assertHasNoErrors();
 
-        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count());
+        $this->assertSame(2, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->count(), 'A anterior fica no histórico.');
+        $this->assertSame(1, PessoaArquivo::query()->where('pessoa_id', $pessoa->id)->where('is_current', true)->count());
     }
 
     public function test_sem_permissao_de_gerenciar_pessoas_nao_fotografa(): void

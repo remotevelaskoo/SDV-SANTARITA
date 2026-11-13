@@ -152,6 +152,63 @@ class AutorizacoesAcesso
         });
     }
 
+    /**
+     * Autorização com prazo escolhido pelo porteiro (Visitante, Prestador ou
+     * Outro) para quem já tem cadastro e não tem vínculo. Começa agora e vai
+     * até o fim informado, no máximo AutorizacaoAcesso::PRAZO_MAXIMO_DIAS.
+     */
+    public function registrarAutorizacaoComPrazo(
+        Pessoa $pessoa,
+        string $tipo,
+        ?Imovel $imovel,
+        string $responsavel,
+        CarbonImmutable $fim,
+        ?User $ator = null,
+    ): AutorizacaoAcesso {
+        if (! in_array($tipo, AutorizacaoAcesso::TIPOS_COM_PRAZO, true)) {
+            throw new RegraIntegracaoViolada('tipo_invalido', 'Tipo de acesso inválido para autorização com prazo.');
+        }
+        if ($pessoa->status !== 'ativo') {
+            throw new RegraIntegracaoViolada('pessoa_inativa', 'A pessoa não está ativa no SDV.');
+        }
+
+        $inicio = CarbonImmutable::now();
+        if ($fim->lessThanOrEqualTo($inicio)) {
+            throw new RegraIntegracaoViolada('periodo_invalido', 'O fim da autorização precisa ser depois de agora.');
+        }
+        if ($fim->greaterThan($inicio->addDays(AutorizacaoAcesso::PRAZO_MAXIMO_DIAS))) {
+            throw new RegraIntegracaoViolada('periodo_invalido', 'A autorização pode durar no máximo '.AutorizacaoAcesso::PRAZO_MAXIMO_DIAS.' dias.');
+        }
+
+        return DB::transaction(function () use ($pessoa, $tipo, $imovel, $responsavel, $inicio, $fim, $ator): AutorizacaoAcesso {
+            Pessoa::query()->whereKey($pessoa->id)->lockForUpdate()->first();
+
+            $emCurso = AutorizacaoAcesso::query()
+                ->where('pessoa_id', $pessoa->id)
+                ->whereIn('tipo', [AutorizacaoAcesso::TIPO_TURISTA, ...AutorizacaoAcesso::TIPOS_COM_PRAZO])
+                ->where('status', 'ativa')
+                ->where('fim', '>', now())
+                ->first();
+            if ($emCurso !== null) {
+                throw new RegraIntegracaoViolada('visita_vigente', 'Esta pessoa já tem uma autorização vigente até '.$emCurso->fim->format('d/m/Y H:i').'.');
+            }
+
+            $autorizacao = AutorizacaoAcesso::query()->create([
+                'pessoa_id' => $pessoa->id,
+                'imovel_id' => $imovel?->id,
+                'tipo' => $tipo,
+                'inicio' => $inicio,
+                'fim' => $fim,
+                'status' => 'ativa',
+                'responsavel' => mb_substr(trim($responsavel), 0, 160) ?: null,
+                'created_by' => $ator?->id,
+            ]);
+            $this->auditar('autorizacao_com_prazo_criada', $autorizacao);
+
+            return $autorizacao;
+        });
+    }
+
     /** A credencial da autorização, criada uma única vez. */
     public function credencialDe(AutorizacaoAcesso $autorizacao): CredencialAcesso
     {
