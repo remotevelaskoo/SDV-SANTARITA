@@ -7,6 +7,8 @@ const files = {
     "/": ["index.html", "text/html"],
     "/portal.js": ["portal.js", "text/javascript"],
     "/portal.css": ["portal.css", "text/css"],
+    "/images/login-fundo.jpg": ["images/login-fundo.jpg", "image/jpeg"],
+    "/images/solucoes-do-vale.png": ["images/solucoes-do-vale.png", "image/png"],
 };
 http.createServer(async (req, res) => {
     try {

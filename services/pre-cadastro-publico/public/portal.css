@@ -1,11 +1,34 @@
+/* Identidade visual do SDV One (mesmas cores do sistema da portaria). */
 :root {
+    color-scheme: light;
+    --navy-950: #061a39;
+    --navy-900: #08234b;
+    --navy-800: #103462;
+    --blue-700: #0759b8;
+    --blue-600: #0867d1;
+    --blue-500: #1788e8;
+    --logo-blue: #126bff;
+    --logo-blue-text: #2687ff;
+    --neutral-950: #17233a;
+    --neutral-800: #334158;
+    --neutral-600: #69778c;
+    --neutral-400: #a9b4c3;
+    --neutral-300: #d8dfe8;
+    --neutral-200: #e7ebf1;
+    --neutral-100: #f3f5f8;
+    --neutral-050: #f8fafc;
+    --white: #fff;
+    /* Nomes antigos, usados pelo resto do arquivo. */
+    --navy: var(--navy-900);
+    --blue: var(--blue-600);
     font:
         16px/1.6 system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
         sans-serif;
-    color: #152c43;
-    background: #f1f5f8;
-    --navy: #102c47;
-    --blue: #1769aa;
+    color: var(--neutral-950);
+    background: var(--neutral-050);
 }
 * {
     box-sizing: border-box;
@@ -13,9 +36,32 @@
 body {
     margin: 0;
 }
+
+/* Topo: azul-marinho do login com a foto da praia ao fundo. */
+.hero {
+    position: relative;
+    overflow: hidden;
+    color: var(--white);
+    background:
+        radial-gradient(circle at 82% 12%, rgb(23 136 232 / 0.35), transparent 28rem),
+        linear-gradient(145deg, rgb(6 26 57 / 0.92) 0%, rgb(8 35 75 / 0.86) 54%, rgb(11 61 112 / 0.78) 100%),
+        url("/images/login-fundo.jpg") center / cover no-repeat,
+        var(--navy-900);
+}
+.hero::after {
+    position: absolute;
+    right: -8rem;
+    bottom: -9rem;
+    width: 26rem;
+    height: 26rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 999px;
+    content: "";
+    pointer-events: none;
+}
 header {
-    background: var(--navy);
-    color: white;
+    position: relative;
+    z-index: 1;
     padding: 22px max(24px, calc((100% - 920px) / 2));
     display: flex;
     justify-content: space-between;
@@ -25,45 +71,90 @@ header {
 .brand {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 23px;
+    gap: 6px;
     color: inherit;
     text-decoration: none;
-    line-height: 1.2;
+    min-width: 0;
 }
-.brand small {
+.brand__symbol {
+    width: 64px;
+    height: 56px;
+    flex: 0 0 auto;
+    overflow: visible;
+}
+.brand__base {
+    fill: #f5f8ff;
+}
+.brand__blue {
+    fill: var(--logo-blue);
+}
+.brand__type strong {
     display: block;
-    font-size: 12px;
-    margin-top: 4px;
-    opacity: 0.75;
+    color: var(--white);
+    font-size: 24px;
+    font-weight: 850;
+    letter-spacing: -0.055em;
+    line-height: 1.06;
+    white-space: nowrap;
 }
-.mark {
-    border: 2px solid #64c7dc;
-    border-radius: 12px;
-    color: #64c7dc;
-    font-weight: 800;
-    padding: 6px 13px;
+.brand__type strong > span {
+    color: var(--logo-blue-text);
+}
+.brand__type small {
+    display: block;
+    margin-top: 4px;
+    color: #abbcdd;
+    font-size: 12px;
+    line-height: 1.15;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
 }
 .badge {
     font-size: 12px;
     padding: 5px 12px;
-    border: 1px solid #4b6c85;
+    border: 1px solid rgb(255 255 255 / 0.25);
     border-radius: 20px;
-}
-main {
-    max-width: 920px;
-    margin: auto;
-    padding: 40px 24px;
+    background: rgb(255 255 255 / 0.08);
+    color: #dbe7f7;
 }
 .intro {
-    max-width: 700px;
-    margin-bottom: 30px;
+    position: relative;
+    z-index: 1;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 24px 44px;
+}
+.intro > * {
+    max-width: 640px;
 }
 .eyebrow {
+    margin: 0;
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.15em;
-    color: #1769aa;
+    text-transform: uppercase;
+    color: #7fc0ff;
+}
+.hero h1 {
+    color: var(--white);
+    font-size: clamp(30px, 5vw, 46px);
+    letter-spacing: -0.045em;
+    line-height: 1.08;
+    margin: 10px 0 12px;
+}
+.hero p {
+    color: rgb(255 255 255 / 0.82);
+}
+.hero .notice {
+    background: rgb(255 255 255 / 0.1);
+    border-left-color: #7fc0ff;
+    color: var(--white);
+}
+
+main {
+    max-width: 920px;
+    margin: auto;
+    padding: 32px 24px 40px;
 }
 h1 {
     font-size: clamp(28px, 5vw, 42px);
@@ -71,30 +162,34 @@ h1 {
     margin: 12px 0;
 }
 h2 {
+    color: var(--navy-900);
     font-size: 21px;
+    letter-spacing: -0.02em;
     margin: 0 0 18px;
 }
 h2 > span {
     font-size: 14px;
-    color: #1769aa;
-    background: #e9f3fc;
-    padding: 7px;
+    color: var(--white);
+    background: var(--blue-600);
+    padding: 6px 8px;
     border-radius: 8px;
     margin-right: 8px;
 }
 .notice {
-    background: #e3edf5;
+    background: #e8f1fc;
     padding: 14px 18px;
-    border-left: 3px solid var(--blue);
+    border-left: 3px solid var(--blue-600);
     border-radius: 6px;
 }
 section {
-    background: #fff;
-    border: 1px solid #dce4eb;
+    background: var(--white);
+    border: 1px solid var(--neutral-200);
     padding: 28px;
     border-radius: 16px;
     margin-bottom: 20px;
-    box-shadow: 0 6px 20px #0e2b4310;
+    box-shadow:
+        0 2px 4px rgb(23 35 58 / 0.06),
+        0 8px 22px rgb(23 35 58 / 0.05);
 }
 .grid {
     display: grid;
@@ -106,6 +201,7 @@ section {
 }
 label {
     display: block;
+    color: var(--neutral-950);
     font-size: 14px;
     font-weight: 650;
     margin-bottom: 12px;
@@ -113,26 +209,32 @@ label {
 label small,
 small {
     font-weight: 400;
-    color: #536777;
+    color: var(--neutral-600);
 }
 input:not([type="checkbox"]),
 select {
     display: block;
     width: 100%;
-    border: 1px solid #b7c7d4;
+    border: 1px solid var(--neutral-300);
     border-radius: 8px;
     min-height: 46px;
     padding: 10px;
     font: inherit;
     color: inherit;
-    background: white;
+    background: var(--white);
     margin-top: 6px;
+}
+input:not([type="checkbox"]):focus,
+select:focus {
+    border-color: var(--blue-500);
+    box-shadow: 0 0 0 3px rgb(23 136 232 / 0.18);
+    outline: none;
 }
 .file {
     padding: 16px;
-    border: 1px dashed #9aafc1;
+    border: 1px dashed #b9cde6;
     border-radius: 10px;
-    background: #f7fafc;
+    background: #f7fbff;
 }
 .file input {
     font-size: 13px;
@@ -157,36 +259,64 @@ select {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    accent-color: var(--blue-600);
 }
 button {
     font: inherit;
     font-weight: 700;
-    background: var(--blue);
-    color: #fff;
+    background: var(--blue-600);
+    color: var(--white);
     border: 0;
     border-radius: 9px;
     min-height: 48px;
     padding: 12px 22px;
     cursor: pointer;
+    box-shadow: 0 6px 16px rgb(8 103 209 / 0.22);
+}
+button:hover {
+    background: var(--blue-700);
 }
 button.secondary {
-    background: #e9f0f6;
-    color: var(--navy);
+    background: #e8f1fc;
+    color: var(--navy-900);
+    box-shadow: none;
     margin: 10px;
+}
+button.secondary:hover {
+    background: #d9e8fa;
 }
 button:disabled {
     opacity: 0.6;
     cursor: wait;
 }
 :focus-visible {
-    outline: 3px solid #b76e00;
+    outline: 3px solid var(--blue-500);
     outline-offset: 3px;
 }
 footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     text-align: center;
-    padding: 24px;
+    padding: 28px 24px 36px;
     font-size: 12px;
-    color: #536777;
+    color: var(--neutral-600);
+}
+footer .maker {
+    color: var(--neutral-400);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+footer img {
+    display: block;
+    width: 152px;
+    height: auto;
+}
+footer p {
+    margin: 6px 0 0;
+    color: var(--neutral-600);
 }
 #resultado {
     white-space: pre-line;
@@ -198,14 +328,24 @@ footer {
     font-weight: 700;
 }
 p {
-    color: #42576b;
+    color: var(--neutral-800);
 }
 @media (max-width: 620px) {
     header {
-        padding: 18px;
+        padding: 16px;
     }
     .badge {
         display: none;
+    }
+    .brand__symbol {
+        width: 52px;
+        height: 46px;
+    }
+    .brand__type strong {
+        font-size: 21px;
+    }
+    .intro {
+        padding: 18px 16px 32px;
     }
     main {
         padding: 24px 16px;
@@ -224,10 +364,6 @@ p {
     }
 }
 
-.brand small {
-    color: #d3e5f2;
-    opacity: 1;
-}
 .camera-open {
     display: block;
     margin: 10px 0;
@@ -240,12 +376,12 @@ p {
     max-height: 92dvh;
     overflow: auto;
     padding: 24px;
-    border: 1px solid #c5d4e0;
+    border: 1px solid var(--neutral-300);
     border-radius: 16px;
-    color: #152c43;
+    color: var(--neutral-950);
 }
 #camera-dialog::backdrop {
-    background: #071c32b8;
+    background: rgb(6 26 57 / 0.72);
 }
 #camera-video {
     display: block;
@@ -253,7 +389,7 @@ p {
     max-height: 50dvh;
     aspect-ratio: 4/3;
     object-fit: contain;
-    background: #102c47;
+    background: var(--navy-900);
     border-radius: 10px;
 }
 #camera-video.camera-selfie {
