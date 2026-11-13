@@ -572,7 +572,7 @@ class ExampleTest extends TestCase
             ->set('ticketNumero', '000103')
             ->call('release')
             ->assertSet('feedback.variant', 'success')
-            ->assertSee('Nenhum portão ou equipamento real foi acionado.');
+            ->assertSee('o SDV não abre portão.');
 
         $this->assertDatabaseHas('historico_acessos', ['pessoa_id' => $pessoa->id, 'resultado' => 'liberado']);
 
@@ -679,7 +679,7 @@ class ExampleTest extends TestCase
             ->call('release')
             ->assertSet('feedback.variant', 'warning')
             ->assertSet('feedback.title', 'Liberação não realizada')
-            ->assertSee('O cadastro rápido não possui autorização válida.');
+            ->assertSee('A pessoa não tem autorização nem vínculo com imóvel.');
 
         $this->assertMatchesRegularExpression('/^SRA-\d{8}-[A-Z0-9]{6}$/', $test->get('protocol'));
         $this->assertDatabaseHas('historico_acessos', ['resultado' => 'pendente']);

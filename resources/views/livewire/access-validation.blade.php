@@ -6,7 +6,8 @@
 @endphp
 <div class="validation-page sdv-one-validation">
     @if ($feedback)
-        <section class="validation-feedback" aria-label="Resultado do atendimento">
+        {{-- Com protocolo, a decisão final já mostra o resultado onde o porteiro está: sem aviso flutuante. --}}
+        <section class="validation-feedback" aria-label="Resultado do atendimento" @if ($protocol) data-sem-rolagem @endif>
             <x-ui.toast :variant="$feedback['variant']" :title="$feedback['title']" :dismissible="false">
                 {{ $feedback['message'] }}
                 <x-slot:action>
@@ -25,10 +26,6 @@
                 />
             @endif
 
-            @if ($envioFacialLiberacao)
-                {{-- Turista liberado: 24 h enviadas ao terminal facial (não à cancela). --}}
-                <x-ui.alert :variant="$envioFacialLiberacao['variant']" :title="$envioFacialLiberacao['title']">{{ $envioFacialLiberacao['message'] }}</x-ui.alert>
-            @endif
         </section>
     @endif
 
@@ -176,6 +173,11 @@
                             <x-ui.field id="quick-responsible" label="Responsável (opcional)" wire:model="quickResponsible" help="Deixe em branco se não houver." :error="$errors->first('quickResponsible')" />
                         @endif
                         <x-ui.field id="quick-property" :label="$quickAccessType === 'visitante' ? 'Código do imóvel' : 'Código do imóvel (opcional)'" wire:model="quickPropertyCode" placeholder="SRA-A-102" :help="match ($quickAccessType) { 'visitante' => 'Imóvel que o visitante vai visitar.', 'turista' => 'Turista não ganha vínculo com imóvel.', default => 'Sem imóvel, nenhum vínculo é criado e o envio à facial depende de uma autorização vigente.' }" :error="$errors->first('quickPropertyCode')" :required="$quickAccessType === 'visitante'" />
+                        @if (in_array($quickAccessType, \App\Models\AutorizacaoAcesso::TIPOS_COM_PRAZO, true))
+                            <x-ui.field id="quick-valido-ate" type="datetime-local" label="Válido até" wire:model.blur="validoAte" :min="now()->format('Y-m-d\TH:i')" :max="now()->addDays(\App\Models\AutorizacaoAcesso::PRAZO_MAXIMO_DIAS)->format('Y-m-d\TH:i')" help="Até quando a facial aceita a pessoa (até {{ \App\Models\AutorizacaoAcesso::PRAZO_MAXIMO_DIAS }} dias). Vale ao tocar em Liberar entrada." :error="$errors->first('validoAte')" />
+                        @elseif ($quickAccessType === 'turista')
+                            <p class="validation-plate__note">Turista: 24 h a partir do "Liberar entrada".</p>
+                        @endif
                     </div>
 
                     @if ($quickDuplicateFound)
@@ -738,28 +740,6 @@
             <div><dt>Pagamento</dt><dd>{{ $resumo['pagamento'] ?? 'Sem contribuição (só turista contribui)' }}</dd>@if (! $protocol && $resumo['pagamento'] !== null)<button type="button" class="sensitive-reveal" wire:click="irParaPasso('pagamento')">Alterar</button>@endif</div>
         </dl>
 
-        @if ($resumo['novo'])
-            <x-ui.alert variant="warning" title="Cadastro não significa entrada liberada">
-                O cadastro rápido não cria autorização. A entrada depende de uma autorização válida, conferida separadamente.
-            </x-ui.alert>
-
-            @php($terminaisRapido = $this->terminaisCadastroRapido())
-            @if ($terminaisRapido->isNotEmpty())
-                <div class="quick-registration__terminal">
-                    <x-ui.checkbox id="enviar-facial" label="Enviar também para o terminal facial" description="Envia o cadastro (e a foto, quando habilitado) ao terminal. Não abre cancela nem catraca." wire:model.live="enviarFacial" />
-                    @if ($enviarFacial)
-                        <x-ui.select id="quick-terminal" label="Terminal facial de destino" wire:model.live="quickTerminalId" :error="$errors->first('quickTerminalId')">
-                            <option value="">Selecione o terminal</option>
-                            @foreach ($terminaisRapido as $terminal)
-                                <option value="{{ $terminal['id'] }}">{{ $terminal['nome'] }} — {{ $terminal['ponto'] }}{{ $terminal['do_posto'] ? ' (seu posto)' : '' }}{{ $terminal['simulador'] ? ' [SIMULADOR]' : '' }}</option>
-                            @endforeach
-                        </x-ui.select>
-                        <x-ui.checkbox id="quick-terminal-confirmado" label="Confirmo o terminal escolhido" wire:model.live="quickTerminalConfirmado" />
-                        @error('quickTerminalConfirmado') <small class="ui-field__error" role="alert">{{ $message }}</small> @enderror
-                    @endif
-                </div>
-            @endif
-        @endif
 
         @if ($quickResultado && ! $quickRegistrationOpen)
             <section class="quick-resultado" aria-label="Resultado do cadastro rápido">
@@ -805,6 +785,10 @@
             <x-ui.alert :variant="$feedback['variant'] ?? 'info'" :title="'Atendimento registrado: '.$protocol">
                 {{ $feedback['title'] ?? '' }}. {{ $feedback['message'] ?? '' }}
             </x-ui.alert>
+            @if ($envioFacialLiberacao)
+                {{-- Liberar entrada: autorização enviada ao terminal facial (não à cancela). --}}
+                <x-ui.alert :variant="$envioFacialLiberacao['variant']" :title="$envioFacialLiberacao['title']">{{ $envioFacialLiberacao['message'] }}</x-ui.alert>
+            @endif
             @error('atendimento')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
             <div class="validation-decision__actions">
                 <div>
@@ -850,19 +834,19 @@
                 <x-ui.button variant="warning" wire:click="concluir('pendente')" wire:loading.attr="disabled" wire:target="concluir">
                     Salvar sem liberar
                 </x-ui.button>
-                <small>Grava o atendimento para continuar depois.</small>
+                <small>Só salva o cadastro e o atendimento. Não envia ao terminal facial.</small>
             </div>
 
             <div>
                 <x-ui.button variant="success" wire:click="concluir('liberar')" wire:loading.attr="disabled" wire:target="concluir">
                     Liberar entrada
                 </x-ui.button>
-                <small>Exige autorização válida. Simula a liberação, sem acionar portão real.</small>
+                <small>Salva, grava o tempo de acesso do perfil e envia ao terminal facial. A pessoa passa na facial para entrar.</small>
             </div>
         </div>
         @endif
 
-        <p><x-icon name="info" /> P06 + P07 em demonstração: cadastro rápido não autoriza entrada e nenhuma das ações desta página envia comandos para equipamentos físicos.</p>
+        <p><x-icon name="info" /> Nenhum botão abre portão ou cancela: quem libera a passagem é o terminal facial, ao reconhecer a pessoa.</p>
     </section>
     @endif
 
