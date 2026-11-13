@@ -57,7 +57,7 @@ class AnaliseSimplificadaTest extends TestCase
 
     public function test_alertas_ficam_agrupados_em_um_unico_resumo(): void
     {
-        $registro = PreRegistration::factory()->create(['alert' => 'Aviso sintético de teste']);
+        $registro = PreRegistration::factory()->tourist()->create(['alert' => 'Aviso sintético de teste', 'document' => '529.982.247-25']);
 
         $html = Livewire::actingAs($this->operador('pre-registro.analisar'))
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])
@@ -74,7 +74,7 @@ class AnaliseSimplificadaTest extends TestCase
 
     public function test_sem_pendencias_mostra_resumo_compacto(): void
     {
-        $registro = PreRegistration::factory()->create([
+        $registro = PreRegistration::factory()->tourist()->create([
             'name' => 'Pessoa Ficticia de Teste',
             'document' => '000.000.001-91',
             'birth_date' => '1990-01-01',

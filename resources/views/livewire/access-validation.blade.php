@@ -24,6 +24,11 @@
                     :tone="$feedback['variant'] === 'danger' ? 'danger' : ($feedback['variant'] === 'warning' ? 'warning' : 'success')"
                 />
             @endif
+
+            @if ($envioFacialLiberacao)
+                {{-- Turista liberado: 24 h enviadas ao terminal facial (não à cancela). --}}
+                <x-ui.alert :variant="$envioFacialLiberacao['variant']" :title="$envioFacialLiberacao['title']">{{ $envioFacialLiberacao['message'] }}</x-ui.alert>
+            @endif
         </section>
     @endif
 
@@ -437,17 +442,19 @@
                     <strong>{{ $quickName }}</strong>
                     <small>CPF {{ \App\Support\NormalizadorBusca::mascararDocumento($quickDocument) }} · {{ ucfirst($quickAccessType) }}{{ $quickPropertyCode ? ' · '.$quickPropertyCode : '' }}</small>
                 </div>
-                @if ($selfiePre = $this->selfieDoPreCadastro())
-                    <figure class="foto-pessoa__previa" x-show="!previa && !ativa">
-                        @if (auth()->user()?->hasPermission('arquivos.sensiveis.visualizar'))
-                            <img src="{{ route('protected-files.show', ['arquivo' => $selfiePre, 'contexto' => 'validacao']) }}" alt="Selfie enviada no pré-cadastro">
-                        @endif
-                        <figcaption>Selfie do pré-cadastro: será a foto do cadastro. Abra a câmera só se ela não servir.</figcaption>
-                    </figure>
+                @php($selfiePre = $this->selfieDoPreCadastro())
+                @if ($selfiePre)
+                    <p class="foto-pessoa__aviso">Selfie do pré-cadastro: será a foto do cadastro. Abra a câmera só se ela não servir.</p>
                 @elseif ($quickPessoaExistenteId && ($existente['tem_foto'] ?? false))
                     <p class="foto-pessoa__aviso">Esta pessoa já tem foto no cadastro. Tire outra só se ela não servir.</p>
                 @endif
-                @include('livewire.partials.foto-pessoa-camera', ['erro' => 'fotoPessoa'])
+                @include('livewire.partials.foto-pessoa-camera', [
+                    'erro' => 'fotoPessoa',
+                    'rotuloAbrir' => $selfiePre ? 'Tirar outra foto' : null,
+                    'fotoAtual' => $selfiePre && auth()->user()?->hasPermission('arquivos.sensiveis.visualizar')
+                        ? ['url' => route('protected-files.show', ['arquivo' => $selfiePre, 'contexto' => 'validacao']), 'alt' => 'Selfie enviada no pré-cadastro', 'legenda' => 'Selfie do pré-cadastro']
+                        : null,
+                ])
                 @if ($quickPessoaExistenteId && ($existente['tem_foto'] ?? false))
                     <x-ui.checkbox id="quick-substituir-foto" label="Substituir a foto atual do cadastro" description="Sem marcar, a foto existente é mantida e esta captura é descartada. A anterior fica no histórico." wire:model="quickSubstituirFoto" />
                 @endif
@@ -468,14 +475,14 @@
                         <small>Pessoa sem foto: a foto vai para o cadastro no Concluir e aparece nos próximos atendimentos. Não é enviada ao terminal.</small>
                     @endif
                 </div>
-                @if ($currentPerson['photo_url'])
-                    <figure class="foto-pessoa__previa foto-pessoa__atual" x-show="!previa && !ativa">
-                        <img src="{{ $currentPerson['photo_url'] }}" alt="Foto atual de {{ $currentPerson['name'] }}">
-                        <figcaption><x-ui.badge variant="success" icon="check-circle">{{ $currentPerson['photo_origin'] ?? 'Foto do cadastro' }}</x-ui.badge></figcaption>
-                    </figure>
-                @endif
+                @php($fotoAtual = $currentPerson['photo_url'] ? ['url' => $currentPerson['photo_url'], 'alt' => 'Foto atual de '.$currentPerson['name'], 'legenda' => $currentPerson['photo_origin'] ?? 'Foto do cadastro'] : null)
                 @if ($currentPerson['can_take_photo'])
-                    @include('livewire.partials.foto-pessoa-camera', ['erro' => 'fotoIdentificacao', 'rotuloAbrir' => $currentPerson['has_photo'] ? 'Tirar nova foto' : null])
+                    @include('livewire.partials.foto-pessoa-camera', ['erro' => 'fotoIdentificacao', 'rotuloAbrir' => $currentPerson['has_photo'] ? 'Tirar nova foto' : null, 'fotoAtual' => $fotoAtual])
+                @elseif ($fotoAtual)
+                    <figure class="foto-pessoa__previa foto-pessoa__atual">
+                        <img src="{{ $fotoAtual['url'] }}" alt="{{ $fotoAtual['alt'] }}">
+                        <figcaption><x-ui.badge variant="success" icon="check-circle">{{ $fotoAtual['legenda'] }}</x-ui.badge></figcaption>
+                    </figure>
                 @endif
             </div>
         @endif

@@ -829,12 +829,12 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('Conferência visual protegida')
             ->assertSee('Aprovar pré-cadastro')
-            ->assertSee('Aprovar apenas prepara a solicitação para a Validação de Entrada.');
+            ->assertSee('Aprovar cria o cadastro da pessoa (só turista, por enquanto).');
     }
 
     public function test_the_pre_registration_queue_records_each_demo_decision(): void
     {
-        $first = PreRegistration::factory()->create(['status' => 'aguardando']);
+        $first = PreRegistration::factory()->tourist()->create(['status' => 'aguardando', 'document' => '529.982.247-25']);
         $second = PreRegistration::factory()->create(['status' => 'aguardando']);
         $third = PreRegistration::factory()->create(['status' => 'aguardando']);
         $this->actingAs($this->operatorWithPermissions('pre-registro.analisar', 'pre-registro.aprovar', 'pre-registro.rejeitar', 'pre-registro.solicitar-correcao'));

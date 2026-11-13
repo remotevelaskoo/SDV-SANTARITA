@@ -27,6 +27,7 @@ use App\Services\ContribuicoesAtendimento;
 use App\Services\FotoPessoaResolver;
 use App\Services\PerfilAtendimento;
 use App\Services\PreCadastro\CatalogoDestinos;
+use App\Services\PreCadastro\PessoaDoPreCadastro;
 use App\Services\PrivateFileService;
 use App\Services\ValidadorFotoPessoa;
 use App\Support\NormalizadorBusca;
@@ -143,20 +144,31 @@ class AccessValidation extends Component
         }
 
         $this->tipoPreCadastro = $pre->access_type;
-        $cpf = preg_replace('/\D/', '', (string) $pre->document) ?? '';
-        $pessoaId = strlen($cpf) === 11 ? PessoaDocumento::query()
-            ->where('tipo', 'cpf')
-            ->where('valor_normalizado', $cpf)
-            ->whereNull('ended_at')
-            ->value('pessoa_id') : null;
+        $pessoaId = PessoaDoPreCadastro::pessoaExistente($pre)?->id;
+
+        // Pré-cadastro de turista aprovado antes desta regra: cria a pessoa agora (pedido de 13/11/2026).
+        if ($pessoaId === null && $usuario->hasPermission('pessoas.gerenciar') && PessoaDoPreCadastro::impedimento($pre) === null) {
+            $servico = app(PessoaDoPreCadastro::class);
+            $pessoa = $servico->registrar($pre)['pessoa'];
+            $servico->usarSelfieComoFoto($pessoa, $pre);
+            $pessoaId = $pessoa->id;
+        }
 
         if ($pessoaId !== null) {
             $this->currentPessoaId = $pessoaId;
+            $this->revelarDocumentoAoSelecionar($audit);
             $resultado = 'cadastro_existente';
+            if ($pre->access_type === 'turista') {
+                $this->tipoAtendimento = 'turista';
+            }
+            if ($pre->vehicle_plate) {
+                $this->placaInformada = NormalizadorBusca::documento((string) $pre->vehicle_plate);
+                $this->veioDeCarro = true;
+            }
             $this->avisoPreCadastro = [
                 'variant' => 'info',
                 'title' => 'Pessoa do pré-cadastro '.$pre->protocol,
-                'message' => 'O CPF já tem cadastro no SDV e ele foi aberto. Confira o documento original e a autorização antes de decidir.',
+                'message' => 'O cadastro da pessoa foi aberto. Confira o documento original; ao liberar a entrada de turista, o sistema grava 24 h e envia ao terminal facial.',
             ];
         } elseif ($usuario->hasPermission('pessoas.gerenciar')) {
             $this->openQuickRegistration();
@@ -233,6 +245,11 @@ class AccessValidation extends Component
         $this->reiniciarTipoAtendimento();
         unset($this->currentPerson, $this->currentProtectedFiles);
 
+        // Turista que volta (pedido de 13/11/2026): já vem como Turista para mais 24 h; o porteiro pode trocar.
+        if (! $this->tipoDoCadastro()['travado'] && PessoaDoPreCadastro::jaFoiTurista($pessoa)) {
+            $this->tipoAtendimento = 'turista';
+        }
+
         $audit->record(
             action: 'selecionou_pessoa',
             module: 'validacao',
@@ -240,6 +257,8 @@ class AccessValidation extends Component
             entityId: $pessoa->id,
             metadata: ['origem' => 'busca'],
         );
+
+        $this->revelarDocumentoAoSelecionar($audit);
     }
 
     public function trocarPessoa(): void
@@ -515,6 +534,28 @@ class AccessValidation extends Component
         $this->documentRevealed = false;
         $this->encerrarFotoIdentificacao();
         $this->reiniciarFluxoGuiado();
+    }
+
+    /**
+     * Pedido do PO (13/11/2026): ao selecionar a pessoa, o CPF já aparece
+     * completo para a portaria conferir com o documento. Só para quem tem a
+     * permissão de revelar, e fica na auditoria como a revelação manual.
+     */
+    private function revelarDocumentoAoSelecionar(AuditService $audit): void
+    {
+        if ($this->currentPessoaId === null || ! Auth::user()?->hasPermission('dados-sensiveis.revelar')) {
+            return;
+        }
+
+        $this->documentRevealed = true;
+        $audit->record(
+            action: 'revelou_dado_sensivel',
+            module: 'validacao',
+            entityType: 'pessoas',
+            entityId: $this->currentPessoaId,
+            classification: 'restrita',
+            metadata: ['categoria' => 'documento', 'origem' => 'selecao_automatica'],
+        );
     }
 
     public function toggleDocumentReveal(AuditService $audit): void

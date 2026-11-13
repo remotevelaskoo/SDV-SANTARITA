@@ -3,6 +3,7 @@
 namespace App\Livewire\Concerns;
 
 use App\Acesso\Aplicacao\AutorizacoesAcesso;
+use App\Acesso\Aplicacao\EnvioFacial;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\AutorizacaoAcesso;
 use App\Models\Imovel;
@@ -17,6 +18,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Throwable;
 
 /**
@@ -44,6 +46,14 @@ trait FluxoGuiadoAtendimento
 
     /** Concluir: enviar o cadastro rápido também ao terminal facial (com permissão). */
     public bool $enviarFacial = false;
+
+    /** Autorização de turista criada neste "Liberar entrada", para o envio ao terminal facial. */
+    #[Locked]
+    public ?string $autorizacaoTuristaLiberada = null;
+
+    /** Resultado do envio do turista liberado ao terminal facial (aparece junto do protocolo). */
+    #[Locked]
+    public ?array $envioFacialLiberacao = null;
 
     /**
      * Pessoa já cadastrada e sem vínculo (pedido do PO de 13/11/2026): o
@@ -177,6 +187,53 @@ trait FluxoGuiadoAtendimento
             'pendente' => $this->savePending(),
             'liberar' => $this->release(),
         };
+
+        if ($decisao === 'liberar' && $this->autorizacaoTuristaLiberada !== null && $this->protocol !== null) {
+            $this->enviarTuristaAoFacial();
+        }
+    }
+
+    /**
+     * Turista liberado (pedido do PO de 13/11/2026): a autorização de 24 h vai
+     * ao terminal facial do posto, não à cancela. Sem permissão, sem terminal
+     * ou com terminal não homologado, a autorização fica gravada e o aviso
+     * diz que o envio está pendente.
+     */
+    private function enviarTuristaAoFacial(): void
+    {
+        $autorizacao = AutorizacaoAcesso::query()->find($this->autorizacaoTuristaLiberada);
+        $this->autorizacaoTuristaLiberada = null;
+        $usuario = Auth::user();
+        if ($autorizacao === null || ! $usuario instanceof User) {
+            return;
+        }
+
+        $validade = 'Autorização de turista gravada até '.$autorizacao->fim->format('d/m/Y H:i').'.';
+        if (! $usuario->hasPermission('facial.enviar')) {
+            $this->envioFacialLiberacao = ['variant' => 'warning', 'title' => 'Envio ao terminal facial pendente', 'message' => $validade.' Seu perfil não envia à facial: peça a quem tem a permissão.'];
+
+            return;
+        }
+
+        $envio = app(EnvioFacial::class);
+        $terminais = $envio->terminaisPara($usuario);
+        $doPosto = $terminais->where('do_posto', true);
+        $terminal = $doPosto->count() === 1 ? $doPosto->first() : ($terminais->count() === 1 ? $terminais->first() : null);
+        if ($terminal === null) {
+            $this->envioFacialLiberacao = ['variant' => 'warning', 'title' => 'Envio ao terminal facial pendente', 'message' => $validade.($terminais->isEmpty()
+                ? ' Não há terminal facial ativo no seu posto.'
+                : ' Há mais de um terminal possível; envie pela ficha da pessoa ou peça ao administrador para ligar um terminal ao posto.')];
+
+            return;
+        }
+
+        $pessoa = Pessoa::query()->findOrFail($autorizacao->pessoa_id);
+        $resultado = $envio->enviar($pessoa, $terminal['id'], $usuario, $autorizacao)->paraTela();
+        $this->envioFacialLiberacao = [
+            'variant' => $resultado['variant'],
+            'title' => $resultado['title'].' · '.$terminal['nome'],
+            'message' => $validade.' '.$resultado['message'],
+        ];
     }
 
     /**
@@ -224,7 +281,7 @@ trait FluxoGuiadoAtendimento
         }
 
         if ($this->tipoAtendimento === 'turista') {
-            return 'Turista por 24 h, gravada ao liberar a entrada';
+            return 'Turista por 24 h, gravada ao liberar a entrada e enviada ao terminal facial';
         }
 
         try {
@@ -306,7 +363,7 @@ trait FluxoGuiadoAtendimento
 
         try {
             if ($this->tipoAtendimento === 'turista') {
-                $autorizacoes->registrarVisitaTurista($pessoa, null, '', null, null, $usuario);
+                $this->autorizacaoTuristaLiberada = $autorizacoes->registrarVisitaTurista($pessoa, null, '', null, null, $usuario)->id;
             } else {
                 $imovel = $this->tipoAtendimento === 'visitante'
                     ? Imovel::query()->where('codigo', strtoupper(trim($this->imovelAtendimento)))->first()
@@ -495,6 +552,8 @@ trait FluxoGuiadoAtendimento
         $this->passo = 'dados';
         $this->veioDeCarro = null;
         $this->enviarFacial = false;
+        $this->autorizacaoTuristaLiberada = null;
+        $this->envioFacialLiberacao = null;
         $this->reiniciarTipoAtendimento();
     }
 }

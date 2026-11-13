@@ -310,7 +310,7 @@
     <section class="pre-cadastro-analise__decisao" aria-labelledby="analise-decisao-titulo">
         <header>
             <h3 id="analise-decisao-titulo">Decisão</h3>
-            <small>Aprovar apenas prepara a solicitação para a Validação de Entrada. A entrada continua sendo decidida na portaria.</small>
+            <small>Aprovar cria o cadastro da pessoa (só turista, por enquanto). A entrada continua sendo decidida na portaria: as 24 h e o envio ao terminal facial acontecem no "Liberar entrada".</small>
         </header>
 
         @if ($record->status === 'aguardando')
