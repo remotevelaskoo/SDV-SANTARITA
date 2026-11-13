@@ -21,6 +21,7 @@ use App\Livewire\Login;
 use App\Livewire\PackageManagement;
 use App\Livewire\PerfilManagement;
 use App\Livewire\PersonRegistration;
+use App\Livewire\PessoaConsulta;
 use App\Livewire\PontoAcessoManagement;
 use App\Livewire\Portaria;
 use App\Livewire\PostoManagement;
@@ -95,6 +96,7 @@ Route::get('/pre-cadastros/divulgacao', PreCadastroDivulgacaoController::class)-
 Route::get('/pre-cadastros/{preRegistration}/analise', PreRegistrationReview::class)->middleware(['auth', 'permissao:pre-registro.analisar'])->name('pre-registrations.review');
 Route::get('/imoveis', PropertyManagement::class)->middleware(['auth', 'permissao:imoveis.consultar'])->name('properties');
 Route::get('/veiculos', VehicleManagement::class)->middleware(['auth', 'permissao:veiculos.consultar'])->name('vehicles');
+Route::get('/pessoas', PessoaConsulta::class)->middleware(['auth', 'permissao:pessoas.gerenciar'])->name('people');
 Route::get('/pessoas/nova', PersonRegistration::class)->middleware(['auth', 'permissao:pessoas.gerenciar'])->name('people.create');
 Route::get('/empresas', CompanyManagement::class)->middleware(['auth', 'permissao:empresas.consultar'])->name('companies');
 Route::get('/caixa', CashRegister::class)->middleware(['auth', 'permissao:caixa.proprio.gerenciar'])->name('cash-register');
