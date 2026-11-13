@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
@@ -36,6 +37,8 @@ class PreRegistrationQueue extends Component
     /** @var array{variant:string,title:string,message:string}|null */
     public ?array $resultadoBusca = null;
 
+    /** Busca global do cabeçalho abre o módulo já filtrado (?q=). */
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
     public function setStatusFilter(string $status): void
