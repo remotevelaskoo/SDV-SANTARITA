@@ -583,7 +583,7 @@
                             @foreach ($currentPerson['vehicles'] as $vehicle)
                                 @php($placaVeiculo = \App\Support\NormalizadorBusca::documento($vehicle['plate']))
                                 <li>
-                                    <button type="button" @class(['validation-plate__veiculo', 'is-selected' => $placaVeiculo === $placaDigitada]) wire:click="$set('placaInformada', '{{ $placaVeiculo }}')">
+                                    <button type="button" @class(['validation-plate__veiculo', 'is-selected' => $placaVeiculo === $placaDigitada]) wire:click="usarVeiculoDoCadastro('{{ $placaVeiculo }}')">
                                         <span class="validation-plate__chapa">{{ $vehicle['plate'] }}</span>
                                         <span class="validation-plate__descricao">{{ $vehicle['description'] }}</span>
                                     </button>
@@ -592,6 +592,44 @@
                         </ul>
                     </div>
                 @endif
+                @php($doCadastro = $this->veiculoDoCadastroAtual())
+                @php($confere = fn (string $campo, string $valor) => $doCadastro !== null && $valor !== '' && mb_strtolower(trim($valor)) === mb_strtolower(trim($doCadastro[$campo])))
+                <div class="validation-plate__dados" data-rolar="dados-veiculo">
+                    <h3>Dados do veículo <small>opcional · escolha da lista ou digite</small></h3>
+                    <div class="validation-plate__dados-grid">
+                        <div @class(['ui-field', 'is-ok' => $confere('marca', $veiculoMarca)])>
+                            <label class="ui-field__label" for="validation-veiculo-marca">Marca</label>
+                            <input id="validation-veiculo-marca" class="ui-field__control" list="validation-marcas" wire:model.live.debounce.300ms="veiculoMarca" maxlength="60" autocomplete="off" placeholder="Ex.: Chevrolet">
+                            <datalist id="validation-marcas">
+                                @foreach (array_keys((array) config('veiculos.marcas')) as $marca)
+                                    <option value="{{ $marca }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                        <div @class(['ui-field', 'is-ok' => $confere('modelo', $veiculoModelo)])>
+                            <label class="ui-field__label" for="validation-veiculo-modelo">Modelo</label>
+                            <input id="validation-veiculo-modelo" class="ui-field__control" list="validation-modelos" wire:model.blur="veiculoModelo" maxlength="80" autocomplete="off" placeholder="{{ $veiculoMarca === '' ? 'Escolha a marca primeiro' : 'Ex.: Onix' }}">
+                            <datalist id="validation-modelos">
+                                @foreach ($this->modelosSugeridos() as $modelo)
+                                    <option value="{{ $modelo }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                    </div>
+                    <div class="validation-plate__cores" role="group" aria-label="Cor do veículo">
+                        <span class="ui-field__label">Cor @if ($confere('cor', $veiculoCor))<x-ui.badge variant="success">confere com o cadastro</x-ui.badge>@endif</span>
+                        <div class="validation-plate__cores-lista">
+                            @foreach ((array) config('veiculos.cores') as $cor => $amostra)
+                                <button type="button" @class(['validation-plate__cor', 'is-selected' => mb_strtolower($veiculoCor) === mb_strtolower($cor)]) wire:click="$set('veiculoCor', '{{ $cor }}')" aria-pressed="{{ mb_strtolower($veiculoCor) === mb_strtolower($cor) ? 'true' : 'false' }}">
+                                    <span class="validation-plate__amostra" style="background: {{ $amostra }}"></span>{{ $cor }}
+                                </button>
+                            @endforeach
+                        </div>
+                        <input id="validation-veiculo-cor" class="ui-field__control validation-plate__outra-cor" wire:model.blur="veiculoCor" maxlength="40" autocomplete="off" placeholder="Outra cor (digite)" aria-label="Cor do veículo">
+
+                    </div>
+                    <p class="validation-plate__note">Fica no cadastro da pessoa e aparece em "Veículos no cadastro" na próxima visita.</p>
+                </div>
                 @if ($cameras === [])
                     <p class="validation-plate__note">Câmeras de placas são cadastradas pela administração em Integrações › Câmeras de placas e aparecem aqui sozinhas.</p>
                 @endif

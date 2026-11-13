@@ -2341,6 +2341,20 @@ body.has-drawer-open { overflow: hidden; }
 .validation-plate__veiculo.is-selected { border-color: var(--success, #15803d); background: #f0fdf4; }
 .validation-plate__chapa { flex: none; padding: 0.2rem 0.5rem; border: 2px solid #1f2937; border-radius: 0.3rem; background: #fff; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; }
 .validation-plate__descricao { min-width: 0; color: var(--neutral-700); font-size: 0.68rem; overflow-wrap: anywhere; }
+.validation-plate__dados { display: grid; gap: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--neutral-200); }
+.validation-plate__dados h3 { margin: 0; color: var(--neutral-700); font-size: 0.72rem; }
+.validation-plate__dados h3 small { margin-left: 0.3rem; color: var(--neutral-500); font-weight: 400; }
+.validation-plate__dados-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem; }
+.validation-plate__dados .ui-field { display: grid; gap: 0.25rem; }
+.validation-plate__dados .is-ok .ui-field__control { border-color: #86c79a; background: var(--success-surface, #f0fdf4); }
+.validation-plate__cores { display: grid; gap: 0.4rem; }
+.validation-plate__cores .ui-field__label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.validation-plate__cores-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.validation-plate__cor { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.4rem; padding: 0.3rem 0.65rem; border: 1px solid var(--neutral-200); border-radius: 999px; background: #fff; color: inherit; font: inherit; font-size: 0.68rem; cursor: pointer; }
+.validation-plate__cor:hover { border-color: var(--primary-500, #0b6bd3); }
+.validation-plate__cor.is-selected { border: 2px solid var(--success, #15803d); background: var(--success-surface, #f0fdf4); font-weight: 700; }
+.validation-plate__amostra { width: 1rem; height: 1rem; border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 50%; }
+.validation-plate__outra-cor { max-width: 14rem; }
 @media (min-width: 60rem) {
     .validation-plate--com-camera { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 }
