@@ -5,12 +5,15 @@ namespace App\Livewire;
 use App\Models\HistoricoAcesso;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class AccessHistory extends Component
 {
     public string $mode = 'list';
 
+    /** Busca global do cabeçalho abre o módulo já filtrado (?q=). */
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
     public string $typeFilter = 'todos';

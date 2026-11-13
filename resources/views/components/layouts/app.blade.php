@@ -162,12 +162,9 @@
                     </div>
 
                     <div class="global-search-row">
-                        <label class="global-search">
-                            <span class="sr-only">Busca global</span>
-                            <x-icon name="search" />
-                            <input type="search" placeholder="Busca global — em desenvolvimento" title="A busca global ainda não está disponível" aria-describedby="sdv-busca-indisponivel" disabled>
-                            <span class="sr-only" id="sdv-busca-indisponivel">A busca global está em desenvolvimento. Use os módulos do menu para consultar registros.</span>
-                        </label>
+                        @auth
+                            <livewire:busca-global />
+                        @endauth
                     </div>
                 </header>
 

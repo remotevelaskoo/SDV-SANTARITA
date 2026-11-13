@@ -12,12 +12,15 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class PropertyManagement extends Component
 {
     public string $mode = 'list';
 
+    /** Busca global do cabeçalho abre o módulo já filtrado (?q=). */
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
     public string $statusFilter = 'todos';

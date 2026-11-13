@@ -8,12 +8,15 @@ use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class VehicleManagement extends Component
 {
     public string $mode = 'list';
 
+    /** Busca global do cabeçalho abre o módulo já filtrado (?q=). */
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
     public string $statusFilter = 'todos';

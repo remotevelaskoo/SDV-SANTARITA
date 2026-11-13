@@ -44,7 +44,7 @@ class SdvOneHeaderStateTest extends TestCase
             ->assertDontSee('notification-dot', false)
             ->assertDontSee('Caixa 01 aberto às 13:00')
             ->assertDontSee('Vínculo de inquilino encerrado')
-            ->assertSee('Busca global — em desenvolvimento');
+            ->assertSee('Buscar pessoa, CPF, placa, imóvel ou protocolo');
     }
 
     public function test_status_do_caixa_prorio_nao_usa_o_caixa_de_outro_operador(): void
