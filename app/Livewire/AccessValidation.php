@@ -439,10 +439,33 @@ class AccessValidation extends Component
      * Captura estática sob demanda (AJ-006). A imagem vira evidência privada;
      * a leitura da placa é outra etapa e a captura não decide nada.
      */
+    /**
+     * "Sim, de carro": já puxa a câmera de placas do posto. Com uma câmera só,
+     * ela é escolhida e a imagem é capturada na hora; a placa continua sendo
+     * conferida e digitada pelo porteiro.
+     */
+    public function escolherCarro(CamerasPlaca $cameras): void
+    {
+        $this->veioDeCarro = true;
+        $this->updatedVeioDeCarro();
+
+        if (count($this->camerasPlaca) === 1) {
+            $this->cameraPlacaId = $this->camerasPlaca[0]['id'];
+        }
+
+        if ($this->cameraPlacaId !== '' && $this->capturaPlacaId === null) {
+            $this->capturarPlaca($cameras);
+        }
+    }
+
     public function capturarPlaca(CamerasPlaca $cameras): void
     {
         abort_unless(Auth::user()?->hasPermission('validacao.registrar'), 403);
         $this->capturaPlacaFalha = null;
+
+        if ($this->cameraPlacaId === '' && count($this->camerasPlaca) === 1) {
+            $this->cameraPlacaId = $this->camerasPlaca[0]['id'];
+        }
 
         if (! collect($this->camerasPlaca)->contains('id', $this->cameraPlacaId)) {
             $this->addError('cameraPlacaId', 'Escolha uma câmera deste posto.');
