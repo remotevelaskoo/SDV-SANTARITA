@@ -10,6 +10,7 @@ use App\Models\PontoAcesso;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 /**
@@ -50,6 +51,11 @@ class CameraPlacasManagement extends Component
     public function cadastrar(CamerasPlaca $cameras): void
     {
         $ator = $this->autorizar();
+        // A senha sai do estado do componente antes de qualquer retorno: nunca volta ao HTML.
+        $senha = $this->form['senha'] ?? '';
+        $this->form['senha'] = '';
+        $usuario = trim($this->form['usuario'] ?? '');
+
         $this->validate([
             'form.nome' => ['required', 'string', 'max:120'],
             'form.adaptador' => ['required', 'string'],
@@ -57,11 +63,30 @@ class CameraPlacasManagement extends Component
             'form.timeout_segundos' => ['required', 'integer', 'between:1,30'],
         ], attributes: ['form.nome' => 'nome', 'form.porta_rede' => 'porta', 'form.timeout_segundos' => 'tempo limite']);
 
-        $this->executar(fn () => $cameras->cadastrar([
-            ...$this->form,
-            'porta_rede' => $this->form['porta_rede'] === '' ? null : (int) $this->form['porta_rede'],
-            'timeout_segundos' => (int) $this->form['timeout_segundos'],
-        ], $ator), 'Câmera cadastrada', 'Defina a credencial (se houver) e vincule a câmera a um ponto para liberar o uso na validação.');
+        $comSenha = $senha !== '' && ! str_starts_with($this->form['adaptador'], 'simulador');
+        if ($comSenha && ! $cameras->senhaNaTelaPermitida()) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Senha não aceita aqui', 'message' => 'Nesta instalação a senha da câmera deve vir do ambiente do servidor. Cadastre sem senha e informe a referência env:NOME.'];
+
+            return;
+        }
+        if ($comSenha && $usuario === '') {
+            $this->addError('form.usuario', 'Informe o usuário da câmera.');
+
+            return;
+        }
+
+        $this->executar(fn () => DB::transaction(function () use ($cameras, $ator, $comSenha, $usuario, $senha): void {
+            $camera = $cameras->cadastrar([
+                ...collect($this->form)->except(['usuario', 'senha'])->all(),
+                'porta_rede' => $this->form['porta_rede'] === '' ? null : (int) $this->form['porta_rede'],
+                'timeout_segundos' => (int) $this->form['timeout_segundos'],
+            ], $ator);
+            if ($comSenha) {
+                $cameras->definirSenha($camera, $usuario, $senha, $ator);
+            }
+        }), 'Câmera cadastrada', $comSenha
+            ? 'A senha foi gravada cifrada e não será exibida. Agora vincule a câmera ao ponto e use "Testar captura".'
+            : 'Defina a credencial (se houver) e vincule a câmera a um ponto para liberar o uso na validação.');
 
         if ($this->feedback['variant'] === 'success') {
             $this->limparFormulario();
@@ -71,10 +96,21 @@ class CameraPlacasManagement extends Component
     public function definirCredencial(string $cameraId, CamerasPlaca $cameras): void
     {
         $ator = $this->autorizar();
-        $dados = $this->credencial[$cameraId] ?? ['referencia' => '', 'usuario' => ''];
+        $dados = ['referencia' => '', 'usuario' => '', 'senha' => '', ...($this->credencial[$cameraId] ?? [])];
+        unset($this->credencial[$cameraId]);
+
+        if ($dados['senha'] !== '') {
+            if (! $cameras->senhaNaTelaPermitida()) {
+                $this->feedback = ['variant' => 'danger', 'title' => 'Senha não aceita aqui', 'message' => 'Nesta instalação a senha da câmera deve vir do ambiente do servidor. Informe a referência env:NOME.'];
+
+                return;
+            }
+            $this->executar(fn () => $cameras->definirSenha($this->camera($cameraId), trim($dados['usuario']), $dados['senha'], $ator), 'Usuário e senha gravados', 'A senha foi gravada cifrada e não será exibida. A anterior foi desativada.');
+
+            return;
+        }
 
         $this->executar(fn () => $cameras->definirCredencial($this->camera($cameraId), trim($dados['referencia']), trim($dados['usuario']) ?: null, $ator), 'Credencial registrada', 'Só a referência foi gravada. A senha continua fora do SDV.');
-        unset($this->credencial[$cameraId]);
     }
 
     public function vincular(string $cameraId, CamerasPlaca $cameras): void
@@ -127,6 +163,7 @@ class CameraPlacasManagement extends Component
             'adaptadores' => array_intersect_key(self::ADAPTADORES, array_flip($cameras->adaptadoresPermitidos())),
             'ultimaCaptura' => $ultima,
             'podeVerImagem' => (bool) Auth::user()?->hasPermission('arquivos.sensiveis.visualizar'),
+            'senhaNaTela' => $cameras->senhaNaTelaPermitida(),
         ])->layout('components.layouts.app', [
             'title' => 'Câmeras de placas',
             'heading' => 'Câmeras de placas',
@@ -144,7 +181,17 @@ class CameraPlacasManagement extends Component
         $this->form = [
             'nome' => '', 'fabricante' => '', 'modelo' => '', 'endereco_rede' => '', 'porta_rede' => '',
             'esquema' => 'http', 'caminho_snapshot' => '', 'adaptador' => 'snapshot-http', 'timeout_segundos' => '5',
+            'usuario' => '', 'senha' => '',
         ];
+    }
+
+    /** Preenche o caminho de foto conhecido do fabricante; o administrador ainda pode trocar. */
+    public function updatedFormFabricante(string $valor): void
+    {
+        $caminho = config("integracoes.cameras_placa.caminhos_conhecidos.{$valor}");
+        if ($caminho !== null && trim($this->form['caminho_snapshot']) === '') {
+            $this->form['caminho_snapshot'] = $caminho;
+        }
     }
 
     private function executar(callable $acao, string $titulo, string $mensagem): void

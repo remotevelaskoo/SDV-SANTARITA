@@ -146,6 +146,67 @@ class CameraPlacasTest extends TestCase
         $this->assertSame(1, CapturaPlaca::query()->count(), 'Tocar de novo em "Sim, de carro" não captura outra imagem.');
     }
 
+    public function test_admin_cadastra_camera_intelbras_com_ip_usuario_e_senha_na_tela(): void
+    {
+        config(['integracoes.segredos.cifrado_permitido' => true]);
+        $admin = $this->usuarioCom('integracoes.gerenciar', 'arquivos.sensiveis.visualizar');
+        $ponto = $this->novoPonto();
+
+        $tela = Livewire::actingAs($admin)->test(CameraPlacasManagement::class)
+            ->set('form.nome', 'Câmera Intelbras entrada')
+            ->set('form.fabricante', 'Intelbras')
+            ->assertSet('form.caminho_snapshot', '/cgi-bin/snapshot.cgi?channel=1')
+            ->set('form.endereco_rede', self::IP_TESTE)
+            ->set('form.porta_rede', '80')
+            ->set('form.usuario', 'sdv')
+            ->set('form.senha', 'Senha-Da-Camera-321')
+            ->call('cadastrar')
+            ->assertSet('feedback.variant', 'success')
+            ->assertSet('form.senha', '')
+            ->assertSee('Usuário e senha gravados');
+        $this->assertStringNotContainsString('Senha-Da-Camera-321', $tela->html());
+
+        $camera = Equipamento::query()->camerasPlaca()->sole();
+        $credencial = $camera->credencialTecnicaAtiva();
+        $this->assertTrue($credencial->cifrada());
+        $this->assertSame('sdv', $credencial->usuario_tecnico);
+        $this->assertSame('Senha-Da-Camera-321', $credencial->segredo_cifrado);
+        $this->assertStringNotContainsString('Senha-Da-Camera-321', (string) \DB::table('equipamento_credenciais')->value('segredo_cifrado'), 'Guardada cifrada no banco.');
+        $this->assertStringNotContainsString('Senha-Da-Camera-321', AuditoriaEvento::query()->get()->toJson());
+
+        app(CamerasPlaca::class)->vincularAoPonto($camera, $ponto, $admin);
+        Http::fake(['*' => Http::response(base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=='), 200, ['Content-Type' => 'image/jpeg'])]);
+
+        $tela->call('testarCaptura', $camera->id)->assertSet('feedback.title', 'Imagem capturada');
+        Http::assertSent(fn (Request $r) => str_starts_with($r->url(), 'http://'.self::IP_TESTE)
+            && str_ends_with($r->url(), '/cgi-bin/snapshot.cgi?channel=1')
+            && ! str_contains($r->url(), 'Senha-Da-Camera-321'));
+    }
+
+    public function test_trocar_usuario_e_senha_de_camera_ja_cadastrada_e_recusa_quando_desabilitado(): void
+    {
+        config(['integracoes.segredos.cifrado_permitido' => true]);
+        $camera = $this->cameraHttp();
+        $admin = $this->usuarioCom('integracoes.gerenciar');
+
+        Livewire::actingAs($admin)->test(CameraPlacasManagement::class)
+            ->set("credencial.{$camera->id}.usuario", 'sdv')
+            ->set("credencial.{$camera->id}.senha", 'Outra-Senha-777')
+            ->call('definirCredencial', $camera->id)
+            ->assertSet('feedback.title', 'Usuário e senha gravados')
+            ->assertSet('credencial', []);
+        $this->assertSame('Outra-Senha-777', $camera->fresh()->credencialTecnicaAtiva()->segredo_cifrado);
+
+        config(['integracoes.segredos.cifrado_permitido' => false]);
+        Livewire::actingAs($admin)->test(CameraPlacasManagement::class)
+            ->assertDontSee('Senha da câmera')
+            ->set("credencial.{$camera->id}.usuario", 'sdv')
+            ->set("credencial.{$camera->id}.senha", 'Mais-Uma-888')
+            ->call('definirCredencial', $camera->id)
+            ->assertSet('feedback.title', 'Senha não aceita aqui');
+        $this->assertSame('Outra-Senha-777', $camera->fresh()->credencialTecnicaAtiva()->segredo_cifrado);
+    }
+
     public function test_resposta_que_nao_e_imagem_ou_camera_fora_do_ar_nao_vira_evidencia(): void
     {
         $camera = $this->cameraHttp();

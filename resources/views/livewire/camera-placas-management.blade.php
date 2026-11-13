@@ -4,10 +4,10 @@
     @endif
 
     <x-ui.alert variant="info" title="Como a câmera é usada">
-        O SDV pede uma imagem estática quando o operador clica em "Capturar imagem". Não há vídeo contínuo. O navegador recebe só o identificador da câmera; endereço, caminho e credencial ficam no servidor. Câmeras só RTSP/ONVIF usam um gateway de vídeo na rede interna que entrega o quadro por HTTP.
+        O SDV pede uma foto da câmera quando o porteiro toca em "Sim, de carro" na validação. Não há vídeo contínuo. O navegador recebe só o identificador da câmera; IP, caminho, usuário e senha ficam no servidor. Câmeras só RTSP/ONVIF usam um gateway de vídeo na rede interna que entrega o quadro por HTTP.
     </x-ui.alert>
 
-    <x-ui.card title="Nova câmera de placas" description="Informe o caminho do snapshot sem usuário ou senha. Sem marca, modelo ou caminho conhecidos, use o simulador para validar o fluxo.">
+    <x-ui.card title="Nova câmera de placas" description="Escolha o fabricante para preencher o caminho da foto, informe o IP, o usuário e a senha da câmera. Sem câmera, use o simulador para validar o fluxo.">
         <form wire:submit="cadastrar" class="equipamento-management-form">
             <div class="equipamento-management-grid">
                 <x-ui.field id="camera-nome" label="Nome" wire:model="form.nome" placeholder="Câmera entrada principal" :error="$errors->first('form.nome')" required />
@@ -17,15 +17,25 @@
                     @endforeach
                 </x-ui.select>
                 @if (! str_starts_with($form['adaptador'], 'simulador'))
-                    <x-ui.field id="camera-fabricante" label="Fabricante" wire:model="form.fabricante" placeholder="Opcional" />
+                    <x-ui.select id="camera-fabricante" label="Fabricante" wire:model.live="form.fabricante">
+                        <option value="">Escolha</option>
+                        @foreach (array_keys((array) config('integracoes.cameras_placa.caminhos_conhecidos')) as $fabricante)
+                            <option value="{{ $fabricante }}">{{ $fabricante }}</option>
+                        @endforeach
+                        <option value="Outro">Outro fabricante</option>
+                    </x-ui.select>
                     <x-ui.field id="camera-modelo" label="Modelo" wire:model="form.modelo" placeholder="Opcional" />
-                    <x-ui.field id="camera-endereco" label="IP da câmera ou do gateway" wire:model="form.endereco_rede" placeholder="IP da rede local" autocomplete="off" />
+                    <x-ui.field id="camera-endereco" label="IP da câmera" wire:model="form.endereco_rede" placeholder="Ex.: 10.1.9.226" autocomplete="off" />
                     <x-ui.field id="camera-porta" label="Porta" type="number" wire:model="form.porta_rede" placeholder="80" :error="$errors->first('form.porta_rede')" />
                     <x-ui.select id="camera-esquema" label="Protocolo" wire:model="form.esquema">
                         <option value="http">HTTP</option>
                         <option value="https">HTTPS</option>
                     </x-ui.select>
-                    <x-ui.field id="camera-caminho" label="Caminho do snapshot" wire:model="form.caminho_snapshot" placeholder="/caminho/do/snapshot.jpg" help="Conforme o manual da câmera ou do gateway. Nunca inclua usuário ou senha." />
+                    <x-ui.field id="camera-caminho" label="Caminho da foto (snapshot)" wire:model="form.caminho_snapshot" placeholder="/cgi-bin/snapshot.cgi?channel=1" help="Preenchido ao escolher o fabricante. Nunca inclua usuário ou senha aqui." />
+                    @if ($senhaNaTela)
+                        <x-ui.field id="camera-usuario" label="Usuário da câmera" wire:model="form.usuario" autocomplete="off" :error="$errors->first('form.usuario')" help="De preferência um usuário só de visualização." />
+                        <x-ui.field id="camera-senha" label="Senha da câmera" type="password" wire:model="form.senha" autocomplete="new-password" help="Gravada cifrada. Não aparece mais depois de salva." />
+                    @endif
                 @else
                     <x-ui.alert variant="warning" title="Simulador">Gera uma imagem sintética marcada como SIMULADOR. Não conecta em nenhuma câmera e não vale como evidência real.</x-ui.alert>
                 @endif
@@ -65,7 +75,7 @@
                 <x-ui.badge :variant="$camera->status->value === 'ativo' ? 'success' : ($camera->status->value === 'inativo' ? 'neutral' : 'warning')">{{ $camera->status->rotulo() }}</x-ui.badge>
                 <x-ui.badge :variant="$vinculo ? 'info' : 'warning'">{{ $vinculo ? 'Ponto: '.$vinculo->pontoAcesso->nome : 'Sem ponto' }}</x-ui.badge>
                 @unless ($simulador)
-                    <x-ui.badge :variant="$credencialAtiva ? 'success' : 'neutral'">{{ $credencialAtiva ? 'Credencial por referência' : 'Sem credencial' }}</x-ui.badge>
+                    <x-ui.badge :variant="$credencialAtiva ? 'success' : 'neutral'">{{ $credencialAtiva ? ($credencialAtiva->cifrada() ? 'Usuário e senha gravados' : 'Credencial por referência') : 'Sem usuário e senha' }}</x-ui.badge>
                 @endunless
                 @if ($simulador)
                     <x-ui.badge variant="danger">SIMULADOR</x-ui.badge>
@@ -92,9 +102,13 @@
 
                 @unless ($simulador)
                     <div class="equipamento-management-acoes">
-                        <x-ui.field id="camera-ref-{{ $camera->id }}" label="Referência da senha" wire:model="credencial.{{ $camera->id }}.referencia" placeholder="env:NOME_DA_VARIAVEL" autocomplete="off" help="Somente a referência. A senha fica no ambiente do servidor." />
-                        <x-ui.field id="camera-usuario-{{ $camera->id }}" label="Usuário técnico" wire:model="credencial.{{ $camera->id }}.usuario" autocomplete="off" />
-                        <x-ui.button variant="secondary" size="sm" wire:click="definirCredencial('{{ $camera->id }}')">{{ $credencialAtiva ? 'Substituir credencial' : 'Registrar credencial' }}</x-ui.button>
+                        <x-ui.field id="camera-usuario-{{ $camera->id }}" label="Usuário da câmera" wire:model="credencial.{{ $camera->id }}.usuario" autocomplete="off" />
+                        @if ($senhaNaTela)
+                            <x-ui.field id="camera-senha-{{ $camera->id }}" label="Senha da câmera" type="password" wire:model="credencial.{{ $camera->id }}.senha" autocomplete="new-password" help="Gravada cifrada. Não aparece mais depois de salva." />
+                        @else
+                            <x-ui.field id="camera-ref-{{ $camera->id }}" label="Referência da senha" wire:model="credencial.{{ $camera->id }}.referencia" placeholder="env:NOME_DA_VARIAVEL" autocomplete="off" help="Somente a referência. A senha fica no ambiente do servidor." />
+                        @endif
+                        <x-ui.button variant="secondary" size="sm" wire:click="definirCredencial('{{ $camera->id }}')">{{ $credencialAtiva ? 'Trocar usuário e senha' : 'Gravar usuário e senha' }}</x-ui.button>
                     </div>
                 @endunless
             @endif
