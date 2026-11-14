@@ -31,6 +31,16 @@
             <h2 id="login-title">Entrar no sistema</h2>
             <p class="login-card__intro">Informe sua identificação operacional e sua senha.</p>
 
+            @if (session('sessao_encerrada'))
+                <div class="login-error" role="alert">
+                    <x-icon name="alert" />
+                    <div>
+                        <strong>Sua sessão foi encerrada</strong>
+                        <span>{{ session('sessao_encerrada') }}</span>
+                    </div>
+                </div>
+            @endif
+
             @if ($errors->has('credentials'))
                 <div class="login-error" role="alert">
                     <x-icon name="alert" />

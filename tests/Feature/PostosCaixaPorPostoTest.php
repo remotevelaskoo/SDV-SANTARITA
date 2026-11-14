@@ -182,6 +182,39 @@ class PostosCaixaPorPostoTest extends TestCase
         $this->assertSame(1, CaixaTurno::query()->where('status', 'aberto')->where('posto_id', $principal->id)->count());
     }
 
+    public function test_liberar_o_posto_derruba_a_sessao_do_operador(): void
+    {
+        $tatiane = $this->porteiro();
+        $principal = $this->posto('Guarita Principal');
+        $this->turnos()->assumir($tatiane, $principal->id);
+        $entrouEm = now()->subMinutes(30)->getTimestamp();
+
+        // Antes da liberação a sessão segue normal.
+        $this->actingAs($tatiane)->withSession(['autenticado_em' => $entrouEm])
+            ->get('/caixa')->assertOk();
+
+        $this->turnos()->liberar($principal, $this->usuarioCom(TurnosOperacionais::PERMISSAO_LIBERAR), 'Computador travou');
+
+        // Navegação: volta para a entrada, deslogada, com o aviso.
+        $this->actingAs($tatiane)->withSession(['autenticado_em' => $entrouEm])
+            ->get('/caixa')
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('sessao_encerrada', fn (string $aviso) => str_contains($aviso, 'Guarita Principal'));
+        $this->assertGuest();
+        $this->assertTrue(AuditoriaEvento::query()->where('action', 'sessao_encerrada_por_liberacao_de_posto')->exists());
+
+        // Clique Livewire: 401 com o cabeçalho que o app.js segue.
+        $this->actingAs($tatiane)->withSession(['autenticado_em' => $entrouEm])
+            ->withHeader('X-Livewire', '1')
+            ->get('/caixa')
+            ->assertStatus(401)
+            ->assertHeader('X-SDV-Sessao-Encerrada', route('login'));
+
+        // Quem entra de novo depois da liberação não cai.
+        $this->actingAs($tatiane)->withSession(['autenticado_em' => now()->addSecond()->getTimestamp()])
+            ->get('/caixa')->assertOk();
+    }
+
     public function test_supervisor_pode_seguir_sem_posto_e_porteiro_e_levado_a_escolher(): void
     {
         $this->posto('Guarita Principal');

@@ -190,6 +190,8 @@ Decisões do Product Owner ao validar a tela de postos. Substituem a designaçã
 
 **Posto preso.** Gestor e Administrador (permissão `postos.liberar`) liberam o posto na tela Equipamentos › Postos, com motivo obrigatório. O turno é encerrado (`liberado_pelo_gestor`) e o caixa aberto do operador é fechado como `aguardando_conferencia`, sem valor informado e com o saldo esperado registrado, para conferência posterior. Tudo vai para a auditoria (`posto_operacional_liberado`).
 
+**Sessão do operador liberado (decisão do PO, 14/11/2026).** Liberar o posto derruba a sessão do operador: na próxima requisição (navegação ou clique, inclusive em tela já aberta) ele é deslogado e volta para "Entrar no sistema" com o aviso "Sua sessão foi encerrada", o nome do posto e o horário da liberação. Só caem as sessões abertas antes da liberação; quem entra de novo segue normalmente e escolhe um posto. Auditoria: `sessao_encerrada_por_liberacao_de_posto`.
+
 **Quem é levado à escolha do posto.** Ao abrir o Modo Portaria sem posto, quem opera caixa (`caixa.proprio.gerenciar`) ou libera relés é levado à escolha. Quem também consulta o caixa consolidado (Gestor, Administrador) pode "Continuar sem assumir posto (supervisão)", para não ocupar uma guarita só para consultar.
 
 **Tela Postos.** A antiga "Postos e operadores" virou "Postos": mostra quem está em cada posto agora, permite editar nome e tipo, desativar e reativar (posto ocupado não é desativado), os pontos de acesso de cada posto num bloco recolhido e o botão "Liberar posto". Cadastro e pontos continuam com `integracoes.gerenciar`.
