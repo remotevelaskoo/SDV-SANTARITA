@@ -192,6 +192,13 @@ Decisões do Product Owner ao validar a tela de postos. Substituem a designaçã
 
 **Sessão do operador liberado (decisão do PO, 14/11/2026).** Liberar o posto derruba a sessão do operador: na próxima requisição (navegação ou clique, inclusive em tela já aberta) ele é deslogado e volta para "Entrar no sistema" com o aviso "Sua sessão foi encerrada", o nome do posto e o horário da liberação. Só caem as sessões abertas antes da liberação; quem entra de novo segue normalmente e escolhe um posto. Auditoria: `sessao_encerrada_por_liberacao_de_posto`.
 
+**Liberar para a facial exige caixa aberto (decisão do PO, 14/11/2026).** Toda liberação para o terminal facial exige o caixa aberto de quem libera. Vale para contribuição paga, "não contribui" e "isento", e para todos os perfis, inclusive Gestor e Administrador. Assim nenhuma entrada é liberada sem registro no caixa, o que fecha a brecha para desvio interno. Sem caixa aberto, a portaria só consulta. A regra vale nos três caminhos que levam à facial:
+- **"Liberar entrada" da Validação:** o botão fica desabilitado com o aviso "Abra o caixa do seu posto para liberar a entrada". A checagem roda antes de gravar qualquer coisa, então não nasce pessoa, autorização, histórico nem pedido ao terminal.
+- **"Enviar ao terminal" na ficha do Cadastro de pessoas:** o envio é recusado com o código `caixa_fechado`.
+- **"Salvar e enviar para a facial" do cadastro rápido:** o cadastro fica salvo, mas nenhuma visita é criada e nada vai à facial.
+
+A recusa central fica em `EnvioFacial::enviar` e é auditada como `facial_envio_recusado`. "Salvar sem liberar" e "Negar" continuam sem exigir caixa. Revogação e vencimento automáticos também não exigem caixa.
+
 **Quem é levado à escolha do posto.** Ao abrir o Modo Portaria sem posto, quem opera caixa (`caixa.proprio.gerenciar`) ou libera relés é levado à escolha. Quem também consulta o caixa consolidado (Gestor, Administrador) pode "Continuar sem assumir posto (supervisão)", para não ocupar uma guarita só para consultar.
 
 **Tela Postos.** A antiga "Postos e operadores" virou "Postos": mostra quem está em cada posto agora, permite editar nome e tipo, desativar e reativar (posto ocupado não é desativado), os pontos de acesso de cada posto num bloco recolhido e o botão "Liberar posto". Cadastro e pontos continuam com `integracoes.gerenciar`.
