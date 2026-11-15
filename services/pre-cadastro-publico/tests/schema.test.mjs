@@ -187,3 +187,27 @@ test("Postgres: migração da fila com espera, conferência e catálogo privado"
         await db.close();
     }
 });
+test("Postgres: painel de gestão sem acesso direto de anon/authenticated", async () => {
+    const db = new PGlite();
+    try {
+        await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;`);
+        await db.exec(
+            await readFile(
+                new URL("../supabase/migrations/20261115100000_painel_gestao.sql", import.meta.url),
+                "utf8",
+            ),
+        );
+        for (const role of ["anon", "authenticated"]) {
+            await db.exec(`reset role; set role ${role}`);
+            await assert.rejects(db.query("select * from public.sdv_gestao_metricas"), /permission denied/);
+            await assert.rejects(db.query("select * from public.sdv_gestao_gestores"), /permission denied/);
+        }
+        await db.exec("reset role");
+        await assert.rejects(
+            db.query("insert into public.sdv_gestao_gestores(implantacao_id,email) values(gen_random_uuid(),'Maiuscula@teste.com')"),
+            /check constraint/,
+        );
+    } finally {
+        await db.close();
+    }
+});

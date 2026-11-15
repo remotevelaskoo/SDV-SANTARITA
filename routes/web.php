@@ -33,6 +33,7 @@ use App\Livewire\RelatorioFinalPortaria;
 use App\Livewire\Reports;
 use App\Livewire\ResetPassword;
 use App\Livewire\SelecaoPosto;
+use App\Livewire\TrocarSenha;
 use App\Livewire\UserManagement;
 use App\Livewire\VehicleManagement;
 use App\Services\AuditService;
@@ -114,6 +115,7 @@ Route::get('/equipamentos/{equipamento}/imagem', EquipamentoImagemController::cl
     ->middleware(['auth', 'permissao:integracoes.gerenciar', 'throttle:30,1'])
     ->name('equipment.image');
 Route::get('/sessoes', ActiveSessions::class)->middleware('auth')->name('sessions');
+Route::get('/trocar-senha', TrocarSenha::class)->middleware('auth')->name('senha.trocar');
 Route::get('/auditoria', AuditLog::class)->middleware(['auth', 'permissao:auditoria.consultar'])->name('audit-log');
 Route::get('/arquivos/{arquivo}/visualizar', ProtectedFileController::class)
     ->middleware(['auth', 'permissao:arquivos.sensiveis.visualizar'])

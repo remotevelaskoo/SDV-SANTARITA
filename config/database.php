@@ -38,10 +38,15 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            // Até 3 terminais gravando juntos (PO 15/11/2026): quem chega com o
+            // banco ocupado espera na fila (até 10 s) em vez de dar "database is
+            // locked"; IMMEDIATE pega a vez de gravar no início da transação,
+            // onde a espera funciona. O journal fica no padrão (delete): WAL usa
+            // memória compartilhada, insegura em pasta montada do Windows/Docker.
+            'busy_timeout' => (int) env('DB_BUSY_TIMEOUT', 10000),
+            'journal_mode' => env('DB_JOURNAL_MODE', 'delete'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'full'),
+            'transaction_mode' => env('DB_TRANSACTION_MODE', 'IMMEDIATE'),
         ],
 
         'mysql' => [

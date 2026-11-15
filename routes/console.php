@@ -21,3 +21,9 @@ Schedule::command('integracoes:despachar')->everyMinute()->withoutOverlapping();
 Schedule::command('pre-cadastro:sincronizar-nuvem')
     ->everyMinute()->withoutOverlapping(60)
     ->when(fn () => (bool) config('pre_cadastro_nuvem.enabled'));
+
+// Painel de gestão na nuvem (PO 15/11/2026): totais do dia a cada 5 minutos,
+// por conexão de saída. Desligado até configurar SDV_GESTAO_NUVEM_ENABLED.
+Schedule::command('gestao:publicar-metricas')
+    ->everyFiveMinutes()->withoutOverlapping(10)
+    ->when(fn () => (bool) config('pre_cadastro_nuvem.gestao_enabled'));

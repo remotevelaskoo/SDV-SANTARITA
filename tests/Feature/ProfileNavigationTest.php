@@ -116,12 +116,12 @@ class ProfileNavigationTest extends TestCase
         $this->assertFalse($user->hasPermission('dashboard.visualizar'));
     }
 
-    public function test_default_dashboard_grant_is_only_for_management_and_direction(): void
+    public function test_default_dashboard_grant_is_for_management_direction_and_admin(): void
     {
         $this->seed(UsuarioDemoSeeder::class);
         foreach (['Gestor', 'Direção', 'Porteiro/Caixa', 'Auditor', 'Administrador'] as $name) {
             $profile = Perfil::query()->where('nome', $name)->firstOrFail();
-            $this->assertSame(in_array($name, ['Gestor', 'Direção'], true), $profile->concede('dashboard.visualizar'), $name);
+            $this->assertSame(in_array($name, ['Gestor', 'Direção', 'Administrador'], true), $profile->concede('dashboard.visualizar'), $name);
         }
     }
 
@@ -184,7 +184,7 @@ class ProfileNavigationTest extends TestCase
             'Direção' => 'dashboard',
             'Porteiro/Caixa' => 'portaria',
             'Auditor' => 'reports',
-            'Administrador' => 'portaria',
+            'Administrador' => 'dashboard',
         ];
 
         foreach ($expectedHome as $name => $home) {
@@ -194,7 +194,7 @@ class ProfileNavigationTest extends TestCase
             $routes = collect(Navigation::groups($user))->flatten(1)->pluck('route');
             $this->assertNotEmpty($routes, $name);
             $this->assertSame($name === 'Direção', $routes->all() === ['dashboard'], $name);
-            $this->assertSame(in_array($name, ['Gestor', 'Direção'], true), $routes->contains('dashboard'), $name);
+            $this->assertSame(in_array($name, ['Gestor', 'Direção', 'Administrador'], true), $routes->contains('dashboard'), $name);
 
             foreach ($routes as $route) {
                 $this->followingRedirects()->get(route($route))->assertOk();

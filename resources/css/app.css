@@ -1897,6 +1897,18 @@ body.has-drawer-open { overflow: hidden; }
 .user-management-detail-data dd { margin: 0; font-weight: 700; text-align: right; }
 .user-management-reason-form { display: flex; flex-wrap: wrap; align-items: end; gap: 0.7rem; padding: 1rem; border-top: 1px solid var(--neutral-200); }
 .user-management-reason-form .ui-field { flex: 1 1 16rem; }
+.user-management-reason-form .ui-select, .user-management-reason-form label.ui-field + label.ui-field { min-width: 0; }
+.user-management-summary-grid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.user-management-group { display: grid; gap: 0.8rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0.9rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); }
+.user-management-group legend { padding: 0 0.35rem; color: var(--navy-900); font-size: 0.7rem; font-weight: 750; }
+.user-management-group .ui-choice { grid-column: 1 / -1; }
+.user-management-sections { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+.user-management-note { margin: 0; padding: 0.8rem 1rem 0; color: var(--neutral-600); font-size: 0.65rem; overflow-wrap: anywhere; }
+.user-presence { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--neutral-600); font-size: 0.65rem; white-space: nowrap; }
+.user-presence::before { content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--neutral-300); }
+.user-presence--online { color: var(--green-700, #13795b); font-weight: 700; }
+.user-presence--online::before { background: var(--green-600, #16a34a); }
+.user-presence--posto::before { background: var(--amber-500, #e08a00); }
 
 /* P17 fatia 2 — Perfis e permissões */
 .perfil-management { display: grid; gap: 1rem; }

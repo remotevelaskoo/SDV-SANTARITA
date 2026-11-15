@@ -55,7 +55,6 @@ use App\Models\UsuarioPerfil;
 use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
-use App\Notifications\UserInvited;
 use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
 use Database\Seeders\CatalogoSeeder;
@@ -67,6 +66,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -2291,7 +2291,7 @@ class ExampleTest extends TestCase
         $this->get('/redefinir-senha/qualquer-token')->assertOk();
     }
 
-    public function test_creating_a_user_sends_an_invitation_and_creates_a_pending_account(): void
+    public function test_creating_a_user_with_an_initial_password_that_must_be_changed(): void
     {
         Notification::fake();
 
@@ -2306,14 +2306,17 @@ class ExampleTest extends TestCase
             ->set('username', 'nova.pessoa')
             ->set('email', 'nova.pessoa@sdv-santarita.local')
             ->set('perfilId', $perfil->id)
+            ->set('senhaInicial', 'inicial123')
+            ->set('senhaInicial_confirmation', 'inicial123')
             ->call('saveUser')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('users', ['username' => 'nova.pessoa', 'status' => 'pendente']);
+        $this->assertDatabaseHas('users', ['username' => 'nova.pessoa', 'status' => 'ativo', 'trocar_senha' => true, 'acesso_painel_remoto' => false]);
 
         $user = User::where('username', 'nova.pessoa')->firstOrFail();
-        Notification::assertSentTo($user, UserInvited::class);
+        Notification::assertNothingSent();
         $this->assertDatabaseHas('usuario_perfis', ['user_id' => $user->id, 'perfil_id' => $perfil->id]);
+        $this->assertTrue(Hash::check('inicial123', $user->password));
     }
 
     public function test_creating_a_user_rejects_duplicate_username_or_email(): void
@@ -2329,6 +2332,8 @@ class ExampleTest extends TestCase
             ->set('username', 'jasmim')
             ->set('email', 'outra@sdv-santarita.local')
             ->set('perfilId', $perfil->id)
+            ->set('senhaInicial', 'inicial123')
+            ->set('senhaInicial_confirmation', 'inicial123')
             ->call('saveUser')
             ->assertHasErrors('username');
 
@@ -2350,22 +2355,9 @@ class ExampleTest extends TestCase
         }
     }
 
-    public function test_the_full_invitation_flow_activates_the_account_and_allows_login(): void
+    public function test_a_pending_account_is_activated_by_the_password_reset_link(): void
     {
-        $admin = $this->operatorWithPermissions('usuarios.administrar');
-        $perfil = Perfil::factory()->create();
-
-        $this->actingAs($admin);
-
-        Livewire::test(UserManagement::class)
-            ->set('name', 'Convidado Teste')
-            ->set('username', 'convidado.teste')
-            ->set('email', 'convidado.teste@sdv-santarita.local')
-            ->set('perfilId', $perfil->id)
-            ->call('saveUser');
-
-        $user = User::where('username', 'convidado.teste')->firstOrFail();
-        $this->assertSame('pendente', $user->status);
+        $user = User::factory()->pendente()->create(['username' => 'convidado.teste', 'email' => 'convidado.teste@sdv-santarita.local']);
 
         $token = Password::createToken($user);
 

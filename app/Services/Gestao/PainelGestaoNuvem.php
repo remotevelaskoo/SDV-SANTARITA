@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Services\Gestao;
+
+use App\Models\Implantacao;
+use App\Models\User;
+use App\Services\Hibrido\SincronizacaoIndisponivel;
+use App\Support\ImplantacaoContext;
+use Carbon\CarbonInterface;
+use Carbon\CarbonPeriod;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
+
+/**
+ * Painel de gestão fora do condomínio (PO 15/11/2026). O servidor local
+ * empurra os totais para a nuvem por HTTPS de saída, pelo mesmo canal do
+ * pré-cadastro; nenhuma porta do condomínio fica aberta para a internet.
+ * Quem pode entrar no painel remoto é quem tem o acesso marcado no cadastro de usuários.
+ */
+class PainelGestaoNuvem
+{
+    public function __construct(private MetricasDia $metricas) {}
+
+    /** Dias passados que podem ser reenviados de uma vez (mesmo teto de período do painel). */
+    public const MAX_DIAS_REENVIO = 93;
+
+    /**
+     * Publica hoje e ontem (ontem fecha caixas que viraram a meia-noite). Com
+     * $desde, reenvia também cada dia desde essa data, para a consulta por
+     * período (De/Até) do painel ter os dias antigos.
+     *
+     * @return list<string>
+     */
+    public function publicar(?CarbonInterface $desde = null): array
+    {
+        [$implantacao, $http, $url] = $this->conexao();
+        $inicio = ($desde ?? now()->subDay())->copy()->startOfDay();
+        if ($inicio->gt(now()->subDay()->startOfDay())) {
+            $inicio = now()->subDay()->startOfDay();
+        }
+        if ($inicio->diffInDays(now()->startOfDay()) >= self::MAX_DIAS_REENVIO) {
+            throw new SincronizacaoIndisponivel('Reenvie no máximo '.self::MAX_DIAS_REENVIO.' dias de uma vez.');
+        }
+
+        return ImplantacaoContext::executarNo($implantacao, function () use ($http, $url, $inicio): array {
+            $dias = [];
+            foreach (CarbonPeriod::create($inicio, '1 day', now()->startOfDay()) as $dia) {
+                $dados = $this->metricas->calcular(Carbon::instance($dia));
+                $this->enviar($http, $url, ['action' => 'metricas', 'dia' => $dados['dia'], 'dados' => $dados]);
+                $dias[] = $dados['dia'];
+            }
+            // Quem perdeu o Dashboard aqui perde o painel remoto no próximo ciclo.
+            $this->enviar($http, $url, ['action' => 'gestores', 'emails' => $this->emailsAutorizados()]);
+
+            return $dias;
+        });
+    }
+
+    /** Cria ou troca a senha do acesso remoto de um usuário com o painel marcado no cadastro. */
+    public function definirAcesso(string $email, string $senha): void
+    {
+        [$implantacao, $http, $url] = $this->conexao();
+        ImplantacaoContext::executarNo($implantacao, function () use ($http, $url, $email, $senha): void {
+            $email = mb_strtolower(trim($email));
+            if (! in_array($email, $this->emailsAutorizados(), true)) {
+                throw new SincronizacaoIndisponivel('Esse e-mail não é de um usuário ativo com o acesso ao painel remoto marcado.');
+            }
+            $usuario = User::query()->whereRaw('lower(email) = ?', [$email])->firstOrFail();
+            $this->enviar($http, $url, ['action' => 'gestor', 'email' => $email, 'nome' => $usuario->name, 'senha' => $senha]);
+            $this->enviar($http, $url, ['action' => 'gestores', 'emails' => $this->emailsAutorizados()]);
+        });
+    }
+
+    /** Liga ou desliga o painel na nuvem na hora, sem esperar o próximo ciclo de 5 minutos. */
+    public function sincronizarGestores(): void
+    {
+        [$implantacao, $http, $url] = $this->conexao();
+        ImplantacaoContext::executarNo($implantacao, fn () => $this->enviar($http, $url, ['action' => 'gestores', 'emails' => $this->emailsAutorizados()]));
+    }
+
+    /**
+     * Quem pode entrar no painel remoto: usuário ativo desta implantação com
+     * "Acesso ao painel de gestão remoto" marcado no cadastro (PO 15/11/2026).
+     *
+     * @return list<string>
+     */
+    public function emailsAutorizados(): array
+    {
+        return User::query()->where('status', 'ativo')->where('acesso_painel_remoto', true)->whereNotNull('email')
+            ->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'))
+            ->pluck('email')
+            ->map(fn (string $email) => mb_strtolower(trim($email)))
+            ->unique()->sort()->values()->all();
+    }
+
+    /** @return array{0: Implantacao, 1: PendingRequest, 2: string} */
+    private function conexao(): array
+    {
+        if (! config('pre_cadastro_nuvem.gestao_enabled')) {
+            throw new SincronizacaoIndisponivel('Painel de gestão na nuvem desativado.');
+        }
+        $url = rtrim((string) config('pre_cadastro_nuvem.url'), '/');
+        $token = (string) config('pre_cadastro_nuvem.token');
+        if (! str_starts_with($url, 'https://') || strlen($token) < 32) {
+            throw new SincronizacaoIndisponivel('Configure o endereço HTTPS e a credencial do nó.');
+        }
+        $implantacao = Implantacao::query()->whereKey(config('pre_cadastro_nuvem.implantacao_id'))->where('status', 'ativa')->firstOrFail();
+        $http = Http::withToken($token)->acceptJson()->connectTimeout(5)->timeout(30)->withOptions(['allow_redirects' => false]);
+
+        return [$implantacao, $http, $url.'/api/gestao'];
+    }
+
+    /** @param array<string, mixed> $corpo */
+    private function enviar(PendingRequest $http, string $url, array $corpo): void
+    {
+        $resposta = $http->post($url, $corpo);
+        if (! $resposta->successful()) {
+            $erro = $resposta->json('error');
+            throw new SincronizacaoIndisponivel(is_string($erro) ? $erro : 'Nuvem indisponível; os dados locais foram preservados.');
+        }
+    }
+}

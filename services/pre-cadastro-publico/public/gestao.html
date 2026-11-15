@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="robots" content="noindex,nofollow" />
+        <title>Gestão · SDV One</title>
+        <link rel="stylesheet" href="/gestao.css" />
+        <script src="/gestao.js" type="module"></script>
+    </head>
+    <body>
+        <header class="topo">
+            <div class="marca">
+                <strong>SDV<span>One</span></strong>
+                <small>Gestão · Condomínio <span id="condominio">Santa Rita</span></small>
+            </div>
+            <button id="sair" class="link" type="button" hidden>Sair</button>
+        </header>
+
+        <main>
+            <section id="entrar" class="cartao entrar" hidden>
+                <h1>Painel de gestão</h1>
+                <p class="suave">Números do dia enviados pelo servidor da portaria.</p>
+                <form id="form-entrar" novalidate>
+                    <label>E-mail <input id="email" type="email" autocomplete="username" required /></label>
+                    <label>Senha <input id="senha" type="password" autocomplete="current-password" required /></label>
+                    <p id="erro-entrar" class="erro" role="alert" hidden></p>
+                    <button type="submit">Entrar</button>
+                </form>
+            </section>
+
+            <section id="painel" hidden>
+                <div class="barra">
+                    <div>
+                        <h1 id="titulo-dia">Hoje</h1>
+                        <p id="atualizado" class="suave"></p>
+                    </div>
+                    <div class="filtros">
+                        <label class="dia">De <input id="de" type="date" /></label>
+                        <label class="dia">Até <input id="ate" type="date" /></label>
+                        <label class="dia">Colaborador <select id="colaborador"></select></label>
+                    </div>
+                </div>
+                <div class="atalhos" role="group" aria-label="Períodos rápidos">
+                    <button type="button" data-atalho="hoje">Hoje</button>
+                    <button type="button" data-atalho="7">Últimos 7 dias</button>
+                    <button type="button" data-atalho="mes">Este mês</button>
+                </div>
+                <p id="aviso" class="aviso" role="status" hidden></p>
+
+                <div class="destaque cartao">
+                    <span id="rotulo-total">Arrecadado no dia</span>
+                    <strong id="total">R$ 0,00</strong>
+                    <small id="composicao" class="suave"></small>
+                </div>
+
+                <div class="graficos">
+                    <figure class="cartao grafico">
+                        <figcaption>Formas de pagamento</figcaption>
+                        <div id="pizza-formas"></div>
+                    </figure>
+                    <figure class="cartao grafico">
+                        <figcaption>Arrecadado por colaborador</figcaption>
+                        <div id="pizza-colaboradores"></div>
+                    </figure>
+                    <figure class="cartao grafico">
+                        <figcaption id="titulo-contribuicoes">Contribuições do dia</figcaption>
+                        <div id="pizza-contribuicoes"></div>
+                    </figure>
+                </div>
+
+                <h2 id="titulo-movimento">Movimento do condomínio no dia</h2>
+                <div class="grade" id="numeros"></div>
+
+                <h2>Caixas</h2>
+                <div class="tabela cartao">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Operador</th>
+                                <th>Posto</th>
+                                <th>Período</th>
+                                <th class="num">Arrecadado</th>
+                                <th class="num">Esperado</th>
+                                <th class="num">Informado</th>
+                                <th class="num">Diferença</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caixas"></tbody>
+                    </table>
+                </div>
+
+                <h2 id="titulo-pessoas">Quem entrou no dia</h2>
+                <div class="filtros-pessoas">
+                    <label>Buscar <input id="busca-pessoa" type="search" placeholder="Nome" autocomplete="off" /></label>
+                    <label>Tipo <select id="filtro-tipo"></select></label>
+                    <label>Pagamento
+                        <select id="filtro-pagamento">
+                            <option value="">Todos</option>
+                            <option value="pago">Contribuiu</option>
+                            <option value="sem_pagamento">Não contribuiu</option>
+                            <option value="isento">Isento</option>
+                            <option value="nenhum">Sem cobrança</option>
+                        </select>
+                    </label>
+                </div>
+                <p id="resumo-pessoas" class="suave"></p>
+                <div class="tabela cartao">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Nome</th>
+                                <th>Tipo</th>
+                                <th>Pagamento</th>
+                                <th class="num">Valor</th>
+                                <th>Atendido por</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pessoas"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>

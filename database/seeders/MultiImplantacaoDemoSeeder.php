@@ -48,8 +48,8 @@ class MultiImplantacaoDemoSeeder extends Seeder
             ['status' => 'ativo']
         );
 
-        // AJ-009: Administrador técnico não recebe o Dashboard gerencial por padrão.
-        foreach (Permissao::query()->where('chave', '!=', 'dashboard.visualizar')->pluck('id') as $permissaoId) {
+        // PO 15/11/2026: o Administrador também vê o Dashboard.
+        foreach (Permissao::query()->pluck('id') as $permissaoId) {
             $jaConcedida = $perfil->permissoes()
                 ->withoutGlobalScope(ImplantacaoScope::class)
                 ->where('permissoes.id', $permissaoId)

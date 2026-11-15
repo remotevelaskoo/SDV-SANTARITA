@@ -3,6 +3,7 @@
 namespace App\Acesso\Aplicacao;
 
 use App\Acesso\Dominio\ResultadoEnvioFacial;
+use App\Integracoes\Aplicacao\FabricaContextoEquipamento;
 use App\Integracoes\Aplicacao\OutboxIntegracao;
 use App\Integracoes\Aplicacao\SincronizacaoCredenciais;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
@@ -12,6 +13,7 @@ use App\Integracoes\Dominio\Enums\Direcao;
 use App\Integracoes\Dominio\Enums\EstadoOutbox;
 use App\Integracoes\Dominio\Enums\EstadoSincronizacao;
 use App\Integracoes\Dominio\Enums\OperacaoIntegracao;
+use App\Integracoes\Dominio\Enums\ResultadoEquipamento;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Integracoes\Infra\RegistroAdaptadores;
@@ -25,6 +27,7 @@ use App\Models\OperacaoIntegracao as Operacao;
 use App\Models\Pessoa;
 use App\Models\PessoaArquivo;
 use App\Models\Posto;
+use App\Models\ReferenciaExterna;
 use App\Models\User;
 use App\Models\Vinculo;
 use App\Services\AuditService;
@@ -66,6 +69,7 @@ class EnvioFacial
         private TurnosOperacionais $turnos,
         private AuditService $audit,
         private OutboxIntegracao $outbox,
+        private FabricaContextoEquipamento $contextos,
     ) {}
 
     /**
@@ -165,6 +169,20 @@ class EnvioFacial
         );
 
         $existente = $this->pedidoIgualEmCurso($terminal, $credencial, $dados);
+        if ($existente !== null && $this->estadoCadastro($terminal, $credencial) === EstadoSincronizacao::Sincronizado) {
+            // Caso real de 15/11/2026: o SDV dizia "confirmado", mas o cadastro
+            // tinha sumido do aparelho. Antes de dizer "já enviado", pergunta ao
+            // terminal; se a pessoa (ou a face) não estiver lá, envia de novo.
+            $noTerminal = $this->conferirNoTerminal($terminal, $credencial);
+            if ($noTerminal['presente'] === false) {
+                $existente = null;
+                $this->marcarFotoParaReenvio($terminal, $credencial);
+                $avisos[] = 'O terminal não tinha mais o cadastro desta pessoa. O SDV enviou de novo.';
+            } elseif ($noTerminal['faces'] === 0 && $this->fotoConfirmada($terminal, $credencial)) {
+                $this->marcarFotoParaReenvio($terminal, $credencial);
+                $avisos[] = 'O terminal estava sem a face desta pessoa. O SDV enviou a foto de novo.';
+            }
+        }
         if ($existente !== null) {
             return $this->resultado($existente, $terminal, $credencial, 'ja_solicitado', $avisos)
                 ->comFoto($this->solicitarFoto($pessoa, $terminal, $credencial, $ator));
@@ -441,6 +459,72 @@ class EnvioFacial
             && $ultima->payload == SincronizacaoCredenciais::payloadDe($dados)
             ? $ultima
             : null;
+    }
+
+    private function estadoCadastro(Equipamento $terminal, CredencialAcesso $credencial): ?EstadoSincronizacao
+    {
+        return CredencialSincronizacao::query()
+            ->where('equipamento_id', $terminal->id)
+            ->where('credencial_id', $credencial->id)
+            ->first()?->estado;
+    }
+
+    /**
+     * Pergunta ao terminal se o cadastro (e a face) ainda estão lá. Sem a
+     * capacidade de consulta, ou sem resposta, devolve "não sei" (null) e o
+     * fluxo segue como antes.
+     *
+     * @return array{presente: ?bool, faces: ?int}
+     */
+    private function conferirNoTerminal(Equipamento $terminal, CredencialAcesso $credencial): array
+    {
+        if (! $terminal->suporta(Capacidade::ConsultarSincronizacao)) {
+            return ['presente' => null, 'faces' => null];
+        }
+
+        try {
+            $idExterno = ReferenciaExterna::query()
+                ->where('equipamento_id', $terminal->id)
+                ->where('entidade_id', $credencial->id)
+                ->whereNull('substituida_em')
+                ->value('id_externo');
+            $resultado = $this->adaptadores->para($terminal->adaptador)->consultarSincronizacao(
+                $this->contextos->para($terminal, 'conferencia-envio-'.$credencial->id),
+                $credencial->id,
+                $idExterno,
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return ['presente' => null, 'faces' => null];
+        }
+
+        if ($resultado->resultado !== ResultadoEquipamento::Confirmado || ! array_key_exists('presente', $resultado->dados)) {
+            return ['presente' => null, 'faces' => null];
+        }
+
+        return [
+            'presente' => (bool) $resultado->dados['presente'],
+            'faces' => isset($resultado->dados['faces']) ? (int) $resultado->dados['faces'] : null,
+        ];
+    }
+
+    private function fotoConfirmada(Equipamento $terminal, CredencialAcesso $credencial): bool
+    {
+        return FotoFacialSincronizacao::query()
+            ->where('equipamento_id', $terminal->id)
+            ->where('credencial_id', $credencial->id)
+            ->where('estado', EstadoSincronizacao::Sincronizado->value)
+            ->exists();
+    }
+
+    /** A foto volta a "não enviada" para que o próximo pedido a mande de novo. */
+    private function marcarFotoParaReenvio(Equipamento $terminal, CredencialAcesso $credencial): void
+    {
+        FotoFacialSincronizacao::query()
+            ->where('equipamento_id', $terminal->id)
+            ->where('credencial_id', $credencial->id)
+            ->update(['estado' => EstadoSincronizacao::NaoEnviado->value, 'sincronizado_em' => null]);
     }
 
     private function proximaTentativa(Equipamento $terminal, CredencialAcesso $credencial): int

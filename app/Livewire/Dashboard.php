@@ -2,12 +2,12 @@
 
 namespace App\Livewire;
 
-use App\Models\CaixaMovimentacao;
 use App\Models\HistoricoAcesso;
 use App\Models\Pessoa;
 use App\Models\PreRegistration;
 use App\Models\Veiculo;
 use App\Models\Vinculo;
+use App\Services\Gestao\MetricasDia;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Livewire\Component;
@@ -45,7 +45,7 @@ class Dashboard extends Component
             $this->metric('Moradores', Vinculo::query()->whereIn('tipo', ['morador', 'proprietario', 'inquilino'])->whereNull('ended_at')->count(), 'Vínculos vigentes'),
             $this->metric('Prestadores', Vinculo::query()->where('tipo', 'prestador')->whereNull('ended_at')->count(), 'Vínculos vigentes'),
             $this->metric('Veículos cadastrados', Veiculo::query()->where('status', 'ativo')->count(), 'Base atual'),
-            $this->metric('Arrecadação hoje', (float) CaixaMovimentacao::query()->where('occurred_at', '>=', $today)->where('type', 'entrada')->sum('amount'), 'Movimentações de hoje', 'currency'),
+            $this->metric('Arrecadação hoje', app(MetricasDia::class)->calcular(now())['arrecadacao']['total'], 'Contribuições e lançamentos de hoje', 'currency'),
         ];
     }
 

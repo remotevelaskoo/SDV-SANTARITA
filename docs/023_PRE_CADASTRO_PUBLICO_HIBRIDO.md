@@ -272,3 +272,27 @@ Nada é gravado ao abrir: o operador confere com o documento original, tira a fo
 
 - **Foto:** a selfie aprovada no pré-cadastro vira a foto do cadastro ao salvar (cópia protegida, origem `pre_cadastro_aprovado`; o original fica no pré-cadastro). A etapa de foto mostra a selfie e só pede câmera se ela não servir. Selfie fora do padrão (escura, pequena) não é usada e o cadastro é salvo com aviso. Pessoa que já tem foto mantém a dela, salvo se o operador marcar a troca.
 - **Contribuição do turista:** pessoa sem visita vigente e sem vínculo passa a valer pelo tipo declarado no atendimento (cadastro rápido ou pré-cadastro aprovado). Assim o turista vê a contribuição já no cadastro rápido e depois de salvar. Quem tem vínculo (morador, proprietário etc.) nunca vira turista por declaração. A contribuição continua exigindo caixa aberto.
+
+## 16. Painel de gestão na nuvem (pedido do PO em 15/11/2026)
+
+O servidor fica no condomínio e não é alcançável de fora, de propósito (ADR-018: nenhuma porta aberta). Para o gestor acompanhar o dia de qualquer lugar, o nó **empurra** os totais para a nuvem e o gestor lê em `/gestao`, no mesmo projeto Vercel do portal.
+
+Decisões do PO:
+
+- **O que sai do condomínio:** os totais do dia e o caixa de cada operador. São eles: arrecadação total (contribuições + lançamentos manuais, saídas e estornos), por forma de pagamento; contribuíram / não contribuíram / isentos; entradas liberadas, pessoas atendidas, saídas, negados; cadastros novos e pré-cadastros recebidos; e cada caixa do dia (operador, posto, período, arrecadado, esperado, informado, diferença, formas de pagamento).
+- **Lista de quem entrou (revisto pelo PO à tarde de 15/11/2026):** cada entrada do dia vai com horário, **nome**, tipo de vínculo, se contribuiu (valor e forma) e quem atendeu, até 500 por dia. **CPF/documento e foto nunca saem do condomínio.** O painel mostra pizzas (formas de pagamento, arrecadado por colaborador, contribuições) e filtra por colaborador, tipo, pagamento e nome.
+- **Período De/Até (mesma data):** o gestor escolhe a data inicial e a final (até 93 dias) ou usa os atalhos Hoje, Últimos 7 dias e Este mês; o painel soma os dias. Para ter dias antigos na nuvem: `php artisan gestao:publicar-metricas --desde=AAAA-MM-DD`.
+- **Login:** e-mail e senha no Supabase Auth. Só entra quem tem **"Acesso ao painel de gestão remoto"** marcado no cadastro de usuários (Administração → Usuários). A cada envio o nó manda a lista de e-mails autorizados; desmarcar envia a lista na hora. A senha do painel é definida pelo administrador no detalhe do usuário (ou por `php artisan gestao:acesso-remoto email@...`) e não fica guardada no servidor local.
+
+**Usuários (mesma data):** o administrador cria o colaborador com **senha inicial** (o servidor local não manda convite por e-mail) e o sistema obriga a troca no primeiro acesso. No detalhe do usuário: trocar perfil, painel remoto, redefinir senha, **derrubar** (encerra as sessões na hora; se ele estiver num posto, o posto é liberado e o caixa vai para conferência, como na liberação forçada de posto), bloquear e inativar. A lista mostra quem está online e em qual posto.
+- **Frequência:** a cada 5 minutos (`gestao:publicar-metricas`, agendado), enviando hoje e ontem. O painel avisa quando o último envio de hoje tem mais de 15 minutos, porque a internet ou o servidor podem estar fora.
+
+Também nesta entrega: o **Administrador** passou a ver o Dashboard (revê a restrição AJ-009 de 02/11 só para esse perfil), e a "Arrecadação hoje" do Dashboard local passou a somar as contribuições dos turistas, que antes ficavam de fora.
+
+Ativação:
+
+1. Supabase `sdv-santa-rita`: migração `supabase/migrations/20261115100000_painel_gestao.sql` (aplicada em 15/11/2026).
+2. Vercel: `GESTAO_ENABLED=true` (hoje só em Preview; produção desligada até a aprovação).
+3. Servidor local: `SDV_GESTAO_NUVEM_ENABLED=true` (usa `SDV_PRE_CADASTRO_NUVEM_URL`/`TOKEN`/`IMPLANTACAO_ID`). Depois, `gestao:acesso-remoto` para cada gestor.
+
+Pendências antes da produção: domínio próprio sem a proteção de Preview do Vercel, e a aprovação do PO para ligar `GESTAO_ENABLED` em produção.
