@@ -51,7 +51,7 @@ class FotoFacialEnvioTest extends TestCase
         Storage::fake(PrivateFileService::DISK);
         $this->terminal = $this->terminalAtivo(['nome' => 'Facial entrada']);
         $this->usarFilaReal();
-        $this->operador = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar');
+        $this->operador = $this->abrirCaixa($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar'));
         Imovel::factory()->create(['codigo' => 'SRA-A-102']);
     }
 

@@ -48,7 +48,7 @@ class TuristaVisitaTest extends TestCase
         $this->prepararIntegracao();
         $this->terminal = $this->terminalAtivo(['nome' => 'Facial entrada']);
         $this->usarFilaReal();
-        $this->operador = $this->usuarioCom('pessoas.gerenciar', 'facial.enviar');
+        $this->operador = $this->abrirCaixa($this->usuarioCom('pessoas.gerenciar', 'facial.enviar'));
         Imovel::factory()->create(['codigo' => 'SRA-T-01']);
         $this->relogioConferido();
     }

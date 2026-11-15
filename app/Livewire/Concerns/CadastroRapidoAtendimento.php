@@ -647,6 +647,11 @@ trait CadastroRapidoAtendimento
     /** @return array<string, mixed> */
     private function enviarParaFacial(Pessoa $pessoa, ?Imovel $imovel, User $usuario): array
     {
+        // Sem caixa aberto o cadastro fica salvo, mas nenhuma visita nasce e nada vai à facial.
+        if (app(EnvioFacial::class)->caixaFechadoPara($usuario)) {
+            return ['variant' => 'danger', 'title' => 'Envio para a facial não realizado', 'message' => EnvioFacial::MENSAGEM_CAIXA_FECHADO.' O cadastro no SDV continua salvo.', 'avisos' => [], 'foto' => null];
+        }
+
         $autorizacao = null;
         // Turista: entrada de até 24 h sem imóvel nem responsável. Visitante: visita de até 24 h
         // ao imóvel informado, com o responsável informado (ambos exigidos na conferência).

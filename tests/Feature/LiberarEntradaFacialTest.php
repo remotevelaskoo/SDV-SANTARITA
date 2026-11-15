@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Acesso\Aplicacao\EnvioFacial;
 use App\Livewire\AccessValidation;
 use App\Models\AutorizacaoAcesso;
 use App\Models\HistoricoAcesso;
 use App\Models\Imovel;
+use App\Models\OperacaoIntegracao;
 use App\Models\Pessoa;
 use App\Models\User;
 use App\Models\Vinculo;
@@ -38,7 +40,7 @@ class LiberarEntradaFacialTest extends TestCase
         parent::setUp();
         $this->prepararIntegracao();
         Storage::fake(PrivateFileService::DISK);
-        $this->operador = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar');
+        $this->operador = $this->abrirCaixa($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar'));
     }
 
     protected function tearDown(): void
@@ -48,9 +50,9 @@ class LiberarEntradaFacialTest extends TestCase
     }
 
     /** Cadastro rápido até o Concluir, a pé. */
-    private function novoNoConcluir(string $tipo, array $extras = []): Testable
+    private function novoNoConcluir(string $tipo, array $extras = [], ?User $operador = null, string $contribuicao = 'no'): Testable
     {
-        $tela = Livewire::actingAs($this->operador)->test(AccessValidation::class)
+        $tela = Livewire::actingAs($operador ?? $this->operador)->test(AccessValidation::class)
             ->call('openQuickRegistration')
             ->set('quickEtapa', 'conferencia')
             ->set('quickName', 'Pessoa Sintética')
@@ -66,10 +68,69 @@ class LiberarEntradaFacialTest extends TestCase
             ->set('veioDeCarro', false)
             ->call('continuar');
         if ($tipo === 'turista') {
-            $tela->set('contribution', 'no')->call('continuar');
+            $tela->set('contribution', $contribuicao);
+            if ($contribuicao === 'yes') {
+                $tela->set('paymentMethod', 'dinheiro')->set('ticketNumero', '000123');
+            }
+            $tela->call('continuar');
         }
 
         return $tela->assertSet('passo', 'concluir');
+    }
+
+    /**
+     * Regra do PO (14/11/2026): liberar para a facial exige caixa aberto de quem
+     * libera, seja contribuição paga, não contribui ou isento. Sem caixa a
+     * portaria só consulta; "Salvar sem liberar" e "Negar" seguem permitidos.
+     */
+    public function test_sem_caixa_aberto_liberar_entrada_e_bloqueado_em_qualquer_contribuicao(): void
+    {
+        $semCaixa = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar');
+
+        foreach (['yes', 'no', 'exempt'] as $contribuicao) {
+            $this->novoNoConcluir('turista', [], $semCaixa, $contribuicao)
+                ->assertSee('Abra o caixa do seu posto para liberar a entrada.')
+                ->call('concluir', 'liberar')
+                ->assertHasErrors('liberarEntrada')
+                ->assertSet('protocol', null)
+                ->assertSet('envioFacialLiberacao', null);
+        }
+
+        // Nada foi gravado: sem pessoa, sem autorização, sem histórico e nenhum pedido ao terminal.
+        $this->assertSame(0, Pessoa::query()->count());
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+        $this->assertSame(0, HistoricoAcesso::query()->count());
+        $this->assertSame(0, OperacaoIntegracao::query()->count());
+    }
+
+    public function test_sem_caixa_aberto_salvar_sem_liberar_continua_permitido(): void
+    {
+        $semCaixa = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar');
+
+        $this->novoNoConcluir('turista', [], $semCaixa)
+            ->call('concluir', 'pendente')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, Pessoa::query()->count());
+        $this->assertSame('pendente', HistoricoAcesso::query()->sole()->resultado);
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+    }
+
+    public function test_envio_a_facial_sem_caixa_e_recusado_para_qualquer_perfil(): void
+    {
+        $terminal = $this->terminalAtivo(['nome' => 'Facial entrada']);
+        $pessoa = Pessoa::factory()->create();
+        // Gestor/Administrador também precisa de caixa aberto para liberar.
+        $administrador = $this->usuarioCom('pessoas.gerenciar', 'facial.enviar', 'autorizacoes.gerenciar', 'integracoes.gerenciar');
+        $operacoesAntes = OperacaoIntegracao::query()->count();
+
+        $resultado = app(EnvioFacial::class)->enviar($pessoa, $terminal->id, $administrador);
+
+        $this->assertFalse($resultado->aceito());
+        $this->assertSame('caixa_fechado', $resultado->codigo);
+        $this->assertSame($operacoesAntes, OperacaoIntegracao::query()->count(), 'Nenhum pedido novo ao terminal.');
+        $this->assertSame(0, AutorizacaoAcesso::query()->count());
+        $this->assertSame([], $this->simulador()->credenciaisGravadas($terminal->id));
     }
 
     public function test_turista_novo_liberado_ganha_24_horas_e_vai_ao_terminal_facial(): void

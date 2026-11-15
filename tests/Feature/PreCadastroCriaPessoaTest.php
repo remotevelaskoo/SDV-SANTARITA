@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\AccessValidation;
 use App\Livewire\PreRegistrationReview;
 use App\Models\AutorizacaoAcesso;
+use App\Models\CaixaTurno;
 use App\Models\HistoricoAcesso;
 use App\Models\Implantacao;
 use App\Models\Pessoa;
@@ -117,8 +118,10 @@ class PreCadastroCriaPessoaTest extends TestCase
             ->test(PreRegistrationReview::class, ['preRegistration' => $registro->id])->call('approve');
 
         // Porteiro sem terminal facial no posto: a autorização fica gravada e o envio aparece como pendente.
+        $porteiro = $this->operador('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar');
+        CaixaTurno::factory()->create(['status' => 'aberto', 'operator_id' => $porteiro->id]);
         $tela = Livewire::withQueryParams(['pre-cadastro' => $registro->id])
-            ->actingAs($this->operador('validacao.registrar', 'pessoas.gerenciar', 'facial.enviar'))
+            ->actingAs($porteiro)
             ->test(AccessValidation::class)
             ->assertSet('quickRegistrationOpen', false)
             ->assertSet('tipoAtendimento', 'turista')
