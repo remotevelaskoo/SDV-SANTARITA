@@ -210,6 +210,26 @@ th {
 .filtros select {
     max-width: 100%;
 }
+.atalhos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+.atalhos button {
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid #d8dfe8;
+    border-radius: 99px;
+    background: #fff;
+    color: var(--texto);
+    cursor: pointer;
+}
+.atalhos button:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+}
 .filtros-pessoas {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

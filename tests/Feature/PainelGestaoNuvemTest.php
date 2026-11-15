@@ -134,6 +134,22 @@ class PainelGestaoNuvemTest extends TestCase
         $this->assertStringNotContainsString('12345678909', $json);
     }
 
+    public function test_reenvia_os_dias_desde_a_data_pedida_para_a_consulta_por_periodo(): void
+    {
+        Http::fake(['https://portal.exemplo.test/api/gestao' => Http::response(['ok' => true])]);
+
+        $this->artisan('gestao:publicar-metricas', ['--desde' => now()->subDays(4)->toDateString()])->assertSuccessful();
+
+        Http::assertSentCount(6);
+        foreach (range(0, 4) as $atras) {
+            Http::assertSent(fn (Request $r) => $r['action'] === 'metricas' && $r['dia'] === now()->subDays($atras)->toDateString());
+        }
+
+        Http::fake();
+        $this->artisan('gestao:publicar-metricas', ['--desde' => now()->subDays(200)->toDateString()])->assertFailed();
+        $this->artisan('gestao:publicar-metricas', ['--desde' => '15/11/2026'])->assertFailed();
+    }
+
     public function test_desligado_nao_envia_nada(): void
     {
         config(['pre_cadastro_nuvem.gestao_enabled' => false]);

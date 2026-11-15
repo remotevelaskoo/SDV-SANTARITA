@@ -54,13 +54,15 @@ function mostrarEntrada(mensagem) {
     $("erro-entrar").textContent = mensagem ?? "";
 }
 
-async function carregar(dia) {
-    let r = await api("GET", null, dia ? `?dia=${encodeURIComponent(dia)}` : "");
+// Período De/Até (PO 15/11/2026). Sem datas, a nuvem devolve o último dia enviado.
+async function carregar(de, ate) {
+    const query = de && ate ? `?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}` : "";
+    let r = await api("GET", null, query);
     if (r.status === 401 && sessao?.refresh) {
         const novo = await api("POST", { action: "renovar", refresh: sessao.refresh });
         if (novo.status === 200) {
             guardar(novo.dados);
-            r = await api("GET", null, dia ? `?dia=${encodeURIComponent(dia)}` : "");
+            r = await api("GET", null, query);
         }
     }
     if (r.status === 401 || r.status === 403) {
@@ -166,6 +168,45 @@ function somarFormas(lista) {
     return soma;
 }
 
+const arred = (v) => Math.round(v * 100) / 100;
+const dataCurta = (dia) => new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const quando = (iso) =>
+    !iso ? "—" : multiDia ? `${new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${hora(iso)}` : hora(iso);
+let dadosAtuais = null;
+let multiDia = false;
+
+// Soma os dias do período. O mesmo caixa pode aparecer em dois dias (virou a
+// meia-noite): fica a versão mais recente dele.
+function somarPeriodo(periodo) {
+    const dias = periodo.filter((p) => p.dados);
+    if (dias.length <= 1) return dias[0]?.dados ?? null;
+    const soma = {
+        arrecadacao: { total: 0, contribuicoes: 0, lancamentos_manuais: 0, saidas_e_estornos: 0, por_forma: {} },
+        contribuicoes: { pagas: 0, nao_contribui: 0, isentas: 0 },
+        acessos: { entradas: 0, saidas: 0, negados: 0, pendentes: 0, pessoas: 0 },
+        cadastros: { pessoas_novas: 0, pre_cadastros_recebidos: 0, pre_cadastros_aguardando: 0 },
+        caixas: [],
+        pessoas: [],
+    };
+    const caixas = new Map();
+    for (const { dados: d } of dias) {
+        for (const grupo of ["arrecadacao", "contribuicoes", "acessos", "cadastros"]) {
+            for (const [k, v] of Object.entries(d[grupo] ?? {})) {
+                if (typeof v === "number" && k in soma[grupo]) soma[grupo][k] = arred(soma[grupo][k] + v);
+            }
+        }
+        for (const [f, v] of Object.entries(d.arrecadacao?.por_forma ?? {})) {
+            soma.arrecadacao.por_forma[f] = arred((soma.arrecadacao.por_forma[f] ?? 0) + v);
+        }
+        for (const cx of d.caixas ?? []) caixas.set(`${cx.operador}|${cx.aberto_em}`, cx);
+        soma.pessoas.push(...(d.pessoas ?? []));
+    }
+    soma.cadastros.pre_cadastros_aguardando = dias.at(-1).dados.cadastros?.pre_cadastros_aguardando ?? 0;
+    soma.caixas = [...caixas.values()].sort((x, y) => (x.aberto_em ?? "").localeCompare(y.aberto_em ?? ""));
+    soma.pessoas.sort((x, y) => (y.hora ?? "").localeCompare(x.hora ?? ""));
+    return soma;
+}
+
 function desenhar() {
     const r = resposta;
     $("entrar").hidden = true;
@@ -173,17 +214,38 @@ function desenhar() {
     $("sair").hidden = false;
     $("condominio").textContent = r.condominio ?? "Santa Rita";
 
-    const atual = r.dia;
-    $("dia").replaceChildren(
-        ...(r.dias ?? []).map((d) => opcao(d, new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR"), d === atual)),
-    );
-
     const hoje = new Date().toLocaleDateString("sv-SE");
-    $("titulo-dia").textContent = atual ? (atual === hoje ? "Hoje" : dataLonga(atual)) : "Sem dados ainda";
-    const d = r.dados;
+    const de = r.de ?? r.dia;
+    const ate = r.ate ?? r.dia;
+    const dias = r.dias ?? [];
+    for (const id of ["de", "ate"]) {
+        $(id).min = dias.at(-1) ?? "";
+        $(id).max = hoje;
+    }
+    $("de").value = de ?? "";
+    $("ate").value = ate ?? "";
+    multiDia = Boolean(de && ate && de !== ate);
+    const periodo = r.periodo ?? (r.dados ? [{ dia: r.dia, dados: r.dados, atualizado_em: r.atualizado_em }] : []);
+    const comDados = periodo.filter((p) => p.dados).length;
+
+    $("titulo-dia").textContent = !ate
+        ? "Sem dados ainda"
+        : multiDia
+          ? `${dataCurta(de)} a ${dataCurta(ate)}`
+          : ate === hoje
+            ? "Hoje"
+            : dataLonga(ate);
+    const d = somarPeriodo(periodo);
+    dadosAtuais = d;
+    const sufixo = multiDia ? "no período" : "no dia";
+    $("titulo-contribuicoes").textContent = multiDia ? "Contribuições do período" : "Contribuições do dia";
+    $("titulo-movimento").textContent = `Movimento do condomínio ${sufixo}`;
+    $("titulo-pessoas").textContent = `Quem entrou ${sufixo}`;
     if (!d) {
         $("aviso").hidden = false;
-        $("aviso").textContent = "O servidor da portaria ainda não enviou números para este dia.";
+        $("aviso").textContent = multiDia
+            ? "O servidor da portaria não enviou números para nenhum dia deste período."
+            : "O servidor da portaria ainda não enviou números para este dia.";
         $("atualizado").textContent = "";
         $("colaborador").replaceChildren(opcao("", "Todos", true));
         for (const id of ["numeros", "caixas", "pessoas", "pizza-formas", "pizza-colaboradores", "pizza-contribuicoes"]) {
@@ -195,9 +257,12 @@ function desenhar() {
     }
 
     // Os números chegam a cada 5 minutos; se o último envio de hoje for antigo, avisa.
-    const minutos = r.atualizado_em ? (Date.now() - new Date(r.atualizado_em).getTime()) / 60000 : Infinity;
-    $("atualizado").textContent = `Atualizado às ${hora(r.atualizado_em)} · enviado pelo servidor da portaria a cada 5 minutos`;
-    $("aviso").hidden = !(atual === hoje && minutos > 15);
+    const deHoje = periodo.find((p) => p.dia === hoje);
+    const minutos = deHoje?.atualizado_em ? (Date.now() - new Date(deHoje.atualizado_em).getTime()) / 60000 : Infinity;
+    $("atualizado").textContent = multiDia
+        ? `${comDados} dia(s) com números no período · atualizado às ${hora(r.atualizado_em)}`
+        : `Atualizado às ${hora(r.atualizado_em)} · enviado pelo servidor da portaria a cada 5 minutos`;
+    $("aviso").hidden = !(ate === hoje && minutos > 15);
     $("aviso").textContent =
         "Sem atualização há mais de 15 minutos. A internet ou o servidor da portaria podem estar fora; os números podem estar desatualizados.";
 
@@ -219,7 +284,7 @@ function desenhar() {
             meus.reduce((s, cx) => s + (cx.saidas ?? 0), 0),
         )}`;
     } else {
-        $("rotulo-total").textContent = "Arrecadado no dia";
+        $("rotulo-total").textContent = multiDia ? "Arrecadado no período" : "Arrecadado no dia";
         $("total").textContent = real.format(a.total ?? 0);
         $("composicao").textContent = `Contribuições ${real.format(a.contribuicoes ?? 0)} · lançamentos ${real.format(
             a.lancamentos_manuais ?? 0,
@@ -283,7 +348,7 @@ function desenhar() {
         tr.append(
             operador,
             celula(cx.posto ?? "—"),
-            celula(`${hora(cx.aberto_em)} – ${cx.fechado_em ? hora(cx.fechado_em) : "agora"}`),
+            celula(`${quando(cx.aberto_em)} – ${cx.fechado_em ? quando(cx.fechado_em) : "agora"}`),
             celula(real.format(cx.arrecadado ?? 0), "num"),
             celula(real.format(cx.esperado ?? 0), "num"),
             celula(cx.informado == null ? "—" : real.format(cx.informado), "num"),
@@ -307,7 +372,7 @@ function desenhar() {
     desenharPessoas();
 
     clearInterval(atualizacao);
-    if (atual === hoje) atualizacao = setInterval(() => carregar($("dia").value), 60000);
+    if (ate === hoje) atualizacao = setInterval(() => carregar($("de").value, $("ate").value), 60000);
 }
 
 const TIPOS = {
@@ -324,7 +389,7 @@ const rotuloTipo = (t) => TIPOS[t] ?? (t ? t.charAt(0).toUpperCase() + t.slice(1
 
 // Quem entrou no dia (PO 15/11/2026): nome, tipo e pagamento. Documento e foto ficam no condomínio.
 function desenharPessoas() {
-    const todas = resposta?.dados?.pessoas ?? [];
+    const todas = dadosAtuais?.pessoas ?? [];
     const tipoAtual = $("filtro-tipo").value;
     const tipos = [...new Set(todas.map((p) => p.tipo))].sort((a, b) => rotuloTipo(a).localeCompare(rotuloTipo(b), "pt-BR"));
     $("filtro-tipo").replaceChildren(
@@ -361,7 +426,7 @@ function desenharPessoas() {
         const situacao = celula(PAGAMENTOS[p.pagamento] ?? "Sem cobrança");
         situacao.className = `pagamento ${p.pagamento ?? "nenhum"}`;
         tr.append(
-            celula(hora(p.hora)),
+            celula(quando(p.hora)),
             celula(p.nome ?? "—"),
             celula(rotuloTipo(p.tipo)),
             situacao,
@@ -396,7 +461,26 @@ $("form-entrar").addEventListener("submit", async (evento) => {
         botao.disabled = false;
     }
 });
-$("dia").addEventListener("change", () => carregar($("dia").value));
+function consultarPeriodo() {
+    let de = $("de").value;
+    let ate = $("ate").value;
+    if (!de || !ate) return;
+    if (de > ate) [de, ate] = [ate, de];
+    carregar(de, ate);
+}
+$("de").addEventListener("change", consultarPeriodo);
+$("ate").addEventListener("change", consultarPeriodo);
+// Atalhos: hoje, últimos 7 dias e mês atual.
+for (const botao of document.querySelectorAll("[data-atalho]")) {
+    botao.addEventListener("click", () => {
+        const hoje = new Date();
+        const iso = (d) => d.toLocaleDateString("sv-SE");
+        const inicio = new Date(hoje);
+        if (botao.dataset.atalho === "7") inicio.setDate(hoje.getDate() - 6);
+        if (botao.dataset.atalho === "mes") inicio.setDate(1);
+        carregar(iso(inicio), iso(hoje));
+    });
+}
 $("colaborador").addEventListener("change", () => {
     colaborador = $("colaborador").value;
     if (resposta) desenhar();

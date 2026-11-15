@@ -6,7 +6,10 @@ use App\Models\Implantacao;
 use App\Models\User;
 use App\Services\Hibrido\SincronizacaoIndisponivel;
 use App\Support\ImplantacaoContext;
+use Carbon\CarbonInterface;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -19,15 +22,31 @@ class PainelGestaoNuvem
 {
     public function __construct(private MetricasDia $metricas) {}
 
-    /** Publica hoje e ontem (ontem fecha caixas que viraram a meia-noite). @return list<string> */
-    public function publicar(): array
+    /** Dias passados que podem ser reenviados de uma vez (mesmo teto de período do painel). */
+    public const MAX_DIAS_REENVIO = 93;
+
+    /**
+     * Publica hoje e ontem (ontem fecha caixas que viraram a meia-noite). Com
+     * $desde, reenvia também cada dia desde essa data, para a consulta por
+     * período (De/Até) do painel ter os dias antigos.
+     *
+     * @return list<string>
+     */
+    public function publicar(?CarbonInterface $desde = null): array
     {
         [$implantacao, $http, $url] = $this->conexao();
+        $inicio = ($desde ?? now()->subDay())->copy()->startOfDay();
+        if ($inicio->gt(now()->subDay()->startOfDay())) {
+            $inicio = now()->subDay()->startOfDay();
+        }
+        if ($inicio->diffInDays(now()->startOfDay()) >= self::MAX_DIAS_REENVIO) {
+            throw new SincronizacaoIndisponivel('Reenvie no máximo '.self::MAX_DIAS_REENVIO.' dias de uma vez.');
+        }
 
-        return ImplantacaoContext::executarNo($implantacao, function () use ($http, $url): array {
+        return ImplantacaoContext::executarNo($implantacao, function () use ($http, $url, $inicio): array {
             $dias = [];
-            foreach ([now()->subDay(), now()] as $dia) {
-                $dados = $this->metricas->calcular($dia);
+            foreach (CarbonPeriod::create($inicio, '1 day', now()->startOfDay()) as $dia) {
+                $dados = $this->metricas->calcular(Carbon::instance($dia));
                 $this->enviar($http, $url, ['action' => 'metricas', 'dia' => $dados['dia'], 'dados' => $dados]);
                 $dias[] = $dados['dia'];
             }

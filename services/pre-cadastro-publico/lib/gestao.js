@@ -54,9 +54,21 @@ export function gestaoConfiguration(env = process.env) {
                         .select("dia")
                         .eq("implantacao_id", tenant)
                         .order("dia", { ascending: false })
-                        .limit(62),
+                        .limit(400),
                 );
                 return rows.map((r) => r.dia);
+            },
+            async metricsRange(de, ate) {
+                return await result(
+                    db
+                        .from("sdv_gestao_metricas")
+                        .select("dia,dados,updated_at")
+                        .eq("implantacao_id", tenant)
+                        .gte("dia", de)
+                        .lte("dia", ate)
+                        .order("dia", { ascending: true })
+                        .limit(93),
+                );
             },
             async gestor(email) {
                 const row = await result(

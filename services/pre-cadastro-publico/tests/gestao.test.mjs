@@ -22,6 +22,12 @@ function contexto() {
             async days() {
                 return [...metricas.keys()].sort().reverse();
             },
+            async metricsRange(de, ate) {
+                return [...metricas.entries()]
+                    .filter(([dia]) => dia >= de && dia <= ate)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([dia, item]) => ({ dia, ...item }));
+            },
             async gestor(email) {
                 return gestores.get(email) ?? null;
             },
@@ -98,6 +104,25 @@ test("nó publica métricas e cria o acesso; gestor entra e lê só com senha", 
     assert.equal(leitura.statusCode, 200);
     assert.equal(leitura.body.dia, "2026-11-15");
     assert.equal(leitura.body.dados.arrecadacao.total, 75);
+});
+
+test("gestor consulta um período De/Até e recebe cada dia do intervalo", async () => {
+    const { ctx } = contexto();
+    const h = createHandler(() => ctx);
+    for (const dia of ["2026-11-10", "2026-11-12", "2026-11-14", "2026-11-15"]) {
+        await chamar(h, { body: { action: "metricas", dia, dados: { dia } }, auth: `Bearer ${node}` });
+    }
+    await chamar(h, { body: { action: "gestor", email: "gestor@teste.com", senha: "senha-forte-123" }, auth: `Bearer ${node}` });
+    const token = (await chamar(h, { body: { action: "login", email: "gestor@teste.com", senha: "senha-forte-123" } })).body.token;
+
+    const periodo = await chamar(h, { method: "GET", auth: `Bearer ${token}`, query: { de: "2026-11-11", ate: "2026-11-14" } });
+    assert.equal(periodo.statusCode, 200);
+    assert.deepEqual(periodo.body.periodo.map((p) => p.dia), ["2026-11-12", "2026-11-14"]);
+    assert.equal(periodo.body.de, "2026-11-11");
+    assert.equal(periodo.body.ate, "2026-11-14");
+
+    assert.equal((await chamar(h, { method: "GET", auth: `Bearer ${token}`, query: { de: "2026-11-15", ate: "2026-11-10" } })).statusCode, 422);
+    assert.equal((await chamar(h, { method: "GET", auth: `Bearer ${token}`, query: { de: "2026-01-01", ate: "2026-11-10" } })).statusCode, 422);
 });
 
 test("quem perde o Dashboard no sistema local perde o painel remoto", async () => {

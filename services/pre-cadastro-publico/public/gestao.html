@@ -36,9 +36,15 @@
                         <p id="atualizado" class="suave"></p>
                     </div>
                     <div class="filtros">
-                        <label class="dia">Dia <select id="dia"></select></label>
+                        <label class="dia">De <input id="de" type="date" /></label>
+                        <label class="dia">Até <input id="ate" type="date" /></label>
                         <label class="dia">Colaborador <select id="colaborador"></select></label>
                     </div>
+                </div>
+                <div class="atalhos" role="group" aria-label="Períodos rápidos">
+                    <button type="button" data-atalho="hoje">Hoje</button>
+                    <button type="button" data-atalho="7">Últimos 7 dias</button>
+                    <button type="button" data-atalho="mes">Este mês</button>
                 </div>
                 <p id="aviso" class="aviso" role="status" hidden></p>
 
@@ -58,12 +64,12 @@
                         <div id="pizza-colaboradores"></div>
                     </figure>
                     <figure class="cartao grafico">
-                        <figcaption>Contribuições do dia</figcaption>
+                        <figcaption id="titulo-contribuicoes">Contribuições do dia</figcaption>
                         <div id="pizza-contribuicoes"></div>
                     </figure>
                 </div>
 
-                <h2>Movimento do condomínio no dia</h2>
+                <h2 id="titulo-movimento">Movimento do condomínio no dia</h2>
                 <div class="grade" id="numeros"></div>
 
                 <h2>Caixas</h2>
@@ -84,7 +90,7 @@
                     </table>
                 </div>
 
-                <h2>Quem entrou no dia</h2>
+                <h2 id="titulo-pessoas">Quem entrou no dia</h2>
                 <div class="filtros-pessoas">
                     <label>Buscar <input id="busca-pessoa" type="search" placeholder="Nome" autocomplete="off" /></label>
                     <label>Tipo <select id="filtro-tipo"></select></label>

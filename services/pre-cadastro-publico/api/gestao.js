@@ -2,6 +2,7 @@ import { respond, failure } from "../lib/cloud.js";
 import { check, sameSecret } from "../lib/validation.js";
 import { gestaoConfiguration } from "../lib/gestao.js";
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DIAS_PERIODO = 92;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const bearer = (req) =>
     (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
@@ -27,14 +28,27 @@ export function createHandler(makeContext = gestaoConfiguration) {
             check(quem, "Entre novamente.", 401);
             check((await ctx.store.gestor(quem))?.ativo, "Acesso desativado.", 403);
             const dias = await ctx.store.days();
-            const dia = DIA.test(req.query?.dia ?? "") ? req.query.dia : dias[0];
-            const item = dia ? await ctx.store.metrics(dia) : null;
+            // Período De/Até (PO 15/11/2026); sem período, o último dia enviado.
+            const q = req.query ?? {};
+            const ate = DIA.test(q.ate ?? "") ? q.ate : DIA.test(q.dia ?? "") ? q.dia : dias[0];
+            const de = DIA.test(q.de ?? "") ? q.de : ate;
+            check(!ate || de <= ate, "A data inicial precisa ser antes da final.", 422);
+            check(
+                !ate || (Date.parse(ate) - Date.parse(de)) / 86400000 <= MAX_DIAS_PERIODO,
+                `Escolha um período de até ${MAX_DIAS_PERIODO + 1} dias.`,
+                422,
+            );
+            const periodo = ate ? await ctx.store.metricsRange(de, ate) : [];
+            const ultimo = periodo.find((p) => p.dia === ate) ?? null;
             return respond(res, 200, {
                 condominio: ctx.name,
-                dia: dia ?? null,
+                dia: ate ?? null,
+                de: de ?? null,
+                ate: ate ?? null,
                 dias,
-                dados: item?.dados ?? null,
-                atualizado_em: item?.updated_at ?? null,
+                dados: ultimo?.dados ?? null,
+                periodo: periodo.map((p) => ({ dia: p.dia, dados: p.dados, atualizado_em: p.updated_at })),
+                atualizado_em: periodo.reduce((m, p) => (p.updated_at > m ? p.updated_at : m), "") || null,
             });
         } catch (error) {
             return failure(res, error);
