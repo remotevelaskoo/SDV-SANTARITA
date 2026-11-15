@@ -81,6 +81,8 @@ class PainelGestaoNuvemTest extends TestCase
         $this->assertCount(1, $dados['caixas']);
         $this->assertSame($porteiro->name, $dados['caixas'][0]['operador']);
         $this->assertSame(60.0, $dados['caixas'][0]['arrecadado']);
+        $this->assertSame(['dinheiro' => 35.0, 'pix' => 25.0], collect($dados['caixas'][0]['por_forma'])->sortKeys()->all());
+        $this->assertSame(2, $dados['caixas'][0]['contribuicoes_pagas']);
     }
 
     public function test_publica_hoje_e_ontem_e_a_lista_de_quem_tem_dashboard_sem_dados_de_visitante(): void

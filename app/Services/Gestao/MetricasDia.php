@@ -92,6 +92,22 @@ class MetricasDia
                 'esperado' => $caixa->expectedBalance(),
                 'informado' => $caixa->informed_amount !== null ? (float) $caixa->informed_amount : null,
                 'diferenca' => $caixa->difference !== null ? (float) $caixa->difference : null,
+                ...$this->recebimentosDoCaixa($caixa),
             ])->values()->all();
+    }
+
+    /** Formas de pagamento e atendimentos de um caixa, para o filtro por colaborador. @return array{por_forma: array<string, float>, contribuicoes_pagas: int} */
+    private function recebimentosDoCaixa(CaixaTurno $caixa): array
+    {
+        $porForma = [];
+        $pagas = Contribuicao::query()->where('caixa_turno_id', $caixa->id)->where('situacao_pagamento', 'pago');
+        foreach ((clone $pagas)->selectRaw('forma_pagamento as forma, sum(valor) as total')->groupBy('forma_pagamento')->get() as $linha) {
+            $porForma[$linha->forma ?? 'outro'] = round(($porForma[$linha->forma ?? 'outro'] ?? 0) + (float) $linha->total, 2);
+        }
+        foreach (CaixaMovimentacao::query()->where('caixa_turno_id', $caixa->id)->where('type', 'entrada')->selectRaw('method as forma, sum(amount) as total')->groupBy('method')->get() as $linha) {
+            $porForma[$linha->forma ?? 'outro'] = round(($porForma[$linha->forma ?? 'outro'] ?? 0) + (float) $linha->total, 2);
+        }
+
+        return ['por_forma' => $porForma, 'contribuicoes_pagas' => (clone $pagas)->count()];
     }
 }

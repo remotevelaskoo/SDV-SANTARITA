@@ -35,20 +35,36 @@
                         <h1 id="titulo-dia">Hoje</h1>
                         <p id="atualizado" class="suave"></p>
                     </div>
-                    <label class="dia">Dia <select id="dia"></select></label>
+                    <div class="filtros">
+                        <label class="dia">Dia <select id="dia"></select></label>
+                        <label class="dia">Colaborador <select id="colaborador"></select></label>
+                    </div>
                 </div>
                 <p id="aviso" class="aviso" role="status" hidden></p>
 
                 <div class="destaque cartao">
-                    <span>Arrecadado no dia</span>
+                    <span id="rotulo-total">Arrecadado no dia</span>
                     <strong id="total">R$ 0,00</strong>
                     <small id="composicao" class="suave"></small>
                 </div>
 
-                <div class="grade" id="numeros"></div>
+                <div class="graficos">
+                    <figure class="cartao grafico">
+                        <figcaption>Formas de pagamento</figcaption>
+                        <div id="pizza-formas"></div>
+                    </figure>
+                    <figure class="cartao grafico">
+                        <figcaption>Arrecadado por colaborador</figcaption>
+                        <div id="pizza-colaboradores"></div>
+                    </figure>
+                    <figure class="cartao grafico">
+                        <figcaption>Contribuições do dia</figcaption>
+                        <div id="pizza-contribuicoes"></div>
+                    </figure>
+                </div>
 
-                <h2>Formas de pagamento</h2>
-                <div class="grade" id="formas"></div>
+                <h2>Movimento do condomínio no dia</h2>
+                <div class="grade" id="numeros"></div>
 
                 <h2>Caixas</h2>
                 <div class="tabela cartao">

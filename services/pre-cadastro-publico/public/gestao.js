@@ -7,9 +7,12 @@ const hora = (iso) =>
 const dataLonga = (dia) =>
     new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 const FORMAS = { dinheiro: "Dinheiro", pix: "Pix", cartao: "Cartão", outro: "Outro" };
+const SVG = "http://www.w3.org/2000/svg";
 
 let sessao = ler();
 let atualizacao = null;
+let resposta = null;
+let colaborador = "";
 
 function ler() {
     try {
@@ -29,7 +32,7 @@ function guardar(valor) {
 }
 
 async function api(metodo, corpo, query = "") {
-    const resposta = await fetch(`/api/gestao${query}`, {
+    const r = await fetch(`/api/gestao${query}`, {
         method: metodo,
         headers: {
             "Content-Type": "application/json",
@@ -37,8 +40,8 @@ async function api(metodo, corpo, query = "") {
         },
         body: corpo ? JSON.stringify(corpo) : undefined,
     });
-    const dados = await resposta.json().catch(() => ({}));
-    return { status: resposta.status, dados };
+    const dados = await r.json().catch(() => ({}));
+    return { status: r.status, dados };
 }
 
 function mostrarEntrada(mensagem) {
@@ -68,7 +71,8 @@ async function carregar(dia) {
         $("aviso").textContent = r.dados.error ?? "Painel indisponível no momento. Tente de novo em instantes.";
         return;
     }
-    desenhar(r.dados);
+    resposta = r.dados;
+    desenhar();
 }
 
 function cartao(rotulo, valor) {
@@ -82,22 +86,96 @@ function cartao(rotulo, valor) {
     return div;
 }
 
-function desenhar(r) {
+function opcao(valor, texto, selecionada) {
+    const o = document.createElement("option");
+    o.value = valor;
+    o.textContent = texto;
+    o.selected = selecionada;
+    return o;
+}
+
+// Pizza em SVG puro (sem biblioteca; a CSP do portal só aceita arquivos próprios).
+function pizza(alvo, fatias, formatar) {
+    const itens = fatias.filter(([, v]) => v > 0);
+    const total = itens.reduce((s, [, v]) => s + v, 0);
+    const caixa = document.createElement("div");
+    caixa.className = "pizza";
+    if (!total) {
+        const vazio = document.createElement("p");
+        vazio.className = "suave";
+        vazio.textContent = "Sem valores neste dia.";
+        alvo.replaceChildren(vazio);
+        return;
+    }
+    const svg = document.createElementNS(SVG, "svg");
+    svg.setAttribute("viewBox", "-1 -1 2 2");
+    svg.setAttribute("role", "img");
+    svg.setAttribute(
+        "aria-label",
+        itens.map(([n, v]) => `${n}: ${formatar(v)} (${Math.round((v / total) * 100)}%)`).join("; "),
+    );
+    let angulo = -Math.PI / 2;
+    itens.forEach(([nome, valor], i) => {
+        const fracao = valor / total;
+        let forma;
+        if (fracao >= 0.9999) {
+            forma = document.createElementNS(SVG, "circle");
+            forma.setAttribute("r", "1");
+        } else {
+            const fim = angulo + fracao * 2 * Math.PI;
+            forma = document.createElementNS(SVG, "path");
+            forma.setAttribute(
+                "d",
+                `M0 0 L${Math.cos(angulo)} ${Math.sin(angulo)} A1 1 0 ${fracao > 0.5 ? 1 : 0} 1 ${Math.cos(fim)} ${Math.sin(fim)} Z`,
+            );
+            angulo = fim;
+        }
+        forma.setAttribute("class", `fatia cor-${i % 6}`);
+        const titulo = document.createElementNS(SVG, "title");
+        titulo.textContent = `${nome}: ${formatar(valor)}`;
+        forma.append(titulo);
+        svg.append(forma);
+    });
+    const furo = document.createElementNS(SVG, "circle");
+    furo.setAttribute("r", "0.55");
+    furo.setAttribute("class", "furo");
+    svg.append(furo);
+
+    const legenda = document.createElement("ul");
+    legenda.className = "legenda";
+    itens.forEach(([nome, valor], i) => {
+        const li = document.createElement("li");
+        const cor = document.createElement("i");
+        cor.className = `cor-${i % 6}`;
+        const rotulo = document.createElement("span");
+        rotulo.textContent = nome;
+        const numero = document.createElement("strong");
+        numero.textContent = `${formatar(valor)} · ${Math.round((valor / total) * 100)}%`;
+        li.append(cor, rotulo, numero);
+        legenda.append(li);
+    });
+    caixa.append(svg, legenda);
+    alvo.replaceChildren(caixa);
+}
+
+function somarFormas(lista) {
+    const soma = {};
+    for (const cx of lista) {
+        for (const [f, v] of Object.entries(cx.por_forma ?? {})) soma[f] = (soma[f] ?? 0) + v;
+    }
+    return soma;
+}
+
+function desenhar() {
+    const r = resposta;
     $("entrar").hidden = true;
     $("painel").hidden = false;
     $("sair").hidden = false;
     $("condominio").textContent = r.condominio ?? "Santa Rita";
 
-    const select = $("dia");
     const atual = r.dia;
-    select.replaceChildren(
-        ...(r.dias ?? []).map((d) => {
-            const opcao = document.createElement("option");
-            opcao.value = d;
-            opcao.textContent = new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR");
-            opcao.selected = d === atual;
-            return opcao;
-        }),
+    $("dia").replaceChildren(
+        ...(r.dias ?? []).map((d) => opcao(d, new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR"), d === atual)),
     );
 
     const hoje = new Date().toLocaleDateString("sv-SE");
@@ -107,9 +185,10 @@ function desenhar(r) {
         $("aviso").hidden = false;
         $("aviso").textContent = "O servidor da portaria ainda não enviou números para este dia.";
         $("atualizado").textContent = "";
-        $("numeros").replaceChildren();
-        $("formas").replaceChildren();
-        $("caixas").replaceChildren();
+        $("colaborador").replaceChildren(opcao("", "Todos", true));
+        for (const id of ["numeros", "caixas", "pizza-formas", "pizza-colaboradores", "pizza-contribuicoes"]) {
+            $(id).replaceChildren();
+        }
         $("total").textContent = real.format(0);
         $("composicao").textContent = "";
         return;
@@ -122,14 +201,56 @@ function desenhar(r) {
     $("aviso").textContent =
         "Sem atualização há mais de 15 minutos. A internet ou o servidor da portaria podem estar fora; os números podem estar desatualizados.";
 
+    const caixas = d.caixas ?? [];
+    const nomes = [...new Set(caixas.map((cx) => cx.operador ?? "—"))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    if (colaborador && !nomes.includes(colaborador)) colaborador = "";
+    $("colaborador").replaceChildren(
+        opcao("", "Todos", !colaborador),
+        ...nomes.map((n) => opcao(n, n, n === colaborador)),
+    );
+    const meus = colaborador ? caixas.filter((cx) => (cx.operador ?? "—") === colaborador) : caixas;
+
     const a = d.arrecadacao ?? {};
-    $("total").textContent = real.format(a.total ?? 0);
-    $("composicao").textContent = `Contribuições ${real.format(a.contribuicoes ?? 0)} · lançamentos ${real.format(
-        a.lancamentos_manuais ?? 0,
-    )} · saídas e estornos ${real.format(a.saidas_e_estornos ?? 0)}`;
+    if (colaborador) {
+        const pagas = meus.reduce((s, cx) => s + (cx.contribuicoes_pagas ?? 0), 0);
+        $("rotulo-total").textContent = `Arrecadado por ${colaborador}`;
+        $("total").textContent = real.format(meus.reduce((s, cx) => s + (cx.arrecadado ?? 0), 0));
+        $("composicao").textContent = `${meus.length} caixa(s) · ${pagas} contribuição(ões) paga(s) · saídas ${real.format(
+            meus.reduce((s, cx) => s + (cx.saidas ?? 0), 0),
+        )}`;
+    } else {
+        $("rotulo-total").textContent = "Arrecadado no dia";
+        $("total").textContent = real.format(a.total ?? 0);
+        $("composicao").textContent = `Contribuições ${real.format(a.contribuicoes ?? 0)} · lançamentos ${real.format(
+            a.lancamentos_manuais ?? 0,
+        )} · saídas e estornos ${real.format(a.saidas_e_estornos ?? 0)}`;
+    }
+
+    const formas = colaborador ? somarFormas(meus) : (a.por_forma ?? {});
+    pizza(
+        $("pizza-formas"),
+        Object.entries(formas).map(([f, v]) => [FORMAS[f] ?? f, v]),
+        (v) => real.format(v),
+    );
+    const porPessoa = {};
+    for (const cx of caixas) porPessoa[cx.operador ?? "—"] = (porPessoa[cx.operador ?? "—"] ?? 0) + (cx.arrecadado ?? 0);
+    pizza(
+        $("pizza-colaboradores"),
+        Object.entries(porPessoa).sort((x, y) => y[1] - x[1]),
+        (v) => real.format(v),
+    );
+    const c = d.contribuicoes ?? {};
+    pizza(
+        $("pizza-contribuicoes"),
+        [
+            ["Contribuíram", c.pagas ?? 0],
+            ["Não contribuíram", c.nao_contribui ?? 0],
+            ["Isentos", c.isentas ?? 0],
+        ],
+        (v) => `${v}`,
+    );
 
     const ac = d.acessos ?? {};
-    const c = d.contribuicoes ?? {};
     const cad = d.cadastros ?? {};
     $("numeros").replaceChildren(
         cartao("Entradas liberadas", ac.entradas ?? 0),
@@ -138,19 +259,9 @@ function desenhar(r) {
         cartao("Negados", ac.negados ?? 0),
         cartao("Cadastros novos", cad.pessoas_novas ?? 0),
         cartao("Pré-cadastros recebidos", cad.pre_cadastros_recebidos ?? 0),
-        cartao("Contribuíram", c.pagas ?? 0),
-        cartao("Não contribuíram", c.nao_contribui ?? 0),
-        cartao("Isentos", c.isentas ?? 0),
     );
 
-    const formas = Object.entries(a.por_forma ?? {});
-    $("formas").replaceChildren(
-        ...(formas.length
-            ? formas.map(([f, v]) => cartao(FORMAS[f] ?? f, real.format(v)))
-            : [cartao("Sem recebimentos", real.format(0))]),
-    );
-
-    const linhas = (d.caixas ?? []).map((cx) => {
+    const linhas = meus.map((cx) => {
         const tr = document.createElement("tr");
         const celula = (texto, classe) => {
             const td = document.createElement("td");
@@ -210,6 +321,10 @@ $("form-entrar").addEventListener("submit", async (evento) => {
     }
 });
 $("dia").addEventListener("change", () => carregar($("dia").value));
+$("colaborador").addEventListener("change", () => {
+    colaborador = $("colaborador").value;
+    if (resposta) desenhar();
+});
 $("sair").addEventListener("click", () => mostrarEntrada());
 
 if (sessao) carregar();
