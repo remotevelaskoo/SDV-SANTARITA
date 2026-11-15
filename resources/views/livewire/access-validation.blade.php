@@ -788,6 +788,12 @@
             @if ($envioFacialLiberacao)
                 {{-- Liberar entrada: autorização enviada ao terminal facial (não à cancela). --}}
                 <x-ui.alert :variant="$envioFacialLiberacao['variant']" :title="$envioFacialLiberacao['title']">{{ $envioFacialLiberacao['message'] }}</x-ui.alert>
+                @if (! empty($envioFacialLiberacao['foto']))
+                    {{-- Foto separada do cadastro: só "confirmada" garante o reconhecimento na facial. --}}
+                    <div @if (! empty($envioFacialLiberacao['acompanhar'])) wire:poll.3s="atualizarFotoFacial" @endif>
+                        <x-ui.alert :variant="$envioFacialLiberacao['foto']['variant']" :title="$envioFacialLiberacao['foto']['title']">{{ $envioFacialLiberacao['foto']['message'] }}</x-ui.alert>
+                    </div>
+                @endif
             @endif
             @error('atendimento')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
             <div class="validation-decision__actions">

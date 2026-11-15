@@ -190,6 +190,26 @@ class FotoFacialEnvioTest extends TestCase
         $this->assertSame(1, PessoaArquivo::query()->count());
     }
 
+    public function test_tentativa_de_foto_que_falhou_aparece_e_a_retentativa_agendada_conclui(): void
+    {
+        config(['integracoes.foto_facial_habilitada' => true]);
+        $this->simulador()->definirCenario($this->terminal->id, CenarioSimulador::Indisponivel, OperacaoIntegracao::EnviarFotoFacial);
+        $this->salvarEEnviar($this->cadastroRapido());
+
+        $credencialId = FotoFacialSincronizacao::query()->sole()->credencial_id;
+        $situacao = app(EnvioFacial::class)->acompanharFoto($credencialId, $this->terminal->id);
+        $this->assertSame('tentativa_falhou', $situacao['situacao'], 'Falha passageira não pode aparecer como "na fila".');
+        $this->assertStringContainsString('tenta de novo sozinho', $situacao['mensagem']);
+
+        // O agendador chama o despachar a cada minuto; com o terminal de volta, a foto é confirmada.
+        $this->simulador()->definirCenario($this->terminal->id, CenarioSimulador::Sucesso, OperacaoIntegracao::EnviarFotoFacial);
+        $this->travel(10)->minutes();
+        $this->artisan('integracoes:despachar')->assertSuccessful();
+
+        $this->assertSame(EstadoSincronizacao::Sincronizado, FotoFacialSincronizacao::query()->sole()->estado);
+        $this->assertSame('sincronizado', app(EnvioFacial::class)->acompanharFoto($credencialId, $this->terminal->id)['estado']);
+    }
+
     public function test_foto_nova_invalida_a_sincronizada_e_gera_novo_envio_controlado(): void
     {
         config(['integracoes.foto_facial_habilitada' => true]);

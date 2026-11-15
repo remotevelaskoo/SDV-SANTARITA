@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use SimpleXMLElement;
 use Throwable;
 
@@ -117,7 +118,17 @@ class ClienteIsapi
             throw $this->classificarConexao($e);
         } catch (FalhaIsapi $e) {
             throw $e;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // A tela mostra só a mensagem genérica; o motivo técnico fica no log,
+            // sem a senha do terminal e sem o conteúdo enviado.
+            $segredo = $equipamento->segredo()?->revelar();
+            Log::warning('Falha inesperada no cliente ISAPI.', [
+                'equipamento_id' => $equipamento->equipamentoId,
+                'correlation_id' => $equipamento->correlationId,
+                'excecao' => $e::class,
+                'mensagem' => mb_substr($segredo !== null && $segredo !== '' ? str_replace($segredo, '[segredo]', $e->getMessage()) : $e->getMessage(), 0, 500),
+            ]);
+
             throw new FalhaIsapi(ResultadoEquipamento::FalhaTecnica, 'falha_cliente', 'Falha inesperada no cliente de comunicação com o terminal.');
         }
 

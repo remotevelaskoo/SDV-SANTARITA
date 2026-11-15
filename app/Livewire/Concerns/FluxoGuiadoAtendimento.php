@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Acesso\Aplicacao\AutorizacoesAcesso;
 use App\Acesso\Aplicacao\EnvioFacial;
+use App\Acesso\Dominio\ResultadoEnvioFacial;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\AutorizacaoAcesso;
 use App\Models\Imovel;
@@ -294,12 +295,42 @@ trait FluxoGuiadoAtendimento
             return;
         }
 
-        $resultado = $envio->enviar($pessoa, $terminal['id'], $usuario, $autorizacao)->paraTela();
+        $envioFeito = $envio->enviar($pessoa, $terminal['id'], $usuario, $autorizacao);
+        $resultado = $envioFeito->paraTela();
         $this->envioFacialLiberacao = [
             'variant' => $resultado['variant'],
             'title' => $resultado['title'].' · '.$terminal['nome'],
-            'message' => $validade.' '.$resultado['message'].($resultado['variant'] === 'success' ? ' A pessoa já pode passar na facial.' : ''),
+            'message' => $validade.' '.$resultado['message'],
+            'cadastro_ok' => $resultado['variant'] === 'success',
+            'foto' => $resultado['foto'],
+            'acompanhar' => $envioFeito->credencialId !== null && in_array($envioFeito->foto['situacao'] ?? null, ['solicitado', 'ja_solicitado'], true)
+                ? ['credencial' => $envioFeito->credencialId, 'terminal' => $terminal['id']]
+                : null,
         ];
+        $this->atualizarFotoFacial();
+    }
+
+    /**
+     * Acompanha a foto depois do "Liberar entrada" (a fila roda em segundo
+     * plano): a tela consulta a cada poucos segundos até a foto ser
+     * confirmada ou recusada. "Pode passar na facial" só com a foto confirmada.
+     */
+    public function atualizarFotoFacial(): void
+    {
+        $acompanhar = $this->envioFacialLiberacao['acompanhar'] ?? null;
+        if ($acompanhar === null) {
+            return;
+        }
+
+        $foto = app(EnvioFacial::class)->acompanharFoto($acompanhar['credencial'], $acompanhar['terminal']);
+        $tela = (new ResultadoEnvioFacial('solicitado', 'solicitado', '', foto: $foto))->paraTela()['foto'];
+        if ($foto['estado'] === 'sincronizado' && $this->envioFacialLiberacao['cadastro_ok']) {
+            $tela['message'] .= ' A pessoa já pode passar na facial.';
+        }
+
+        $this->envioFacialLiberacao['foto'] = $tela;
+        $finalizado = in_array($foto['estado'], ['sincronizado', 'falha', 'intervencao_necessaria', 'nao_enviado', null], true);
+        $this->envioFacialLiberacao['acompanhar'] = $finalizado ? null : $acompanhar;
     }
 
     private function tipoDaAutorizacao(AutorizacaoAcesso $autorizacao): string

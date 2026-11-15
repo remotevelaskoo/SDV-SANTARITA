@@ -9,6 +9,7 @@ use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Integracoes\Dominio\Dados\CredencialParaSincronizar;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\Direcao;
+use App\Integracoes\Dominio\Enums\EstadoOutbox;
 use App\Integracoes\Dominio\Enums\EstadoSincronizacao;
 use App\Integracoes\Dominio\Enums\OperacaoIntegracao;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
@@ -285,6 +286,39 @@ class EnvioFacial
             ->where('equipamento_id', $terminalId)
             ->where('credencial_id', $credencialId)
             ->first()?->estado->value;
+    }
+
+    /**
+     * Situação da foto para a tela que acompanha o envio. Uma tentativa que
+     * falhou e vai ser repetida aparece como tal, e não como "na fila".
+     *
+     * @return array{situacao: string, estado: ?string, mensagem: string}
+     */
+    public function acompanharFoto(string $credencialId, string $terminalId): array
+    {
+        $registro = FotoFacialSincronizacao::query()->where('equipamento_id', $terminalId)->where('credencial_id', $credencialId)->first();
+        if ($registro === null) {
+            return ['situacao' => 'sem_foto', 'estado' => null, 'mensagem' => 'Nenhum envio de foto registrado para este terminal.'];
+        }
+
+        $estado = $registro->estado->value;
+        $operacao = $registro->ultima_operacao_id !== null ? Operacao::query()->find($registro->ultima_operacao_id) : null;
+        if ($estado === EstadoSincronizacao::Aguardando->value && $operacao?->estado === EstadoOutbox::FalhaTemporaria) {
+            return [
+                'situacao' => 'tentativa_falhou',
+                'estado' => $estado,
+                'mensagem' => 'O terminal não recebeu a foto na tentativa '.$operacao->tentativas.' de '.$operacao->max_tentativas
+                    .' ('.($operacao->erro_sanitizado ?: 'motivo não informado').'). O SDV tenta de novo sozinho em cerca de 1 minuto.',
+            ];
+        }
+
+        return ['situacao' => 'solicitado', 'estado' => $estado, 'mensagem' => match ($estado) {
+            'sincronizado' => 'O terminal confirmou o recebimento da foto desta versão.',
+            'falha', 'intervencao_necessaria' => 'O terminal não aceitou a foto: '.($registro->erro_sanitizado ?: 'motivo não informado').' Cadastro e foto continuam salvos no SDV; envie de novo pela ficha da pessoa.',
+            'atualizacao_pendente' => 'O terminal não confirmou a foto. O SDV vai conferir antes de reenviar.',
+            'nao_enviado' => $registro->erro_sanitizado ?: 'Foto salva no SDV; envio facial pendente.',
+            default => 'Foto na fila de envio ao terminal.',
+        }];
     }
 
     private function registrarFoto(?FotoFacialSincronizacao $registro, Pessoa $pessoa, Equipamento $terminal, CredencialAcesso $credencial, string $arquivoId, string $versao, EstadoSincronizacao $estado, ?string $operacaoId, ?string $erro): void
