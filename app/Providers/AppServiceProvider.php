@@ -9,6 +9,7 @@ use App\Integracoes\Adaptadores\Simulador\SimuladorEquipamento;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -33,6 +34,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Proxy https da rede local (porta 8443): confia só nos IPs configurados
+        // para que os links gerados saiam em https.
+        $proxies = array_filter(array_map('trim', explode(',', (string) config('app.proxies_confiaveis'))));
+        if ($proxies !== []) {
+            TrustProxies::at($proxies);
+        }
+
         // Ações Livewire (POST de atualização) reaplicam a permissão da rota
         // em que o componente foi aberto: revogar a permissão bloqueia também
         // telas já abertas, não só o carregamento da página (AJ-009).
