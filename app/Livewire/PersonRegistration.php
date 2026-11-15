@@ -120,26 +120,8 @@ class PersonRegistration extends Component
     #[Locked]
     public ?string $pessoaExistenteId = null;
 
-    public string $terminalId = '';
-
-    public bool $terminalConfirmado = false;
-
     /** @var array{variant: string, title: string, message: string, avisos: list<string>}|null */
     public ?array $resultadoEnvio = null;
-
-    public function mount(EnvioFacial $envio): void
-    {
-        $usuario = Auth::user();
-        if (! $usuario instanceof User || ! $usuario->hasPermission('facial.enviar')) {
-            return;
-        }
-
-        // Contexto do posto: com um único terminal possível, ele já vem escolhido (ainda exige confirmação).
-        $terminais = $envio->terminaisPara($usuario);
-        $doPosto = $terminais->where('do_posto', true);
-        $unico = $doPosto->count() === 1 ? $doPosto->first() : ($terminais->count() === 1 ? $terminais->first() : null);
-        $this->terminalId = $unico['id'] ?? '';
-    }
 
     /** @return list<array{number: int, label: string, description: string}> */
     public function steps(): array
@@ -209,7 +191,6 @@ class PersonRegistration extends Component
     {
         $salvo = $this->pessoaId !== null;
         $this->reset();
-        $this->mount(app(EnvioFacial::class));
         $this->feedback = $salvo
             ? [
                 'variant' => 'info',
@@ -632,19 +613,14 @@ class PersonRegistration extends Component
         $pessoa = Pessoa::query()->findOrFail($this->pessoaId);
         $autorizacao = $this->autorizacaoId !== null ? AutorizacaoAcesso::query()->find($this->autorizacaoId) : null;
 
-        $this->resultadoEnvio = $envio->enviar($pessoa, $this->terminalId, $this->operador(), $autorizacao)->paraTela();
-        $this->terminalConfirmado = false;
+        // Regra do PO (15/11/2026): vai para todos os terminais faciais ativos.
+        $this->resultadoEnvio = $envio->enviarParaTodos($pessoa, $this->operador(), $autorizacao)->paraTela();
     }
 
     private function terminalEscolhido(EnvioFacial $envio): bool
     {
-        if ($this->terminalId === '' || $envio->terminaisPara($this->operador())->firstWhere('id', $this->terminalId) === null) {
-            $this->addError('terminalId', 'Escolha o terminal facial que vai receber o cadastro.');
-
-            return false;
-        }
-        if (! $this->terminalConfirmado) {
-            $this->addError('terminalConfirmado', 'Confirme o terminal escolhido antes de enviar.');
+        if ($envio->terminaisPara($this->operador())->isEmpty()) {
+            $this->addError('envio', 'Não há terminal facial ativo cadastrado. Salve o cadastro e envie depois.');
 
             return false;
         }

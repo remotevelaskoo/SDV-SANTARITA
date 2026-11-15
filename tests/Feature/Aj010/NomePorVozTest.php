@@ -183,8 +183,6 @@ class NomePorVozTest extends TestCase
             ->set('quickPropertyCode', '')
             ->call('preencherNomePorVoz', 'Prestador Sem Imovel')
             ->call('irParaEtapa', 'foto')
-            ->set('quickTerminalId', $terminal->id)
-            ->set('quickTerminalConfirmado', true)
             ->call('saveQuickRegistrationAndSend')
             ->assertSet('quickResultado.cadastro.title', 'Cadastro salvo')
             ->assertSet('quickResultado.facial.variant', 'danger');

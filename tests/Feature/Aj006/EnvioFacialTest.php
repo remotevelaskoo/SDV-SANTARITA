@@ -52,8 +52,6 @@ class EnvioFacialTest extends TestCase
     public function test_salvar_e_enviar_salva_primeiro_e_mostra_os_dois_resultados(): void
     {
         $tela = $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend')
             ->assertHasNoErrors()
             ->assertSet('feedback.variant', 'success')
@@ -84,8 +82,6 @@ class EnvioFacialTest extends TestCase
         $this->simulador()->definirCenario($this->terminal->id, CenarioSimulador::Recusa, OperacaoIntegracao::SincronizarCredencial);
 
         $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend')
             ->assertSet('feedback.variant', 'success')
             ->assertSet('resultadoEnvio.variant', 'danger')
@@ -96,28 +92,28 @@ class EnvioFacialTest extends TestCase
         $this->assertSame(EstadoSincronizacao::Falha, CredencialSincronizacao::query()->sole()->estado);
     }
 
-    public function test_sem_terminal_confirmado_nada_e_salvo_nem_enviado(): void
+    public function test_envio_vai_para_todos_os_terminais_faciais_com_o_mesmo_cadastro(): void
     {
-        $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->call('saveAndSend')
-            ->assertHasErrors('terminalConfirmado');
+        // Regra do PO (15/11/2026): todo envio vai para todas as faciais cadastradas.
+        $saida = $this->terminalAtivo(['nome' => 'Facial saída']);
 
         $this->formulario()
-            ->set('terminalId', '')
-            ->set('terminalConfirmado', true)
+            ->assertSee('Facial entrada')
+            ->assertSee('Facial saída')
             ->call('saveAndSend')
-            ->assertHasErrors('terminalId');
+            ->assertHasNoErrors()
+            ->assertSet('resultadoEnvio.variant', 'success')
+            ->assertSet('resultadoEnvio.title', 'Cadastro confirmado nos 2 terminais faciais');
 
-        $this->assertSame(0, Pessoa::query()->count());
-        $this->assertSame(0, Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->count());
+        $pedidos = Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->get();
+        $this->assertEqualsCanonicalizing([$this->terminal->id, $saida->id], $pedidos->pluck('equipamento_id')->all());
+        $this->assertCount(1, $pedidos->pluck('payload.credencial_id')->unique(), 'Mesmo cadastro e validade nos dois terminais.');
+        $this->assertSame(2, CredencialSincronizacao::query()->where('estado', EstadoSincronizacao::Sincronizado->value)->count());
     }
 
     public function test_enviar_exige_pessoa_salva_e_bloqueia_alteracoes_pendentes(): void
     {
         $tela = $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('send')
             ->assertHasErrors('envio')
             ->assertSee('Salve o cadastro antes de enviar para a facial.');
@@ -126,7 +122,6 @@ class EnvioFacialTest extends TestCase
 
         // Alteração não salva: nada de salvamento silencioso.
         $tela->set('fullName', 'Pessoa Sintética Alterada')
-            ->set('terminalConfirmado', true)
             ->call('send')
             ->assertHasErrors('envio')
             ->assertSee('Há alterações não salvas.');
@@ -135,7 +130,6 @@ class EnvioFacialTest extends TestCase
 
         $tela->call('discardChanges')
             ->assertSet('fullName', 'Pessoa Sintética')
-            ->set('terminalConfirmado', true)
             ->call('send')
             ->assertHasNoErrors()
             ->assertSet('resultadoEnvio.variant', 'success');
@@ -165,12 +159,9 @@ class EnvioFacialTest extends TestCase
     public function test_enviar_duas_vezes_nao_repete_o_comando(): void
     {
         $tela = $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend');
 
-        $tela->set('terminalConfirmado', true)
-            ->call('send')
+        $tela->call('send')
             ->assertSee('Este envio já tinha sido pedido e não foi repetido.');
 
         $this->assertSame(1, Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->count());
@@ -181,12 +172,10 @@ class EnvioFacialTest extends TestCase
     {
         $this->simulador()->definirCenario($this->terminal->id, CenarioSimulador::Recusa, OperacaoIntegracao::SincronizarCredencial);
         $tela = $this->formulario()
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend');
 
         $this->simulador()->definirCenario($this->terminal->id, CenarioSimulador::Sucesso, OperacaoIntegracao::SincronizarCredencial);
-        $tela->set('terminalConfirmado', true)->call('send')->assertSet('resultadoEnvio.variant', 'success');
+        $tela->call('send')->assertSet('resultadoEnvio.variant', 'success');
 
         $this->assertSame(2, Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->count());
         $this->assertSame(EstadoSincronizacao::Sincronizado, CredencialSincronizacao::query()->sole()->estado);
@@ -210,27 +199,15 @@ class EnvioFacialTest extends TestCase
         $semPermissao = $this->usuarioCom('pessoas.gerenciar');
         Livewire::actingAs($semPermissao)->test(PersonRegistration::class)
             ->assertDontSee('Salvar e enviar para a facial')
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('send')
             ->assertForbidden();
 
         $this->cadastro()->alterarStatus($this->terminal, StatusEquipamento::Manutencao, 'manutenção programada');
         $this->formulario()
             ->assertSee('Nenhum terminal disponível')
-            ->set('terminalId', $this->terminal->id)
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend')
-            ->assertHasErrors('terminalId');
+            ->assertHasErrors('envio');
         $this->assertSame(0, Pessoa::query()->count());
-    }
-
-    public function test_com_um_unico_terminal_ele_ja_vem_escolhido_mas_exige_confirmacao(): void
-    {
-        $this->formulario()
-            ->assertSet('terminalId', $this->terminal->id)
-            ->assertSet('terminalConfirmado', false)
-            ->assertSee('Facial entrada');
     }
 
     private function formulario(): Testable

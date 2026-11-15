@@ -149,6 +149,25 @@ class LiberarEntradaFacialTest extends TestCase
         $this->assertSame('liberado', HistoricoAcesso::query()->sole()->resultado);
     }
 
+    public function test_liberar_entrada_envia_para_todas_as_faciais_cadastradas(): void
+    {
+        // Regra do PO (15/11/2026): mesmo cadastro, validade e foto em todos os terminais faciais.
+        $entrada = $this->terminalAtivo(['nome' => 'Facial entrada']);
+        $saida = $this->terminalAtivo(['nome' => 'Facial pedestres']);
+
+        $this->novoNoConcluir('turista')
+            ->call('concluir', 'liberar')
+            ->assertHasNoErrors()
+            ->assertSet('feedback.title', 'Entrada liberada')
+            ->assertSet('envioFacialLiberacao.title', 'Envio para a facial na fila nos 2 terminais faciais')
+            ->assertSee('Facial entrada')
+            ->assertSee('Facial pedestres');
+
+        $pedidos = OperacaoIntegracao::query()->where('operacao', 'sincronizar_credencial')->get();
+        $this->assertEqualsCanonicalizing([$entrada->id, $saida->id], $pedidos->pluck('equipamento_id')->all());
+        $this->assertCount(1, $pedidos->pluck('payload.credencial_id')->unique(), 'Mesmo cadastro e validade nos dois terminais.');
+    }
+
     public function test_prestador_novo_liberado_ganha_o_prazo_escolhido(): void
     {
         $fim = now()->addDays(3)->startOfMinute();

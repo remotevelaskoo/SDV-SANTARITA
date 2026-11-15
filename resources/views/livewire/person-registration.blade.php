@@ -187,20 +187,15 @@
             </x-ui.card>
 
             @if ($podeEnviar)
-                <x-ui.card title="Terminal facial" description="Onde a pessoa será cadastrada. Isto não abre cancela nem catraca." class="registration-facial">
+                <x-ui.card title="Terminais faciais" description="A pessoa é cadastrada em todos os terminais faciais ativos, com a mesma validade e foto. Isto não abre cancela nem catraca." class="registration-facial">
                     @if ($terminais->isEmpty())
                         <x-ui.empty-state title="Nenhum terminal disponível" description="Não há terminal facial ativo e vinculado a um ponto de acesso. O cadastro pode ser salvo e enviado depois." icon="alert" />
                     @else
-                        <div class="registration-fields">
-                            <x-ui.select id="terminalId" label="Terminal" wire:model.live="terminalId" :error="$errors->first('terminalId')">
-                                <option value="">Selecione o terminal</option>
-                                @foreach ($terminais as $terminal)
-                                    <option value="{{ $terminal['id'] }}">{{ $terminal['nome'] }} — {{ $terminal['ponto'] }}{{ $terminal['do_posto'] ? ' (seu posto)' : '' }}{{ $terminal['simulador'] ? ' [SIMULADOR]' : '' }}</option>
-                                @endforeach
-                            </x-ui.select>
-                        </div>
-                        <x-ui.checkbox id="terminalConfirmado" label="Confirmo o terminal escolhido" description="O envio só cadastra a pessoa no terminal; a liberação continua decidida pelo SDV." wire:model.live="terminalConfirmado" />
-                        @error('terminalConfirmado') <small class="ui-field__error" role="alert">{{ $message }}</small> @enderror
+                        <ul class="registration-terminais">
+                            @foreach ($terminais as $terminal)
+                                <li>{{ $terminal['nome'] }} — {{ $terminal['ponto'] }}{{ $terminal['simulador'] ? ' [SIMULADOR]' : '' }}</li>
+                            @endforeach
+                        </ul>
                     @endif
                     @error('envio') <x-ui.alert variant="warning" title="Envio bloqueado">{{ $message }}</x-ui.alert> @enderror
                     @if ($pendente)

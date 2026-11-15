@@ -199,6 +199,10 @@ Decisões do Product Owner ao validar a tela de postos. Substituem a designaçã
 
 A recusa central fica em `EnvioFacial::enviar` e é auditada como `facial_envio_recusado`. "Salvar sem liberar" e "Negar" continuam sem exigir caixa. Revogação e vencimento automáticos também não exigem caixa.
 
+**Todo envio vai para todas as faciais (decisão do PO, 15/11/2026).** Toda vez que alguém é enviado à facial, o SDV manda **o mesmo cadastro, a mesma validade e a mesma foto para todos os terminais faciais ativos** (com ponto de acesso vigente), não só para o do posto. Assim a pessoa passa em qualquer entrada do condomínio. O operador não escolhe mais terminal: a ficha mostra a lista de terminais que vão receber. Vale nos três caminhos acima. O resultado na tela junta os terminais ("Cadastro confirmado nos 2 terminais faciais" ou "em 1 de 2"), e a foto é acompanhada terminal a terminal. A entrada central é `EnvioFacial::enviarParaTodos`.
+
+**Conferência no aparelho antes de dizer "já enviado" (15/11/2026).** Se o SDV registra o cadastro como confirmado num terminal, ele pergunta ao aparelho se a pessoa e a face ainda estão lá. Se alguém apagou o usuário no terminal, o SDV envia de novo cadastro e foto, com o aviso "O terminal não tinha mais o cadastro desta pessoa".
+
 **Quem é levado à escolha do posto.** Ao abrir o Modo Portaria sem posto, quem opera caixa (`caixa.proprio.gerenciar`) ou libera relés é levado à escolha. Quem também consulta o caixa consolidado (Gestor, Administrador) pode "Continuar sem assumir posto (supervisão)", para não ocupar uma guarita só para consultar.
 
 **Tela Postos.** A antiga "Postos e operadores" virou "Postos": mostra quem está em cada posto agora, permite editar nome e tipo, desativar e reativar (posto ocupado não é desativado), os pontos de acesso de cada posto num bloco recolhido e o botão "Liberar posto". Cadastro e pontos continuam com `integracoes.gerenciar`.
