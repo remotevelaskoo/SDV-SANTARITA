@@ -859,6 +859,9 @@ body.has-drawer-open { overflow: hidden; }
 
 .dashboard-panels { display: grid; gap: 1rem; }
 .panel { min-width: 0; overflow: hidden; }
+.acesso-painel-remoto-wrap > p, .acesso-painel-remoto-wrap > .ui-alert { margin: 0.9rem 1rem 0; overflow-wrap: anywhere; }
+.acesso-painel-remoto { display: grid; gap: 0.75rem; padding: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); align-items: start; }
+.acesso-painel-remoto footer { grid-column: 1 / -1; }
 .panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1rem; border-bottom: 1px solid var(--neutral-200); }
 .panel__header h2 { margin: 0; font-size: 0.88rem; }
 .panel__header p { margin: 0.12rem 0 0; color: var(--neutral-600); font-size: 0.68rem; }

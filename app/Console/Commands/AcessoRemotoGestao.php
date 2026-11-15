@@ -19,6 +19,14 @@ class AcessoRemotoGestao extends Command
 
             return self::FAILURE;
         }
+        // Terminais do Windows via docker podem mandar caracteres invisíveis
+        // junto com a senha; aí o painel nunca aceita o que é digitado no navegador.
+        if (! mb_check_encoding($senha, 'UTF-8') || preg_match('/\p{C}/u', $senha)) {
+            $this->error('A senha chegou com caracteres invisíveis ou acentos alterados pelo terminal. Use só letras sem acento e números.');
+
+            return self::FAILURE;
+        }
+        $this->line('Senha recebida com '.mb_strlen($senha).' caracteres.');
 
         try {
             $painel->definirAcesso((string) $this->argument('email'), $senha);

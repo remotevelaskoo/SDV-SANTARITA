@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\AcessoPainelRemoto;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Contribuicao;
@@ -12,7 +13,9 @@ use App\Services\Gestao\MetricasDia;
 use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 use Tests\Support\OperadorComPermissoes;
 use Tests\TestCase;
 
@@ -124,5 +127,33 @@ class PainelGestaoNuvemTest extends TestCase
             ->expectsQuestion('Repita a senha', 'senha-forte-123')
             ->assertSuccessful();
         Http::assertSent(fn (Request $r) => $r['action'] === 'gestor' && $r['email'] === mb_strtolower($gestor->email) && $r['senha'] === 'senha-forte-123');
+    }
+
+    public function test_gestor_cria_a_propria_senha_remota_pela_tela_confirmando_a_senha_do_sdv(): void
+    {
+        $gestor = $this->operador('dashboard.visualizar');
+        $gestor->forceFill(['password' => Hash::make('senha-do-sdv-1')])->save();
+        Http::fake(['https://portal.exemplo.test/api/gestao' => Http::response(['ready' => true])]);
+
+        Livewire::actingAs($gestor)->test(AcessoPainelRemoto::class)
+            ->set('senha', 'painel-remoto-1')->set('senha_confirmation', 'painel-remoto-1')->set('senhaAtual', 'errada')
+            ->call('salvar')
+            ->assertHasErrors('senhaAtual');
+        Http::assertNothingSent();
+
+        Livewire::actingAs($gestor)->test(AcessoPainelRemoto::class)
+            ->set('senha', 'painel-remoto-1')->set('senha_confirmation', 'painel-remoto-1')->set('senhaAtual', 'senha-do-sdv-1')
+            ->call('salvar')
+            ->assertHasNoErrors()
+            ->assertSet('senha', '')
+            ->assertSee('Acesso remoto pronto');
+        Http::assertSent(fn (Request $r) => $r['action'] === 'gestor' && $r['email'] === mb_strtolower($gestor->email) && $r['senha'] === 'painel-remoto-1');
+    }
+
+    public function test_tela_de_acesso_remoto_exige_dashboard(): void
+    {
+        $porteiro = $this->operador('validacao.registrar');
+
+        Livewire::actingAs($porteiro)->test(AcessoPainelRemoto::class)->assertForbidden();
     }
 }
