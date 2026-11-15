@@ -114,7 +114,7 @@ class UsuarioDemoSeeder extends Seeder
             'Direção' => ['dashboard.visualizar'],
             'Gestor' => [...self::PORTEIRO_CAIXA, 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket', 'postos.liberar'],
             'Auditor' => self::AUDITOR,
-            'Administrador' => array_values(array_diff(array_keys(self::PERMISSOES), ['dashboard.visualizar'])),
+            'Administrador' => array_keys(self::PERMISSOES),
         ];
 
         $perfis = [];

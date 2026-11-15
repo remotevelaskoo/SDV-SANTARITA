@@ -1,0 +1,210 @@
+/* Painel de gestão: mesma identidade do SDV One. */
+:root {
+    color-scheme: light;
+    --navy: #08234b;
+    --blue: #0867d1;
+    --texto: #17233a;
+    --suave: #69778c;
+    --borda: #e7ebf1;
+    --fundo: #f3f5f8;
+    --cartao: #fff;
+    --ok: #13795b;
+    --alerta: #a15c07;
+    --erro: #b42318;
+    font:
+        16px/1.5 system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif;
+    color: var(--texto);
+    background: var(--fundo);
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    background: var(--fundo);
+}
+[hidden] {
+    display: none !important;
+}
+.topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--navy);
+    color: #fff;
+}
+.marca strong {
+    font-size: 20px;
+    letter-spacing: 0.02em;
+}
+.marca strong span {
+    color: #2687ff;
+}
+.marca small {
+    display: block;
+    color: #a9b4c3;
+    font-size: 13px;
+}
+.link {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+}
+main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+}
+h1 {
+    font-size: 24px;
+    margin: 0;
+}
+h2 {
+    font-size: 17px;
+    margin: 28px 0 10px;
+}
+.suave {
+    color: var(--suave);
+    margin: 4px 0 0;
+    font-size: 14px;
+}
+.cartao {
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 16px;
+}
+.entrar {
+    max-width: 380px;
+    margin: 48px auto;
+}
+form {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+}
+label {
+    display: grid;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 600;
+}
+input,
+select {
+    font: inherit;
+    padding: 10px 12px;
+    border: 1px solid #d8dfe8;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--texto);
+}
+button[type="submit"] {
+    font: inherit;
+    font-weight: 600;
+    padding: 11px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--blue);
+    color: #fff;
+    cursor: pointer;
+}
+.erro {
+    color: var(--erro);
+    margin: 0;
+    font-size: 14px;
+}
+.barra {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.dia {
+    font-weight: 600;
+}
+.aviso {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fff4e5;
+    color: var(--alerta);
+    font-size: 14px;
+}
+.destaque {
+    margin-top: 16px;
+    display: grid;
+    gap: 2px;
+}
+.destaque span {
+    color: var(--suave);
+    font-size: 14px;
+}
+.destaque strong {
+    font-size: 34px;
+    color: var(--navy);
+    font-variant-numeric: tabular-nums;
+}
+.grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+.numero span {
+    display: block;
+    color: var(--suave);
+    font-size: 13px;
+}
+.numero strong {
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+}
+.tabela {
+    padding: 0;
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    min-width: 640px;
+}
+th,
+td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--borda);
+    white-space: nowrap;
+}
+th {
+    color: var(--suave);
+    font-weight: 600;
+    font-size: 13px;
+}
+.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.positivo {
+    color: var(--ok);
+}
+.negativo {
+    color: var(--erro);
+}
+.selo {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-size: 12px;
+    background: #e6f4ee;
+    color: var(--ok);
+}

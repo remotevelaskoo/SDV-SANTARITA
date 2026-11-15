@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="robots" content="noindex,nofollow" />
+        <title>Gestão · SDV One</title>
+        <link rel="stylesheet" href="/gestao.css" />
+        <script src="/gestao.js" type="module"></script>
+    </head>
+    <body>
+        <header class="topo">
+            <div class="marca">
+                <strong>SDV<span>One</span></strong>
+                <small>Gestão · Condomínio <span id="condominio">Santa Rita</span></small>
+            </div>
+            <button id="sair" class="link" type="button" hidden>Sair</button>
+        </header>
+
+        <main>
+            <section id="entrar" class="cartao entrar" hidden>
+                <h1>Painel de gestão</h1>
+                <p class="suave">Números do dia enviados pelo servidor da portaria.</p>
+                <form id="form-entrar" novalidate>
+                    <label>E-mail <input id="email" type="email" autocomplete="username" required /></label>
+                    <label>Senha <input id="senha" type="password" autocomplete="current-password" required /></label>
+                    <p id="erro-entrar" class="erro" role="alert" hidden></p>
+                    <button type="submit">Entrar</button>
+                </form>
+            </section>
+
+            <section id="painel" hidden>
+                <div class="barra">
+                    <div>
+                        <h1 id="titulo-dia">Hoje</h1>
+                        <p id="atualizado" class="suave"></p>
+                    </div>
+                    <label class="dia">Dia <select id="dia"></select></label>
+                </div>
+                <p id="aviso" class="aviso" role="status" hidden></p>
+
+                <div class="destaque cartao">
+                    <span>Arrecadado no dia</span>
+                    <strong id="total">R$ 0,00</strong>
+                    <small id="composicao" class="suave"></small>
+                </div>
+
+                <div class="grade" id="numeros"></div>
+
+                <h2>Formas de pagamento</h2>
+                <div class="grade" id="formas"></div>
+
+                <h2>Caixas</h2>
+                <div class="tabela cartao">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Operador</th>
+                                <th>Posto</th>
+                                <th>Período</th>
+                                <th class="num">Arrecadado</th>
+                                <th class="num">Esperado</th>
+                                <th class="num">Informado</th>
+                                <th class="num">Diferença</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caixas"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>

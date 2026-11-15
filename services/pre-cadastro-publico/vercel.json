@@ -3,7 +3,9 @@
     "framework": null,
     "buildCommand": null,
     "outputDirectory": "public",
-    "regions": ["gru1"],
+    "regions": [
+        "gru1"
+    ],
     "functions": {
         "api/*.js": {
             "maxDuration": 60
@@ -38,6 +40,12 @@
                     "value": "camera=(self), microphone=()"
                 }
             ]
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/gestao",
+            "destination": "/gestao.html"
         }
     ]
 }

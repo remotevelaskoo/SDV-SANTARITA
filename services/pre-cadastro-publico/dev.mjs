@@ -2,11 +2,15 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import portal from "./api/portal.js";
 import sync from "./api/sync.js";
+import gestao from "./api/gestao.js";
 const files = {
     "/camera.js": ["camera.js", "text/javascript"],
     "/": ["index.html", "text/html"],
     "/portal.js": ["portal.js", "text/javascript"],
     "/portal.css": ["portal.css", "text/css"],
+    "/gestao": ["gestao.html", "text/html"],
+    "/gestao.js": ["gestao.js", "text/javascript"],
+    "/gestao.css": ["gestao.css", "text/css"],
     "/images/login-fundo.jpg": ["images/login-fundo.jpg", "image/jpeg"],
     "/images/solucoes-do-vale.png": ["images/solucoes-do-vale.png", "image/png"],
 };
@@ -23,17 +27,17 @@ http.createServer(async (req, res) => {
             res.end(JSON.stringify(data));
         };
         res.send = (data) => res.end(data);
-        if (["/api/portal", "/api/sync"].includes(url.pathname)) {
+        if (["/api/portal", "/api/sync", "/api/gestao"].includes(url.pathname)) {
             let raw = "";
             for await (const chunk of req) {
                 raw += chunk;
-                if (raw.length > 20000) {
+                if (raw.length > 200000) {
                     res.statusCode = 413;
                     return res.end();
                 }
             }
             if (raw) req.body = JSON.parse(raw);
-            return await (url.pathname.endsWith("portal") ? portal : sync)(
+            return await ({ "/api/portal": portal, "/api/sync": sync, "/api/gestao": gestao }[url.pathname])(
                 req,
                 res,
             );
