@@ -167,7 +167,6 @@ class TuristaVisitaTest extends TestCase
             ->set('responsible', 'Anfitrião Sintético')
             ->set('startDate', '2026-11-02')
             ->set('endDate', '2026-11-03')
-            ->set('terminalConfirmado', true)
             ->call('saveAndSend')
             ->assertSet('feedback.title', 'Nova visita registrada')
             ->assertSet('resultadoEnvio.variant', 'success');
@@ -251,8 +250,7 @@ class TuristaVisitaTest extends TestCase
             ->set('property', 'SRA-T-01')
             ->set('responsible', 'Anfitrião Sintético')
             ->set('startDate', '2026-10-25')
-            ->set('endDate', $fim)
-            ->set('terminalConfirmado', true);
+            ->set('endDate', $fim);
     }
 
     private function relogioConferido(): void

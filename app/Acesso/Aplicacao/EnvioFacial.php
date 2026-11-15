@@ -3,6 +3,7 @@
 namespace App\Acesso\Aplicacao;
 
 use App\Acesso\Dominio\ResultadoEnvioFacial;
+use App\Acesso\Dominio\ResultadoEnvioFacialTodos;
 use App\Integracoes\Aplicacao\FabricaContextoEquipamento;
 use App\Integracoes\Aplicacao\OutboxIntegracao;
 use App\Integracoes\Aplicacao\SincronizacaoCredenciais;
@@ -115,6 +116,30 @@ class EnvioFacial
     public function caixaFechadoPara(User $operador): bool
     {
         return $this->turnos->caixaAberto($operador) === null;
+    }
+
+    /**
+     * Regra do PO (15/11/2026): todo envio à facial vai para TODOS os
+     * terminais faciais ativos, com o mesmo cadastro, validade e foto. Assim a
+     * pessoa passa em qualquer entrada do condomínio.
+     */
+    public function enviarParaTodos(Pessoa $pessoa, User $ator, ?AutorizacaoAcesso $autorizacao = null): ResultadoEnvioFacialTodos
+    {
+        if ($this->caixaFechadoPara($ator)) {
+            return new ResultadoEnvioFacialTodos([], $this->recusar($pessoa, '', 'caixa_fechado', self::MENSAGEM_CAIXA_FECHADO));
+        }
+        $terminais = $this->terminaisPara($ator);
+        if ($terminais->isEmpty()) {
+            return ResultadoEnvioFacialTodos::semTerminal();
+        }
+
+        $autorizacao ??= rescue(fn () => $this->autorizacaoPara($pessoa, $ator), null, false);
+        $itens = [];
+        foreach ($terminais as $terminal) {
+            $itens[] = ['id' => $terminal['id'], 'nome' => $terminal['nome'], 'resultado' => $this->enviar($pessoa, $terminal['id'], $ator, $autorizacao)];
+        }
+
+        return new ResultadoEnvioFacialTodos($itens);
     }
 
     public function enviar(Pessoa $pessoa, string $terminalId, User $ator, ?AutorizacaoAcesso $autorizacao = null): ResultadoEnvioFacial

@@ -95,10 +95,6 @@ trait CadastroRapidoAtendimento
     /** Para cadastro reutilizado que já tem foto: trocar exige marcação explícita. */
     public bool $quickSubstituirFoto = false;
 
-    public string $quickTerminalId = '';
-
-    public bool $quickTerminalConfirmado = false;
-
     /** @var array{cadastro: array<string, string>, foto: array<string, string>, facial: array<string, mixed>|null}|null */
     #[Locked]
     public ?array $quickResultado = null;
@@ -122,7 +118,6 @@ trait CadastroRapidoAtendimento
         $this->quickEtapa = $this->podeCapturarDocumento() ? 'documento' : 'conferencia';
         $this->feedback = null;
         $this->protocol = null;
-        $this->preSelecionarTerminal();
         $this->resetErrorBag();
     }
 
@@ -668,36 +663,19 @@ trait CadastroRapidoAtendimento
             }
         }
 
-        $resultado = app(EnvioFacial::class)->enviar($pessoa, $this->quickTerminalId, $usuario, $autorizacao)->paraTela();
-        $this->quickTerminalConfirmado = false;
-
-        return $resultado;
+        // Regra do PO (15/11/2026): vai para todos os terminais faciais ativos.
+        return app(EnvioFacial::class)->enviarParaTodos($pessoa, $usuario, $autorizacao)->paraTela();
     }
 
     private function terminalCadastroRapidoValido(): bool
     {
-        if ($this->quickTerminalId === '' || $this->terminaisCadastroRapido()->firstWhere('id', $this->quickTerminalId) === null) {
-            $this->addError('quickTerminalId', 'Escolha o terminal facial que vai receber o cadastro.');
-
-            return false;
-        }
-        if (! $this->quickTerminalConfirmado) {
-            $this->addError('quickTerminalConfirmado', 'Confirme o terminal escolhido antes de enviar.');
+        if ($this->terminaisCadastroRapido()->isEmpty()) {
+            $this->addError('quickTerminalId', 'Não há terminal facial ativo cadastrado. Salve o cadastro e envie depois.');
 
             return false;
         }
 
         return true;
-    }
-
-    /** Terminal do posto (ou o único possível) vem escolhido; o envio ainda exige confirmação. */
-    private function preSelecionarTerminal(): void
-    {
-        $terminais = $this->terminaisCadastroRapido();
-        $doPosto = $terminais->where('do_posto', true);
-        $unico = $doPosto->count() === 1 ? $doPosto->first() : ($terminais->count() === 1 ? $terminais->first() : null);
-        $this->quickTerminalId = $unico['id'] ?? '';
-        $this->quickTerminalConfirmado = false;
     }
 
     /** Leitura útil leva direto à conferência (chamado pela captura do documento). */
@@ -741,8 +719,6 @@ trait CadastroRapidoAtendimento
         $this->quickPessoaExistenteId = null;
         $this->quickSelfiePreCadastroId = null;
         $this->quickToken = null;
-        $this->quickTerminalId = '';
-        $this->quickTerminalConfirmado = false;
         $this->capturaTipoDocumento = 'cnh';
         $this->capturaOrigem = 'camera';
         $this->limparCapturasCadastro();

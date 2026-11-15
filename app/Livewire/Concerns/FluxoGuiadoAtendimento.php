@@ -5,6 +5,7 @@ namespace App\Livewire\Concerns;
 use App\Acesso\Aplicacao\AutorizacoesAcesso;
 use App\Acesso\Aplicacao\EnvioFacial;
 use App\Acesso\Dominio\ResultadoEnvioFacial;
+use App\Acesso\Dominio\ResultadoEnvioFacialTodos;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\AutorizacaoAcesso;
 use App\Models\Imovel;
@@ -293,29 +294,24 @@ trait FluxoGuiadoAtendimento
             return;
         }
 
-        $envio = app(EnvioFacial::class);
-        $terminais = $envio->terminaisPara($usuario);
-        $doPosto = $terminais->where('do_posto', true);
-        $terminal = $doPosto->count() === 1 ? $doPosto->first() : ($terminais->count() === 1 ? $terminais->first() : null);
-        if ($terminal === null) {
-            $this->envioFacialLiberacao = ['variant' => 'warning', 'title' => 'Envio ao terminal facial pendente', 'message' => $validade.($terminais->isEmpty()
-                ? ' Não há terminal facial ativo no seu posto.'
-                : ' Há mais de um terminal possível; envie pela ficha da pessoa ou peça ao administrador para ligar um terminal ao posto.')];
+        // Regra do PO (15/11/2026): vai para todos os terminais faciais ativos.
+        $envioFeito = app(EnvioFacial::class)->enviarParaTodos($pessoa, $usuario, $autorizacao);
+        if ($envioFeito->recusaGeral?->codigo === 'sem_terminal') {
+            $this->envioFacialLiberacao = ['variant' => 'warning', 'title' => 'Envio ao terminal facial pendente', 'message' => $validade.' Não há terminal facial ativo cadastrado.'];
 
             return;
         }
 
-        $envioFeito = $envio->enviar($pessoa, $terminal['id'], $usuario, $autorizacao);
         $resultado = $envioFeito->paraTela();
+        $acompanhar = $envioFeito->acompanhar();
         $this->envioFacialLiberacao = [
             'variant' => $resultado['variant'],
-            'title' => $resultado['title'].' · '.$terminal['nome'],
+            'title' => count($envioFeito->itens) === 1 ? $resultado['title'].' · '.$envioFeito->itens[0]['nome'] : $resultado['title'],
             'message' => $validade.' '.$resultado['message'],
             'cadastro_ok' => $resultado['variant'] === 'success',
             'foto' => $resultado['foto'],
-            'acompanhar' => $envioFeito->credencialId !== null && in_array($envioFeito->foto['situacao'] ?? null, ['solicitado', 'ja_solicitado'], true)
-                ? ['credencial' => $envioFeito->credencialId, 'terminal' => $terminal['id']]
-                : null,
+            'acompanhar' => $acompanhar === [] ? null : $acompanhar,
+            'fotos' => [],
         ];
         $this->atualizarFotoFacial();
     }
@@ -332,15 +328,28 @@ trait FluxoGuiadoAtendimento
             return;
         }
 
-        $foto = app(EnvioFacial::class)->acompanharFoto($acompanhar['credencial'], $acompanhar['terminal']);
-        $tela = (new ResultadoEnvioFacial('solicitado', 'solicitado', '', foto: $foto))->paraTela()['foto'];
-        if ($foto['estado'] === 'sincronizado' && $this->envioFacialLiberacao['cadastro_ok']) {
+        // Uma foto por terminal; a tela mostra o conjunto.
+        $fotos = $this->envioFacialLiberacao['fotos'] ?? [];
+        $pendentes = [];
+        $todasConfirmadas = true;
+        foreach ($acompanhar as $par) {
+            $foto = app(EnvioFacial::class)->acompanharFoto($par['credencial'], $par['terminal']);
+            $fotos[$par['terminal']] = ['nome' => $par['nome'], 'foto' => (new ResultadoEnvioFacial('solicitado', 'solicitado', '', foto: $foto))->paraTela()['foto']];
+            $todasConfirmadas = $todasConfirmadas && $foto['estado'] === 'sincronizado';
+            if (! in_array($foto['estado'], ['sincronizado', 'falha', 'intervencao_necessaria', 'nao_enviado', null], true)) {
+                $pendentes[] = $par;
+            }
+        }
+        $todasConfirmadas = $todasConfirmadas && collect($fotos)->every(fn (array $f) => $f['foto']['variant'] === 'success');
+
+        $tela = ResultadoEnvioFacialTodos::juntarFotos(array_values($fotos));
+        if ($todasConfirmadas && $this->envioFacialLiberacao['cadastro_ok']) {
             $tela['message'] .= ' A pessoa já pode passar na facial.';
         }
 
+        $this->envioFacialLiberacao['fotos'] = $fotos;
         $this->envioFacialLiberacao['foto'] = $tela;
-        $finalizado = in_array($foto['estado'], ['sincronizado', 'falha', 'intervencao_necessaria', 'nao_enviado', null], true);
-        $this->envioFacialLiberacao['acompanhar'] = $finalizado ? null : $acompanhar;
+        $this->envioFacialLiberacao['acompanhar'] = $pendentes === [] ? null : $pendentes;
     }
 
     private function tipoDaAutorizacao(AutorizacaoAcesso $autorizacao): string

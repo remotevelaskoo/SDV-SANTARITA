@@ -79,16 +79,14 @@ class FotoFacialEnvioTest extends TestCase
             ->set('quickAccessType', $tipo)
             ->set('quickResponsible', 'Responsável Sintético')
             ->set('quickPropertyCode', 'SRA-A-102')
-            ->call('irParaEtapa', 'foto')
-            // Com um único terminal possível, ele já vem escolhido; ainda exige confirmação.
-            ->assertSet('quickTerminalId', $this->terminal->id);
+            ->call('irParaEtapa', 'foto');
 
         return $comFoto ? $tela->set('fotoPessoa', $this->foto()) : $tela;
     }
 
     private function salvarEEnviar(Testable $tela): Testable
     {
-        return $tela->set('quickTerminalConfirmado', true)->call('saveQuickRegistrationAndSend')->assertHasNoErrors()->set('passo', 'concluir');
+        return $tela->call('saveQuickRegistrationAndSend')->assertHasNoErrors()->set('passo', 'concluir');
     }
 
     public function test_com_a_flag_desligada_a_foto_fica_salva_e_o_envio_aparece_pendente(): void

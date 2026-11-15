@@ -67,9 +67,9 @@ class ResponsavelEImovelPorTipoTest extends TestCase
 
     private function enviarAoTerminal(Testable $tela): Testable
     {
-        return $tela->set('quickTerminalId', $this->terminalAtivo(['nome' => 'Facial entrada'])->id)
-            ->set('quickTerminalConfirmado', true)
-            ->call('saveQuickRegistrationAndSend');
+        $this->terminalAtivo(['nome' => 'Facial entrada']);
+
+        return $tela->call('saveQuickRegistrationAndSend');
     }
 
     public function test_campos_por_tipo_na_tela(): void
