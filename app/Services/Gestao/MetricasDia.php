@@ -12,12 +12,17 @@ use Illuminate\Support\Carbon;
 
 /**
  * Números de um dia para a gestão (PO 15/11/2026): arrecadação, caixa por
- * operador, entradas e saídas, cadastros e contribuições. Só totais: nenhum
- * nome, documento ou foto de visitante sai do condomínio. O único nome é o
- * do operador responsável pelo caixa.
+ * operador, entradas e saídas, cadastros e contribuições.
+ *
+ * Lista de quem entrou (decisão do PO, 15/11/2026 à tarde): vai nome, tipo,
+ * horário e se contribuiu. Documento (CPF/RG) e foto nunca saem do
+ * condomínio.
  */
 class MetricasDia
 {
+    /** Teto da lista do dia enviada à nuvem (o resto continua só no servidor local). */
+    public const LIMITE_PESSOAS = 500;
+
     /** @return array<string, mixed> */
     public function calcular(Carbon $dia): array
     {
@@ -70,8 +75,33 @@ class MetricasDia
                 'pre_cadastros_aguardando' => PreRegistration::query()->where('status', 'aguardando')->count(),
             ],
             'caixas' => $this->caixas($inicio, $fim),
+            'pessoas' => $this->pessoas($inicio, $fim),
             'gerado_em' => now()->toIso8601String(),
         ];
+    }
+
+    /** Entradas do dia: nome, tipo de vínculo e pagamento. Sem documento e sem foto. @return list<array<string, mixed>> */
+    private function pessoas(Carbon $inicio, Carbon $fim): array
+    {
+        return HistoricoAcesso::query()
+            ->whereBetween('occurred_at', [$inicio, $fim])->where('tipo', 'entrada')
+            ->with(['pessoa:id,nome,nome_social', 'pessoa.vinculos:id,pessoa_id,tipo,ended_at', 'contribuicao', 'operator:id,name'])
+            ->latest('occurred_at')->limit(self::LIMITE_PESSOAS)->get()
+            ->map(function (HistoricoAcesso $acesso): array {
+                $vinculo = $acesso->pessoa?->vinculos->firstWhere('ended_at', null) ?? $acesso->pessoa?->vinculos->first();
+                $contribuicao = $acesso->contribuicao;
+
+                return [
+                    'hora' => $acesso->occurred_at?->toIso8601String(),
+                    'nome' => $acesso->pessoa?->nomeExibicao() ?? 'Não identificado',
+                    'tipo' => $vinculo?->tipo ?? 'nao_identificado',
+                    'resultado' => $acesso->resultado,
+                    'pagamento' => $contribuicao?->situacao_pagamento,
+                    'valor' => $contribuicao?->valor !== null ? round((float) $contribuicao->valor, 2) : null,
+                    'forma' => $contribuicao?->forma_pagamento,
+                    'operador' => $acesso->operator?->name,
+                ];
+            })->values()->all();
     }
 
     /** Caixas abertos no dia ou ainda abertos, com o que cada um arrecadou. @return list<array<string, mixed>> */

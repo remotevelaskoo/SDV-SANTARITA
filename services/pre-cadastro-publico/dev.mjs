@@ -31,7 +31,7 @@ http.createServer(async (req, res) => {
             let raw = "";
             for await (const chunk of req) {
                 raw += chunk;
-                if (raw.length > 200000) {
+                if (raw.length > 700000) {
                     res.statusCode = 413;
                     return res.end();
                 }

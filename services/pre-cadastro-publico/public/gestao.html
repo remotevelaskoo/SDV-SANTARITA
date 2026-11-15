@@ -83,6 +83,37 @@
                         <tbody id="caixas"></tbody>
                     </table>
                 </div>
+
+                <h2>Quem entrou no dia</h2>
+                <div class="filtros-pessoas">
+                    <label>Buscar <input id="busca-pessoa" type="search" placeholder="Nome" autocomplete="off" /></label>
+                    <label>Tipo <select id="filtro-tipo"></select></label>
+                    <label>Pagamento
+                        <select id="filtro-pagamento">
+                            <option value="">Todos</option>
+                            <option value="pago">Contribuiu</option>
+                            <option value="sem_pagamento">Não contribuiu</option>
+                            <option value="isento">Isento</option>
+                            <option value="nenhum">Sem cobrança</option>
+                        </select>
+                    </label>
+                </div>
+                <p id="resumo-pessoas" class="suave"></p>
+                <div class="tabela cartao">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Nome</th>
+                                <th>Tipo</th>
+                                <th>Pagamento</th>
+                                <th class="num">Valor</th>
+                                <th>Atendido por</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pessoas"></tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </body>

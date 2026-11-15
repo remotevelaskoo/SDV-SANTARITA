@@ -163,6 +163,4 @@
         </header>
         <x-ui.empty-state title="Nenhuma câmera integrada" description="Imagens e comandos serão habilitados somente após inventário técnico e homologação dos equipamentos (P23)." />
     </section>
-
-    <livewire:acesso-painel-remoto />
 </div>

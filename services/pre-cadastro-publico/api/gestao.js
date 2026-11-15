@@ -49,7 +49,7 @@ async function fromNode(ctx, req, res, body) {
                 body.dados &&
                 typeof body.dados === "object" &&
                 !Array.isArray(body.dados) &&
-                JSON.stringify(body.dados).length <= 200000,
+                JSON.stringify(body.dados).length <= 600000,
             "Métricas inválidas.",
         );
         await ctx.store.saveMetrics(body.dia, body.dados);

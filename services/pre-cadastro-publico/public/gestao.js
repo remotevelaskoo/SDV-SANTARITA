@@ -186,7 +186,7 @@ function desenhar() {
         $("aviso").textContent = "O servidor da portaria ainda não enviou números para este dia.";
         $("atualizado").textContent = "";
         $("colaborador").replaceChildren(opcao("", "Todos", true));
-        for (const id of ["numeros", "caixas", "pizza-formas", "pizza-colaboradores", "pizza-contribuicoes"]) {
+        for (const id of ["numeros", "caixas", "pessoas", "pizza-formas", "pizza-colaboradores", "pizza-contribuicoes"]) {
             $(id).replaceChildren();
         }
         $("total").textContent = real.format(0);
@@ -304,9 +304,82 @@ function desenhar() {
         linhas.push(tr);
     }
     $("caixas").replaceChildren(...linhas);
+    desenharPessoas();
 
     clearInterval(atualizacao);
     if (atual === hoje) atualizacao = setInterval(() => carregar($("dia").value), 60000);
+}
+
+const TIPOS = {
+    visitante: "Visitante",
+    prestador: "Prestador",
+    morador: "Morador",
+    proprietario: "Proprietário",
+    inquilino: "Inquilino",
+    funcionario: "Funcionário",
+    nao_identificado: "Não identificado",
+};
+const PAGAMENTOS = { pago: "Contribuiu", sem_pagamento: "Não contribuiu", isento: "Isento" };
+const rotuloTipo = (t) => TIPOS[t] ?? (t ? t.charAt(0).toUpperCase() + t.slice(1).replaceAll("_", " ") : "—");
+
+// Quem entrou no dia (PO 15/11/2026): nome, tipo e pagamento. Documento e foto ficam no condomínio.
+function desenharPessoas() {
+    const todas = resposta?.dados?.pessoas ?? [];
+    const tipoAtual = $("filtro-tipo").value;
+    const tipos = [...new Set(todas.map((p) => p.tipo))].sort((a, b) => rotuloTipo(a).localeCompare(rotuloTipo(b), "pt-BR"));
+    $("filtro-tipo").replaceChildren(
+        opcao("", "Todos", !tipoAtual || !tipos.includes(tipoAtual)),
+        ...tipos.map((t) => opcao(t, rotuloTipo(t), t === tipoAtual)),
+    );
+
+    const busca = $("busca-pessoa").value.trim().toLocaleLowerCase("pt-BR");
+    const tipo = $("filtro-tipo").value;
+    const pagamento = $("filtro-pagamento").value;
+    const lista = todas.filter(
+        (p) =>
+            (!colaborador || p.operador === colaborador) &&
+            (!tipo || p.tipo === tipo) &&
+            (!pagamento || (pagamento === "nenhum" ? !p.pagamento : p.pagamento === pagamento)) &&
+            (!busca || (p.nome ?? "").toLocaleLowerCase("pt-BR").includes(busca)),
+    );
+
+    const pagas = lista.filter((p) => p.pagamento === "pago");
+    $("resumo-pessoas").textContent = todas.length
+        ? `${lista.length} entrada(s)${colaborador ? ` atendidas por ${colaborador}` : ""} · ${pagas.length} contribuíram · ${real.format(
+              pagas.reduce((s, p) => s + (p.valor ?? 0), 0),
+          )}`
+        : "";
+
+    const linhas = lista.map((p) => {
+        const tr = document.createElement("tr");
+        const celula = (texto, classe) => {
+            const td = document.createElement("td");
+            td.textContent = texto;
+            if (classe) td.className = classe;
+            return td;
+        };
+        const situacao = celula(PAGAMENTOS[p.pagamento] ?? "Sem cobrança");
+        situacao.className = `pagamento ${p.pagamento ?? "nenhum"}`;
+        tr.append(
+            celula(hora(p.hora)),
+            celula(p.nome ?? "—"),
+            celula(rotuloTipo(p.tipo)),
+            situacao,
+            celula(p.valor == null ? "—" : `${real.format(p.valor)}${p.forma ? ` · ${FORMAS[p.forma] ?? p.forma}` : ""}`, "num"),
+            celula(p.operador ?? "—"),
+        );
+        return tr;
+    });
+    if (!linhas.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.className = "suave";
+        td.textContent = todas.length ? "Ninguém com esses filtros." : "Nenhuma entrada registrada neste dia.";
+        tr.append(td);
+        linhas.push(tr);
+    }
+    $("pessoas").replaceChildren(...linhas);
 }
 
 $("form-entrar").addEventListener("submit", async (evento) => {
@@ -329,6 +402,9 @@ $("colaborador").addEventListener("change", () => {
     if (resposta) desenhar();
 });
 $("sair").addEventListener("click", () => mostrarEntrada());
+$("busca-pessoa").addEventListener("input", () => desenharPessoas());
+$("filtro-tipo").addEventListener("change", () => desenharPessoas());
+$("filtro-pagamento").addEventListener("change", () => desenharPessoas());
 
 if (sessao) carregar();
 else mostrarEntrada();

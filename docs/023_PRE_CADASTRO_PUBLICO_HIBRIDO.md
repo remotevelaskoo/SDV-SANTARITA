@@ -279,8 +279,11 @@ O servidor fica no condomínio e não é alcançável de fora, de propósito (AD
 
 Decisões do PO:
 
-- **O que sai do condomínio:** só totais do dia e o caixa de cada operador. São eles: arrecadação total (contribuições + lançamentos manuais, saídas e estornos), por forma de pagamento; contribuíram / não contribuíram / isentos; entradas liberadas, pessoas atendidas, saídas, negados; cadastros novos e pré-cadastros recebidos; e cada caixa do dia (operador, posto, período, arrecadado, esperado, informado, diferença). Nenhum nome, CPF ou foto de visitante.
-- **Login:** e-mail e senha no Supabase Auth. Só entra quem tem **Dashboard** no sistema local. A cada envio o nó manda a lista de e-mails autorizados, e quem perde o Dashboard aqui perde o painel no ciclo seguinte. A senha é definida no servidor local com `php artisan gestao:acesso-remoto email@...` e não fica guardada nele.
+- **O que sai do condomínio:** os totais do dia e o caixa de cada operador. São eles: arrecadação total (contribuições + lançamentos manuais, saídas e estornos), por forma de pagamento; contribuíram / não contribuíram / isentos; entradas liberadas, pessoas atendidas, saídas, negados; cadastros novos e pré-cadastros recebidos; e cada caixa do dia (operador, posto, período, arrecadado, esperado, informado, diferença, formas de pagamento).
+- **Lista de quem entrou (revisto pelo PO à tarde de 15/11/2026):** cada entrada do dia vai com horário, **nome**, tipo de vínculo, se contribuiu (valor e forma) e quem atendeu, até 500 por dia. **CPF/documento e foto nunca saem do condomínio.** O painel mostra pizzas (formas de pagamento, arrecadado por colaborador, contribuições) e filtra por dia, colaborador, tipo, pagamento e nome.
+- **Login:** e-mail e senha no Supabase Auth. Só entra quem tem **"Acesso ao painel de gestão remoto"** marcado no cadastro de usuários (Administração → Usuários). A cada envio o nó manda a lista de e-mails autorizados; desmarcar envia a lista na hora. A senha do painel é definida pelo administrador no detalhe do usuário (ou por `php artisan gestao:acesso-remoto email@...`) e não fica guardada no servidor local.
+
+**Usuários (mesma data):** o administrador cria o colaborador com **senha inicial** (o servidor local não manda convite por e-mail) e o sistema obriga a troca no primeiro acesso. No detalhe do usuário: trocar perfil, painel remoto, redefinir senha, **derrubar** (encerra as sessões na hora; se ele estiver num posto, o posto é liberado e o caixa vai para conferência, como na liberação forçada de posto), bloquear e inativar. A lista mostra quem está online e em qual posto.
 - **Frequência:** a cada 5 minutos (`gestao:publicar-metricas`, agendado), enviando hoje e ontem. O painel avisa quando o último envio de hoje tem mais de 15 minutos, porque a internet ou o servidor podem estar fora.
 
 Também nesta entrega: o **Administrador** passou a ver o Dashboard (revê a restrição AJ-009 de 02/11 só para esse perfil), e a "Arrecadação hoje" do Dashboard local passou a somar as contribuições dos turistas, que antes ficavam de fora.
@@ -291,4 +294,4 @@ Ativação:
 2. Vercel: `GESTAO_ENABLED=true` (hoje só em Preview; produção desligada até a aprovação).
 3. Servidor local: `SDV_GESTAO_NUVEM_ENABLED=true` (usa `SDV_PRE_CADASTRO_NUVEM_URL`/`TOKEN`/`IMPLANTACAO_ID`). Depois, `gestao:acesso-remoto` para cada gestor.
 
-Pendências antes da produção: tela no sistema local para criar o acesso remoto (hoje é por comando), domínio próprio sem a proteção de Preview do Vercel, e a aprovação do PO para ligar `GESTAO_ENABLED` em produção.
+Pendências antes da produção: domínio próprio sem a proteção de Preview do Vercel, e a aprovação do PO para ligar `GESTAO_ENABLED` em produção.

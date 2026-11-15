@@ -210,6 +210,33 @@ th {
 .filtros select {
     max-width: 100%;
 }
+.filtros-pessoas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.filtros-pessoas label {
+    font-weight: 600;
+    font-size: 14px;
+    display: grid;
+    gap: 4px;
+}
+.filtros-pessoas input,
+.filtros-pessoas select {
+    width: 100%;
+}
+.pagamento.pago {
+    color: var(--ok);
+    font-weight: 600;
+}
+.pagamento.sem_pagamento {
+    color: var(--erro);
+}
+.pagamento.isento,
+.pagamento.nenhum {
+    color: var(--suave);
+}
 .graficos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

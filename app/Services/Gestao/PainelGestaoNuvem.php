@@ -13,12 +13,10 @@ use Illuminate\Support\Facades\Http;
  * Painel de gestão fora do condomínio (PO 15/11/2026). O servidor local
  * empurra os totais para a nuvem por HTTPS de saída, pelo mesmo canal do
  * pré-cadastro; nenhuma porta do condomínio fica aberta para a internet.
- * Quem pode entrar no painel remoto é quem tem o Dashboard aqui.
+ * Quem pode entrar no painel remoto é quem tem o acesso marcado no cadastro de usuários.
  */
 class PainelGestaoNuvem
 {
-    public const PERMISSAO = 'dashboard.visualizar';
-
     public function __construct(private MetricasDia $metricas) {}
 
     /** Publica hoje e ontem (ontem fecha caixas que viraram a meia-noite). @return list<string> */
@@ -40,26 +38,40 @@ class PainelGestaoNuvem
         });
     }
 
-    /** Cria ou troca a senha do acesso remoto de um usuário com Dashboard. */
+    /** Cria ou troca a senha do acesso remoto de um usuário com o painel marcado no cadastro. */
     public function definirAcesso(string $email, string $senha): void
     {
         [$implantacao, $http, $url] = $this->conexao();
         ImplantacaoContext::executarNo($implantacao, function () use ($http, $url, $email, $senha): void {
             $email = mb_strtolower(trim($email));
             if (! in_array($email, $this->emailsAutorizados(), true)) {
-                throw new SincronizacaoIndisponivel('Esse e-mail não é de um usuário ativo com acesso ao Dashboard.');
+                throw new SincronizacaoIndisponivel('Esse e-mail não é de um usuário ativo com o acesso ao painel remoto marcado.');
             }
             $usuario = User::query()->whereRaw('lower(email) = ?', [$email])->firstOrFail();
             $this->enviar($http, $url, ['action' => 'gestor', 'email' => $email, 'nome' => $usuario->name, 'senha' => $senha]);
+            $this->enviar($http, $url, ['action' => 'gestores', 'emails' => $this->emailsAutorizados()]);
         });
     }
 
-    /** @return list<string> */
+    /** Liga ou desliga o painel na nuvem na hora, sem esperar o próximo ciclo de 5 minutos. */
+    public function sincronizarGestores(): void
+    {
+        [$implantacao, $http, $url] = $this->conexao();
+        ImplantacaoContext::executarNo($implantacao, fn () => $this->enviar($http, $url, ['action' => 'gestores', 'emails' => $this->emailsAutorizados()]));
+    }
+
+    /**
+     * Quem pode entrar no painel remoto: usuário ativo desta implantação com
+     * "Acesso ao painel de gestão remoto" marcado no cadastro (PO 15/11/2026).
+     *
+     * @return list<string>
+     */
     public function emailsAutorizados(): array
     {
-        return User::query()->where('status', 'ativo')->whereNotNull('email')->get()
-            ->filter(fn (User $usuario) => $usuario->hasPermission(self::PERMISSAO))
-            ->map(fn (User $usuario) => mb_strtolower(trim($usuario->email)))
+        return User::query()->where('status', 'ativo')->where('acesso_painel_remoto', true)->whereNotNull('email')
+            ->whereHas('implantacoes', fn ($q) => $q->where('status', 'ativa'))
+            ->pluck('email')
+            ->map(fn (string $email) => mb_strtolower(trim($email)))
             ->unique()->sort()->values()->all();
     }
 
