@@ -234,6 +234,9 @@ function desenhar() {
     );
     const porPessoa = {};
     for (const cx of caixas) porPessoa[cx.operador ?? "—"] = (porPessoa[cx.operador ?? "—"] ?? 0) + (cx.arrecadado ?? 0);
+    // Recebimentos registrados sem caixa (antes da regra de caixa aberto) também contam no total do dia.
+    const semCaixa = Math.round(((a.total ?? 0) - Object.values(porPessoa).reduce((s, v) => s + v, 0)) * 100) / 100;
+    if (semCaixa > 0) porPessoa["Sem caixa vinculado"] = semCaixa;
     pizza(
         $("pizza-colaboradores"),
         Object.entries(porPessoa).sort((x, y) => y[1] - x[1]),
