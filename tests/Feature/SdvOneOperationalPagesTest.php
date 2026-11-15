@@ -40,10 +40,10 @@ class SdvOneOperationalPagesTest extends TestCase
             ->assertOk()
             ->assertSee('sdv-one-validation', false)
             ->assertSee('Validação de entrada')
-            ->assertSee('Identificação da pessoa')
-            ->assertSee('Veículo e leitura da placa')
-            ->assertSee('Contribuição / taxa de acesso')
-            ->assertSee('Validar e liberar')
+            // Etapas do atendimento guiado (PR #91): Dados → Foto → Placa → Pagamento → Concluir.
+            ->assertSeeInOrder(['Dados', 'Foto', 'Placa', 'Pagamento', 'Concluir'])
+            ->assertSee('Quem está sendo atendido?')
+            ->assertSee('Buscar pessoa')
             ->assertSee('Pessoa não encontrada? Cadastro rápido')
             ->assertSee('Sem acionamento nesta tela')
             ->assertDontSee('Conectada');

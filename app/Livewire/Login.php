@@ -73,6 +73,9 @@ class Login extends Component
 
         RateLimiter::clear($throttleKey);
         session()->regenerate();
+        // Referência para derrubar a sessão se o posto for liberado depois
+        // (EncerrarSessaoDePostoLiberado).
+        session(['autenticado_em' => now()->getTimestamp()]);
 
         $audit->record(
             action: 'entrou',

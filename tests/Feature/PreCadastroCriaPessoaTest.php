@@ -4,14 +4,12 @@ namespace Tests\Feature;
 
 use App\Livewire\AccessValidation;
 use App\Livewire\PreRegistrationReview;
-use App\Models\Arquivo;
 use App\Models\AutorizacaoAcesso;
 use App\Models\HistoricoAcesso;
 use App\Models\Implantacao;
 use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
-use App\Models\PreRegistrationArquivo;
 use App\Services\PrivateFileService;
 use App\Support\ImplantacaoContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
