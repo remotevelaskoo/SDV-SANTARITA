@@ -252,7 +252,9 @@ class PessoaConsulta extends Component
             ->map(fn (HistoricoAcesso $h) => [
                 'quando' => $h->occurred_at?->format('d/m/Y H:i') ?? '—',
                 'resultado' => ucfirst((string) $h->resultado),
-                'tom' => match ($h->resultado) { 'liberado' => 'success', 'negado' => 'danger', default => 'warning' },
+                'tom' => match ($h->resultado) {
+                    'liberado' => 'success', 'negado' => 'danger', default => 'warning'
+                },
                 'protocolo' => $h->protocol,
             ])->all();
 
