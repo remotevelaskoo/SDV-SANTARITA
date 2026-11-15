@@ -18,8 +18,14 @@ use Illuminate\Support\Facades\Storage;
  */
 class PreparadorFotoFacial
 {
-    /** Lado maior da foto enviada ao terminal (confirmar na homologação). */
-    public const LADO_MAXIMO = 640;
+    /**
+     * Formato da face que o próprio DS-K1T673DX-BR (V3.18.0) grava ao
+     * cadastrar pela câmera: 352x432, em pé. Foto deitada é exibida espremida
+     * na tela do terminal, então a foto é recortada no centro nesta proporção.
+     */
+    public const LARGURA = 352;
+
+    public const ALTURA = 432;
 
     public function preparar(string $pessoaId, string $arquivoId, string $versaoFoto, string $credencialId, ?string $idExterno): FotoFacialParaEnviar
     {
@@ -58,9 +64,18 @@ class PreparadorFotoFacial
 
         $largura = imagesx($imagem);
         $altura = imagesy($imagem);
-        $escala = min(1, self::LADO_MAXIMO / max($largura, $altura));
-        $destino = imagecreatetruecolor(max(1, (int) round($largura * $escala)), max(1, (int) round($altura * $escala)));
-        imagecopyresampled($destino, $imagem, 0, 0, 0, 0, imagesx($destino), imagesy($destino), $largura, $altura);
+
+        // Recorte central na proporção do terminal, sem distorcer o rosto.
+        $proporcao = self::LARGURA / self::ALTURA;
+        $recorteLargura = min($largura, (int) round($altura * $proporcao));
+        $recorteAltura = min($altura, (int) round($largura / $proporcao));
+        $origemX = intdiv($largura - $recorteLargura, 2);
+        $origemY = intdiv($altura - $recorteAltura, 2);
+
+        // Reduz até 352x432; foto menor não é ampliada.
+        $escala = min(1, self::LARGURA / $recorteLargura);
+        $destino = imagecreatetruecolor(max(1, (int) round($recorteLargura * $escala)), max(1, (int) round($recorteAltura * $escala)));
+        imagecopyresampled($destino, $imagem, 0, 0, $origemX, $origemY, imagesx($destino), imagesy($destino), $recorteLargura, $recorteAltura);
 
         ob_start();
         imagejpeg($destino, null, 85);

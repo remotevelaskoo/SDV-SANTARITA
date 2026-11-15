@@ -67,6 +67,7 @@ final readonly class ResultadoEnvioFacial
             in_array($this->foto['situacao'], ['pendente_habilitacao', 'pendente_homologacao'], true) => ['warning', 'Foto salva; envio facial pendente'],
             $this->foto['situacao'] === 'sem_foto' => ['info', 'Sem foto enviada'],
             $this->foto['situacao'] === 'recusado' || in_array($this->foto['estado'], ['falha', 'intervencao_necessaria'], true) => ['danger', 'A foto não chegou ao terminal'],
+            $this->foto['situacao'] === 'tentativa_falhou' => ['warning', 'A foto ainda não chegou ao terminal'],
             $this->foto['estado'] === 'atualizacao_pendente' => ['warning', 'Confirmação da foto pendente'],
             default => ['info', 'Foto na fila de envio'],
         };
