@@ -68,6 +68,12 @@ return [
     'timezone' => env('APP_TIMEZONE', 'America/Sao_Paulo'),
 
     /*
+    | Proxies confiáveis: IPs ou faixas CIDR separados por vírgula. Use só para o
+    | proxy https da rede local; vazio = nenhum proxy é confiável.
+    */
+    'proxies_confiaveis' => env('SDV_PROXIES_CONFIAVEIS'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
