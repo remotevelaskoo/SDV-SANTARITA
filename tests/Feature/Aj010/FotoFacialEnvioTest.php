@@ -6,6 +6,7 @@ use App\Acesso\Aplicacao\AutorizacoesAcesso;
 use App\Acesso\Aplicacao\EnvioFacial;
 use App\Integracoes\Adaptadores\Simulador\CenarioSimulador;
 use App\Integracoes\Aplicacao\DiagnosticoEquipamento;
+use App\Integracoes\Aplicacao\FabricaContextoEquipamento;
 use App\Integracoes\Dominio\Enums\Capacidade;
 use App\Integracoes\Dominio\Enums\EstadoSincronizacao;
 use App\Integracoes\Dominio\Enums\OperacaoIntegracao;
@@ -167,6 +168,37 @@ class FotoFacialEnvioTest extends TestCase
 
         $this->assertSame('ja_solicitado', $resultado->foto['situacao']);
         $this->assertSame(1, Operacao::query()->where('operacao', OperacaoIntegracao::EnviarFotoFacial->value)->count());
+    }
+
+    public function test_cadastro_apagado_do_terminal_e_reenviado_em_vez_de_dizer_ja_enviado(): void
+    {
+        // Caso real de 15/11/2026: o SDV dizia "confirmado", mas o Gabriel não
+        // estava mais no aparelho, e a validação seguinte não reenviou.
+        config(['integracoes.foto_facial_habilitada' => true]);
+        $this->salvarEEnviar($this->cadastroRapido());
+        $pessoa = Pessoa::query()->sole();
+        $credencialId = CredencialSincronizacao::query()->sole()->credencial_id;
+        $this->assertSame(EstadoSincronizacao::Sincronizado, FotoFacialSincronizacao::query()->sole()->estado);
+
+        // Alguém apaga o usuário direto no terminal.
+        $this->simulador()->revogarCredencial(
+            app(FabricaContextoEquipamento::class)->para($this->terminal, 'apagado-no-aparelho'),
+            $credencialId,
+            null,
+        );
+
+        $resultado = app(EnvioFacial::class)->enviar($pessoa, $this->terminal->id, $this->operador);
+
+        $this->assertSame('solicitado', $resultado->situacao);
+        $this->assertContains('O terminal não tinha mais o cadastro desta pessoa. O SDV enviou de novo.', $resultado->avisos);
+        $this->assertSame(2, Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->count());
+        $this->assertSame(2, Operacao::query()->where('operacao', OperacaoIntegracao::EnviarFotoFacial->value)->count());
+        $this->assertSame(EstadoSincronizacao::Sincronizado, FotoFacialSincronizacao::query()->sole()->estado);
+
+        // Com a pessoa de volta no aparelho, repetir não reenvia nada.
+        $denovo = app(EnvioFacial::class)->enviar($pessoa, $this->terminal->id, $this->operador);
+        $this->assertSame('ja_solicitado', $denovo->situacao);
+        $this->assertSame(2, Operacao::query()->where('operacao', OperacaoIntegracao::SincronizarCredencial->value)->count());
     }
 
     public function test_timeout_nao_vira_sucesso_e_terminal_fora_do_ar_mantem_cadastro_e_foto(): void
