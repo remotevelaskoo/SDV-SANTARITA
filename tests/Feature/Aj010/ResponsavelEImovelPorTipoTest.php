@@ -43,7 +43,7 @@ class ResponsavelEImovelPorTipoTest extends TestCase
         parent::setUp();
         $this->prepararIntegracao();
         Storage::fake(PrivateFileService::DISK);
-        $this->operador = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'documentos.capturar', 'facial.enviar');
+        $this->operador = $this->abrirCaixa($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar', 'documentos.capturar', 'facial.enviar'));
         Imovel::factory()->create(['codigo' => 'SRA-A-102']);
     }
 

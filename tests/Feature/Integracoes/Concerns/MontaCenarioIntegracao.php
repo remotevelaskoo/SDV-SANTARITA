@@ -11,6 +11,7 @@ use App\Integracoes\Dominio\Enums\Direcao;
 use App\Integracoes\Dominio\Enums\StatusEquipamento;
 use App\Integracoes\Dominio\Enums\StatusPontoAcesso;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
+use App\Models\CaixaTurno;
 use App\Models\Equipamento;
 use App\Models\Implantacao;
 use App\Models\OperacaoIntegracao;
@@ -81,6 +82,14 @@ trait MontaCenarioIntegracao
         UsuarioPerfil::factory()->for($usuario)->for($perfil)->create();
 
         return $usuario;
+    }
+
+    /** Liberar para a facial exige caixa aberto de quem libera (regra do PO, 14/11/2026). */
+    protected function abrirCaixa(User $operador): User
+    {
+        CaixaTurno::factory()->create(['status' => 'aberto', 'operator_id' => $operador->id, 'closed_at' => null]);
+
+        return $operador;
     }
 
     /**

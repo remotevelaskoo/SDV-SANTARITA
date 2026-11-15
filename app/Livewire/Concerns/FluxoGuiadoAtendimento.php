@@ -206,6 +206,16 @@ trait FluxoGuiadoAtendimento
             return;
         }
 
+        // Liberar exige caixa aberto de quem libera (regra do PO, 14/11/2026). Checado antes de
+        // gravar qualquer coisa: sem caixa não nasce autorização, histórico liberado nem envio.
+        // "Salvar sem liberar" e "Negar" seguem sem caixa.
+        $usuario = Auth::user();
+        if ($decisao === 'liberar' && (! $usuario instanceof User || app(EnvioFacial::class)->caixaFechadoPara($usuario))) {
+            $this->addError('liberarEntrada', EnvioFacial::MENSAGEM_CAIXA_FECHADO);
+
+            return;
+        }
+
         foreach (array_keys($this->passosDoAtendimento()) as $passo) {
             if ($passo !== 'concluir' && ! $this->validarPasso($passo)) {
                 return;

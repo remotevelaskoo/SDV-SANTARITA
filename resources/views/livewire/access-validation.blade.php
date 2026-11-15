@@ -844,10 +844,16 @@
             </div>
 
             <div>
-                <x-ui.button variant="success" wire:click="concluir('liberar')" wire:loading.attr="disabled" wire:target="concluir">
+                <x-ui.button variant="success" wire:click="concluir('liberar')" wire:loading.attr="disabled" wire:target="concluir" :disabled="! $this->caixaAberto">
                     Liberar entrada
                 </x-ui.button>
-                <small>Salva, grava o tempo de acesso do perfil e envia ao terminal facial. A pessoa passa na facial para entrar.</small>
+                @if ($this->caixaAberto)
+                    <small>Salva, grava o tempo de acesso do perfil e envia ao terminal facial. A pessoa passa na facial para entrar.</small>
+                @else
+                    {{-- Regra do PO (14/11/2026): liberar exige caixa aberto; sem caixa a portaria só consulta. --}}
+                    <small class="ui-field__message ui-field__message--error" role="alert">{{ \App\Acesso\Aplicacao\EnvioFacial::MENSAGEM_CAIXA_FECHADO }}</small>
+                @endif
+                @error('liberarEntrada')<small class="ui-field__message ui-field__message--error" role="alert">{{ $message }}</small>@enderror
             </div>
         </div>
         @endif

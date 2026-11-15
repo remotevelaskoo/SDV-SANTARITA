@@ -41,7 +41,7 @@ class FluxoGuiadoAtendimentoTest extends TestCase
         parent::setUp();
         $this->prepararIntegracao();
         Storage::fake(PrivateFileService::DISK);
-        $this->operador = $this->usuarioCom('validacao.registrar', 'pessoas.gerenciar');
+        $this->operador = $this->abrirCaixa($this->usuarioCom('validacao.registrar', 'pessoas.gerenciar'));
     }
 
     protected function tearDown(): void

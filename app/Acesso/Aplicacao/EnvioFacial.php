@@ -100,8 +100,25 @@ class EnvioFacial
             ->values();
     }
 
+    /**
+     * Regra do PO (14/11/2026): liberar alguém para a facial exige o caixa
+     * aberto de quem libera, para todo perfil e todo tipo de contribuição
+     * (paga, não contribui ou isento). Sem caixa, a portaria só consulta.
+     * Evita liberação sem registro no caixa (desvio interno).
+     */
+    public const MENSAGEM_CAIXA_FECHADO = 'Abra o caixa do seu posto para liberar a entrada. Sem caixa aberto, a portaria só consulta.';
+
+    public function caixaFechadoPara(User $operador): bool
+    {
+        return $this->turnos->caixaAberto($operador) === null;
+    }
+
     public function enviar(Pessoa $pessoa, string $terminalId, User $ator, ?AutorizacaoAcesso $autorizacao = null): ResultadoEnvioFacial
     {
+        if ($this->caixaFechadoPara($ator)) {
+            return $this->recusar($pessoa, $terminalId, 'caixa_fechado', self::MENSAGEM_CAIXA_FECHADO);
+        }
+
         $terminal = $this->terminaisPara($ator)->firstWhere('id', $terminalId) !== null
             ? Equipamento::query()->terminais()->with('vinculoVigente.pontoAcesso')->find($terminalId)
             : null;
