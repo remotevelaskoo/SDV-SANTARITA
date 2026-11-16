@@ -30,8 +30,11 @@ class UsuarioDemoSeeder extends Seeder
         'pre-registro.solicitar-correcao' => ['modulo' => 'pre-cadastro', 'descricao' => 'Solicitar correção de um pré-cadastro'],
         'validacao.registrar' => ['modulo' => 'validacao', 'descricao' => 'Registrar entradas e saídas'],
         'imoveis.consultar' => ['modulo' => 'imoveis', 'descricao' => 'Consultar imóveis e responsáveis'],
+        'imoveis.gerenciar' => ['modulo' => 'imoveis', 'descricao' => 'Criar, editar e alterar situação de imóveis'],
         'veiculos.consultar' => ['modulo' => 'veiculos', 'descricao' => 'Consultar veículos cadastrados'],
+        'veiculos.gerenciar' => ['modulo' => 'veiculos', 'descricao' => 'Criar, editar e alterar situação de veículos'],
         'empresas.consultar' => ['modulo' => 'empresas', 'descricao' => 'Consultar empresas e prestadores'],
+        'empresas.gerenciar' => ['modulo' => 'empresas', 'descricao' => 'Criar, editar e alterar situação de empresas'],
         'encomendas.registrar' => ['modulo' => 'encomendas', 'descricao' => 'Registrar recebimento de encomendas'],
         'contribuicao.registrar' => ['modulo' => 'contribuicao', 'descricao' => 'Registrar contribuições/taxas na portaria'],
         'contribuicao.corrigir-ticket' => ['modulo' => 'contribuicao', 'descricao' => 'Corrigir o número do ticket de acesso com justificativa (AJ-006)'],
@@ -112,7 +115,7 @@ class UsuarioDemoSeeder extends Seeder
         $grants = [
             'Porteiro/Caixa' => self::PORTEIRO_CAIXA,
             'Direção' => ['dashboard.visualizar'],
-            'Gestor' => [...self::PORTEIRO_CAIXA, 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket', 'postos.liberar'],
+            'Gestor' => [...self::PORTEIRO_CAIXA, 'imoveis.gerenciar', 'veiculos.gerenciar', 'empresas.gerenciar', 'dashboard.visualizar', 'caixa.consolidado.consultar', 'relatorios.consolidado.consultar', 'autorizacoes.gerenciar', 'contribuicao.corrigir-ticket', 'postos.liberar'],
             'Auditor' => self::AUDITOR,
             'Administrador' => array_keys(self::PERMISSOES),
         ];
