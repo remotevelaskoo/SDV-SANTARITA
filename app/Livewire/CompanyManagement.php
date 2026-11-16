@@ -79,7 +79,7 @@ class CompanyManagement extends Component
 
         $empresa = Empresa::query()->find($id);
 
-        if (! $empresa) {
+        if ($empresa === null) {
             return;
         }
 
@@ -159,13 +159,13 @@ class CompanyManagement extends Component
     {
         abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
 
-        if (! $this->selectedCompanyId) {
+        if ($this->selectedCompanyId === null) {
             return;
         }
 
         $empresa = Empresa::query()->find($this->selectedCompanyId);
 
-        if (! $empresa) {
+        if ($empresa === null) {
             return;
         }
 
