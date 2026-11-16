@@ -7,6 +7,7 @@ use App\Models\Pessoa;
 use App\Models\Veiculo;
 use App\Models\VeiculoVinculo;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -78,12 +79,16 @@ class VehicleManagement extends Component
 
     public function createVehicle(): void
     {
+        abort_unless(Auth::user()?->hasPermission('veiculos.gerenciar'), 403);
+
         $this->resetForm();
         $this->mode = 'form';
     }
 
     public function editVehicle(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('veiculos.gerenciar'), 403);
+
         $veiculo = Veiculo::query()->find($id);
 
         if (! $veiculo) {
@@ -113,6 +118,8 @@ class VehicleManagement extends Component
 
     public function saveDraft(): void
     {
+        abort_unless(Auth::user()?->hasPermission('veiculos.gerenciar'), 403);
+
         $this->plate = $this->normalizePlate($this->plate);
         $this->validate([
             'plate' => ['required', 'regex:/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/'],
@@ -132,6 +139,8 @@ class VehicleManagement extends Component
 
     public function saveVehicle(): void
     {
+        abort_unless(Auth::user()?->hasPermission('veiculos.gerenciar'), 403);
+
         $this->plate = $this->normalizePlate($this->plate);
         $this->validateVehicle();
 
@@ -214,6 +223,8 @@ class VehicleManagement extends Component
 
     public function toggleVehicleBlock(): void
     {
+        abort_unless(Auth::user()?->hasPermission('veiculos.gerenciar'), 403);
+
         if (! $this->selectedVehicleId) {
             return;
         }

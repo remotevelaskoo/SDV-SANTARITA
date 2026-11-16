@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class Login extends Component
@@ -28,13 +29,19 @@ class Login extends Component
 
     public function login(AuditService $audit): mixed
     {
-        $credentials = $this->validate([
-            'identification' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ], [
-            'identification.required' => 'Informe sua identificação.',
-            'password.required' => 'Informe sua senha.',
-        ]);
+        try {
+            $credentials = $this->validate([
+                'identification' => ['required', 'string'],
+                'password' => ['required', 'string'],
+            ], [
+                'identification.required' => 'Informe sua identificação.',
+                'password.required' => 'Informe sua senha.',
+            ]);
+        } catch (ValidationException $exception) {
+            $this->reset('password');
+
+            throw $exception;
+        }
 
         // Chave combina identificação + IP: freia tanto quem tenta várias
         // senhas contra uma conta quanto um IP tentando várias contas, sem
@@ -50,6 +57,7 @@ class Login extends Component
                 reasonCode: 'limite_tentativas_excedido',
                 classification: 'restrita',
             );
+            $this->reset('password');
             $this->addError('credentials', 'Muitas tentativas. Tente novamente em '.RateLimiter::availableIn($throttleKey).' segundos.');
 
             return null;
@@ -66,12 +74,14 @@ class Login extends Component
                 reasonCode: 'credenciais_invalidas',
                 classification: 'restrita',
             );
+            $this->reset('password');
             $this->addError('credentials', 'Identificação ou senha inválida.');
 
             return null;
         }
 
         RateLimiter::clear($throttleKey);
+        $this->reset('password');
         session()->regenerate();
         // Referência para derrubar a sessão se o posto for liberado depois
         // (EncerrarSessaoDePostoLiberado).
