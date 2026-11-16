@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class ResetPassword extends Component
@@ -28,14 +29,20 @@ class ResetPassword extends Component
 
     public function resetPassword(): void
     {
-        $credentials = $this->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)],
-        ], [
-            'email.required' => 'Link inválido: e-mail ausente.',
-            'password.required' => 'Informe a nova senha.',
-            'password.confirmed' => 'A confirmação não corresponde à nova senha.',
-        ]);
+        try {
+            $credentials = $this->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'confirmed', PasswordRule::min(8)],
+            ], [
+                'email.required' => 'Link inválido: e-mail ausente.',
+                'password.required' => 'Informe a nova senha.',
+                'password.confirmed' => 'A confirmação não corresponde à nova senha.',
+            ]);
+        } catch (ValidationException $exception) {
+            $this->reset('password', 'password_confirmation');
+
+            throw $exception;
+        }
 
         $status = Password::reset(
             [...$credentials, 'token' => $this->token],
@@ -46,6 +53,8 @@ class ResetPassword extends Component
                 ])->save();
             }
         );
+
+        $this->reset('password', 'password_confirmation');
 
         if ($status !== Password::PASSWORD_RESET) {
             $this->addError('token', 'Link inválido ou expirado. Solicite um novo link de recuperação.');
