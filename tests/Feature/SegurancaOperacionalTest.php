@@ -8,7 +8,6 @@ use App\Livewire\Login;
 use App\Livewire\PropertyManagement;
 use App\Livewire\ResetPassword;
 use App\Livewire\VehicleManagement;
-use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Empresa;
 use App\Models\Imovel;
