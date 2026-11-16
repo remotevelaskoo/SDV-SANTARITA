@@ -9,6 +9,7 @@ use App\Models\Imovel;
 use App\Models\Pessoa;
 use App\Models\Vinculo;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -85,12 +86,16 @@ class PropertyManagement extends Component
 
     public function createProperty(): void
     {
+        abort_unless(Auth::user()?->hasPermission('imoveis.gerenciar'), 403);
+
         $this->resetForm();
         $this->mode = 'form';
     }
 
     public function editProperty(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('imoveis.gerenciar'), 403);
+
         $imovel = Imovel::query()->with(['bloco', 'condominio'])->find($id);
 
         if (! $imovel) {
@@ -148,6 +153,8 @@ class PropertyManagement extends Component
 
     public function saveDraft(): void
     {
+        abort_unless(Auth::user()?->hasPermission('imoveis.gerenciar'), 403);
+
         $this->validate([
             'unit' => ['required', 'string', 'max:20'],
             'code' => ['required', 'string', 'max:40'],
@@ -163,6 +170,8 @@ class PropertyManagement extends Component
 
     public function saveProperty(): void
     {
+        abort_unless(Auth::user()?->hasPermission('imoveis.gerenciar'), 403);
+
         $this->validateProperty();
 
         $code = strtoupper($this->code);
@@ -244,6 +253,8 @@ class PropertyManagement extends Component
 
     public function togglePropertyBlock(): void
     {
+        abort_unless(Auth::user()?->hasPermission('imoveis.gerenciar'), 403);
+
         if (! $this->selectedPropertyId) {
             return;
         }
