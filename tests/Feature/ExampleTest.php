@@ -1343,6 +1343,12 @@ class ExampleTest extends TestCase
         $this->assertFalse($porteiroCaixa->concede('usuarios.administrar'));
         $this->assertFalse($porteiroCaixa->concede('caixa.consolidado.consultar'));
 
+        $this->assertTrue($gestor->concede('imoveis.gerenciar'));
+        $this->assertTrue($gestor->concede('veiculos.gerenciar'));
+        $this->assertTrue($gestor->concede('empresas.gerenciar'));
+        $this->assertFalse($auditor->concede('imoveis.gerenciar'));
+        $this->assertFalse($auditor->concede('veiculos.gerenciar'));
+        $this->assertFalse($auditor->concede('empresas.gerenciar'));
         $this->assertTrue($gestor->concede('validacao.registrar'), 'gestor herda tudo do porteiro/caixa');
         $this->assertTrue($gestor->concede('caixa.consolidado.consultar'));
         $this->assertTrue($gestor->concede('autorizacoes.gerenciar'));
@@ -1446,6 +1452,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_detail_preserves_people_links_and_vehicles(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         $imovel = Imovel::factory()->create();
         EnderecoImovel::factory()->for($imovel, 'imovel')->create();
 
@@ -1473,6 +1481,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_form_creates_a_demo_property_without_implicit_links(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         Livewire::test(PropertyManagement::class)
             ->call('createProperty')
             ->assertSet('mode', 'form')
@@ -1513,6 +1523,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_detail_preserves_links_when_blocked(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         $pessoa = Pessoa::factory()->create(['nome' => 'Marcos Vinicius da Silva']);
         $imovel = Imovel::factory()->create(['codigo' => 'SRA-A-102']);
         $veiculo = Veiculo::factory()->create();
@@ -1534,6 +1546,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_creates_a_demo_vehicle_without_releasing_access(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Pessoa::factory()->create(['nome' => 'Camila Andrade']);
 
         Livewire::test(VehicleManagement::class)
@@ -1559,6 +1573,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_rejects_a_duplicate_plate(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Pessoa::factory()->create(['nome' => 'Outra pessoa']);
         Veiculo::factory()->create(['plate_display' => 'ABC1D23', 'plate_normalized' => 'ABC1D23']);
 
@@ -1578,6 +1594,8 @@ class ExampleTest extends TestCase
 
     public function test_the_vehicle_form_rejects_an_owner_that_does_not_exist(): void
     {
+        $this->actingAs($this->operatorWithPermissions('veiculos.gerenciar'));
+
         Livewire::test(VehicleManagement::class)
             ->call('createVehicle')
             ->set('plate', 'QRS-8T90')
@@ -1699,6 +1717,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_detail_preserves_providers_documents_and_services(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         $empresa = Empresa::factory()->create(['status' => 'ativo']);
 
         $pessoa = Pessoa::factory()->create(['nome' => 'Sérgio Aparecido Luz']);
@@ -1722,6 +1742,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_form_creates_a_demo_company_without_implicit_providers(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         Livewire::test(CompanyManagement::class)
             ->call('createCompany')
             ->assertSet('mode', 'form')
@@ -1742,6 +1764,8 @@ class ExampleTest extends TestCase
 
     public function test_the_company_form_rejects_a_duplicate_cnpj(): void
     {
+        $this->actingAs($this->operatorWithPermissions('empresas.gerenciar'));
+
         Empresa::factory()->create(['cnpj' => '12.345.678/0001-90']);
 
         Livewire::test(CompanyManagement::class)
@@ -1853,7 +1877,9 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_records_a_manual_movement(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto']);
+        $operator = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $this->actingAs($operator);
+        CaixaTurno::factory()->create(['operator_id' => $operator->id, 'status' => 'aberto']);
 
         Livewire::test(CashRegister::class)
             ->set('movementType', 'saida')
@@ -1898,7 +1924,9 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_closing_computes_the_difference(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto', 'opening_balance' => 200.00]);
+        $operator = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $this->actingAs($operator);
+        CaixaTurno::factory()->create(['operator_id' => $operator->id, 'status' => 'aberto', 'opening_balance' => 200.00]);
 
         Livewire::test(CashRegister::class)
             ->assertSet('status', 'aberto')
@@ -1913,7 +1941,9 @@ class ExampleTest extends TestCase
 
     public function test_the_cash_register_rejects_a_zero_value_movement(): void
     {
-        CaixaTurno::factory()->create(['status' => 'aberto']);
+        $operator = $this->operatorWithPermissions('caixa.proprio.gerenciar');
+        $this->actingAs($operator);
+        CaixaTurno::factory()->create(['operator_id' => $operator->id, 'status' => 'aberto']);
 
         Livewire::test(CashRegister::class)
             ->set('movementType', 'entrada')
@@ -2015,6 +2045,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_zip_code_lookup_fills_the_address(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         Http::fake([
             'viacep.com.br/*' => Http::response([
                 'logradouro' => 'Rua das Acácias',
@@ -2037,6 +2069,8 @@ class ExampleTest extends TestCase
 
     public function test_the_property_zip_code_lookup_warns_when_not_found(): void
     {
+        $this->actingAs($this->operatorWithPermissions('imoveis.gerenciar'));
+
         Http::fake([
             'viacep.com.br/*' => Http::response(['erro' => true]),
         ]);
