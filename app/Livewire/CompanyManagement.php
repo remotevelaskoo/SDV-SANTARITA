@@ -6,8 +6,8 @@ use App\Models\Empresa;
 use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
