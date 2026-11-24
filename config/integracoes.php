@@ -124,8 +124,8 @@ return [
         // em homologação (bancada). Capacidade fora da lista é classificada
         // pelo adaptador (não implementada, não suportada ou detectada).
         // Firmware fora desta lista não executa nada.
-        'perfis_homologados' => [
-            'V3.18.0 build 250115' => [
+        'perfis_homologados' => (static function (): array {
+            $v318 = [
                 'testar_conexao' => 'homologada',
                 'consultar_informacoes' => 'homologada',
                 'consultar_capacidades' => 'homologada',
@@ -141,12 +141,24 @@ return [
                 // Período gravado e devolvido igual; a recusa de acesso depois do fim
                 // ainda não foi observada (exige credencial de teste no terminal).
                 'validade_nativa' => 'em_homologacao',
-                // Foto no terminal (AJ-010): implementada no adaptador, sem bancada.
-                // Só sai de "bloqueada" com ADR-013 1.1.0 aprovado e o roteiro
-                // do docs/021 §10 cumprido neste firmware.
-                'credencial_facial' => 'bloqueada',
-            ],
-        ],
+                // Foto no terminal (AJ-010): validada em bancada real em 14/11/2026
+                // (pessoa reconhecida no terminal) e aprovada pelo PO em 23/11/2026.
+                // O envio de foto ainda depende de SDV_INTEGRACAO_FOTO_FACIAL=true.
+                'credencial_facial' => 'homologada',
+            ];
+
+            // Mesma versão V3.18.0 em outros builds, liberados com o perfil do
+            // 250115 por decisão do PO em 23/11/2026, sem roteiro de bancada
+            // próprio: 260521 (Facial Saída), 240819 e 250912 (Facial Entrada
+            // Serviço, antes e depois da atualização de firmware). Conferidos
+            // com testar conexão e consultar capacidades nos terminais reais.
+            return [
+                'V3.18.0 build 250115' => $v318,
+                'V3.18.0 build 260521' => $v318,
+                'V3.18.0 build 240819' => $v318,
+                'V3.18.0 build 250912' => $v318,
+            ];
+        })(),
 
         // Canal de vídeo da captura. Nulo = descobrir em /Streaming/channels.
         'canal_imagem' => null,
