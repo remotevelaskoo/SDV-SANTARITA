@@ -216,4 +216,8 @@ A recusa central fica em `EnvioFacial::enviar` e é auditada como `facial_envio_
 
 **Caixa fechado avisado na entrada do atendimento (decisão do PO, 26/11/2026).** Ao abrir a tela de atendimento (`/validacao`) com o caixa fechado, quem opera caixa vê no topo o aviso "Seu caixa está fechado". O aviso traz o saldo inicial (sugerido pela configuração `caixa.saldo_sugerido_abertura`) e o botão "Abrir caixa" ali mesmo, no posto do turno. Sem posto, o botão leva a "Escolher o posto". "Só consultar" esconde o aviso, e a tela segue servindo para consultar e "Salvar sem liberar". Depois de abrir, o botão "Liberar entrada" passa a valer na hora.
 
+**Abrir o caixa sempre pergunta o posto (decisão do PO, 26/11/2026).** Na tela Caixa e no aviso do atendimento, a abertura traz o campo "Posto deste caixa". O campo começa no posto atual e lista só os postos livres e o do próprio operador. Se o operador escolher outro posto, o turno passa para ele antes de abrir (`posto_operacional_trocado`, auditado). Isso é permitido porque o caixa está fechado. Sem posto escolhido, o caixa não abre.
+
+**Nome do posto real na tela (26/11/2026).** O cabeçalho ("Operador de portaria · *posto*"), o Modo Portaria e o "Ponto de acesso" do atendimento mostram o posto em que o operador está. Antes mostravam sempre "Portaria Principal". O histórico de acesso grava em `ponto_acesso` o nome desse posto. Sem posto, o nome continua "Portaria Principal".
+
 Testes em `tests/Feature/PostosCaixaPorPostoTest.php`, `tests/Feature/PostoAoEntrarECaixaNoAtendimentoTest.php` e `tests/Feature/Integracoes/LiberacaoManualTest.php`.

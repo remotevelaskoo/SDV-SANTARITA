@@ -89,7 +89,7 @@
                             <span class="operational-header__title-icon" aria-hidden="true"><x-icon name="building" /></span>
                             <div class="operational-header__title-copy">
                                 <h1>{{ $heading ?? $title ?? config('app.name') }}</h1>
-                                <p>{{ $headingDescription ?? 'Operador de portaria · Portaria Principal' }}</p>
+                                <p>{{ $headingDescription ?? 'Operador de portaria · '.(app(\App\Integracoes\Aplicacao\TurnosOperacionais::class)->nomeDoPosto(auth()->user()) ?? 'sem posto assumido') }}</p>
                             </div>
                         </div>
 

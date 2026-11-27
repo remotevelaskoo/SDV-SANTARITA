@@ -114,13 +114,19 @@
         <article class="cash-register-closed-card">
             <span class="cash-register-closed-card__icon"><x-icon name="wallet" /></span>
             <strong>Caixa fechado</strong>
-            @if (! $postoAtivo)
-                <p>Cada posto tem o seu caixa. Assuma o posto em que você está trabalhando para abrir o caixa dele.</p>
-                <x-ui.button variant="primary" :href="route('posto.selecionar', ['voltar' => '/caixa'])">Escolher o posto</x-ui.button>
+            @if ($postosAbertura->isEmpty())
+                <p>Nenhum posto livre agora. Peça ao Gestor para liberar um posto em Equipamentos › Postos.</p>
             @else
-            <p>Nenhuma movimentação pode ser registrada até a abertura de um novo turno (RN-084). O caixa será aberto no posto <b>{{ $postoAtivo }}</b>.</p>
-            <x-ui.modal id="open-register-modal" title="Abrir caixa" description="Informe o saldo inicial para iniciar o turno em {{ $postoAtivo }}." trigger-label="Abrir caixa" trigger-variant="success">
+            {{-- Regra do PO (26/11/2026): abrir o caixa sempre pergunta o posto. --}}
+            <p>Nenhuma movimentação pode ser registrada até a abertura de um novo turno (RN-084). Cada posto tem o seu caixa: ao abrir, confirme o posto em que você está.</p>
+            <x-ui.modal id="open-register-modal" title="Abrir caixa" description="Confirme o posto em que você está trabalhando e informe o saldo inicial." trigger-label="Abrir caixa" trigger-variant="success">
                 <div class="cash-register-form-fields">
+                    <x-ui.select id="opening-posto" label="Posto deste caixa" wire:model="postoAbertura" :error="$errors->first('postoAbertura')" required>
+                        <option value="">Escolha o posto</option>
+                        @foreach ($postosAbertura as $postoOpcao)
+                            <option value="{{ $postoOpcao->id }}">{{ $postoOpcao->nome }}{{ $postoOpcao->nome === $postoAtivo ? ' (posto atual)' : '' }}</option>
+                        @endforeach
+                    </x-ui.select>
                     <x-ui.field id="opening-balance" label="Saldo inicial" wire:model="openingBalanceInput" placeholder="0,00" :error="$errors->first('openingBalanceInput')" required />
                 </div>
                 <x-slot:confirm><form method="dialog"><x-ui.button type="submit" variant="success" wire:click="openRegister">Confirmar abertura</x-ui.button></form></x-slot:confirm>

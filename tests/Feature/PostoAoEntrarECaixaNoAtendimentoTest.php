@@ -6,6 +6,7 @@ use App\Integracoes\Aplicacao\CadastroPostos;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Livewire\AccessValidation;
 use App\Livewire\AvisoCaixaAtendimento;
+use App\Livewire\CashRegister;
 use App\Livewire\Login;
 use App\Livewire\SelecaoPosto;
 use App\Models\AuditoriaEvento;
@@ -137,17 +138,70 @@ class PostoAoEntrarECaixaNoAtendimentoTest extends TestCase
         Livewire::actingAs($porteiro)->test(AvisoCaixaAtendimento::class)->assertDontSee('Seu caixa está fechado');
     }
 
-    public function test_aviso_sem_posto_leva_a_escolher_e_pode_so_consultar(): void
+    public function test_aviso_pode_so_consultar_sem_abrir(): void
     {
         $this->posto('Guarita Principal');
         $porteiro = $this->porteiro();
 
         Livewire::actingAs($porteiro)->test(AvisoCaixaAtendimento::class)
-            ->assertSee('Escolher o posto')
+            ->assertSee('Posto deste caixa')
             ->call('dispensar')
             ->assertDontSee('Seu caixa está fechado');
 
         $this->assertSame(0, CaixaTurno::query()->count());
+    }
+
+    public function test_abrir_caixa_pergunta_o_posto_e_troca_para_o_escolhido(): void
+    {
+        $principal = $this->posto('Guarita Principal');
+        $pedestres = $this->posto('Acesso Pedestres');
+        $outro = $this->porteiro('outro.porteiro');
+        $veiculos = $this->posto('Guarita Veiculos');
+        app(TurnosOperacionais::class)->assumir($outro, $veiculos->id);
+        $porteiro = $this->porteiro();
+        app(TurnosOperacionais::class)->assumir($porteiro, $principal->id);
+
+        // Começa no posto atual; posto ocupado por outro operador não aparece.
+        Livewire::actingAs($porteiro)->test(CashRegister::class)
+            ->assertSet('postoAbertura', $principal->id)
+            ->assertSee('Acesso Pedestres')
+            ->assertDontSee('Guarita Veiculos')
+            ->set('postoAbertura', $pedestres->id)
+            ->set('openingBalanceInput', '50,00')
+            ->call('openRegister')
+            ->assertSet('status', 'aberto');
+
+        $caixa = CaixaTurno::query()->where('operator_id', $porteiro->id)->sole();
+        $this->assertSame($pedestres->id, $caixa->posto_id);
+        $this->assertSame('Acesso Pedestres', $caixa->terminal);
+        $this->assertSame($pedestres->id, app(TurnosOperacionais::class)->turnoAtivo($porteiro)?->posto_id, 'O turno passou para o posto escolhido.');
+        $this->assertTrue(AuditoriaEvento::query()->where('action', 'posto_operacional_trocado')->exists());
+    }
+
+    public function test_aviso_do_atendimento_abre_sem_posto_escolhendo_ali(): void
+    {
+        $pedestres = $this->posto('Acesso Pedestres');
+        $porteiro = $this->porteiro();
+
+        Livewire::actingAs($porteiro)->test(AvisoCaixaAtendimento::class)
+            ->set('postoAbertura', $pedestres->id)
+            ->call('abrir')
+            ->assertHasNoErrors()
+            ->assertSee('registrado no posto Acesso Pedestres');
+
+        $this->assertSame($pedestres->id, CaixaTurno::query()->sole()->posto_id);
+    }
+
+    public function test_cabecalho_e_atendimento_mostram_o_posto_real(): void
+    {
+        $pedestres = $this->posto('Acesso Pedestres');
+        $porteiro = $this->porteiro();
+        app(TurnosOperacionais::class)->assumir($porteiro, $pedestres->id);
+
+        $this->actingAs($porteiro)->get(route('portaria'))->assertOk()
+            ->assertSee('Operador de portaria · Acesso Pedestres')
+            ->assertDontSee('Operador de portaria · Portaria Principal');
+        Livewire::actingAs($porteiro)->test(AccessValidation::class)->assertSet('pontoAcesso', 'Acesso Pedestres');
     }
 
     public function test_tela_de_atendimento_mostra_o_aviso(): void

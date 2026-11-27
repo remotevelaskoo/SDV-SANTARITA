@@ -201,17 +201,21 @@ class Portaria extends Component
         };
     }
 
-    public function render(): View
+    public function render(TurnosOperacionais $turnos): View
     {
+        // Mostra o posto em que o operador está de fato (antes era fixo "Portaria Principal").
+        $posto = $turnos->nomeDoPosto(auth()->user());
+
         return view('livewire.portaria', [
             'alerts' => $this->alerts(),
             'cashRegister' => $this->cashRegister(),
             'recentAttendances' => $this->recentAttendances(),
             'dailySummary' => $this->dailySummary(),
+            'postoAtual' => $posto,
         ])->layout('components.layouts.app', [
             'title' => 'Modo Portaria',
             'heading' => 'Modo Portaria',
-            'headingDescription' => 'Operador de portaria · Portaria Principal',
+            'headingDescription' => 'Operador de portaria · '.($posto ?? 'sem posto assumido'),
         ]);
     }
 }

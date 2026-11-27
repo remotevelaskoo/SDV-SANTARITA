@@ -33,7 +33,7 @@
     @endif
 
     <section class="validation-context" aria-label="Contexto do atendimento">
-        <div><span>Ponto de acesso</span><strong>Portaria Principal</strong></div>
+        <div><span>Ponto de acesso</span><strong>{{ $this->pontoAcesso }}</strong></div>
         <div><span>Direção</span><strong>Entrada</strong></div>
         <div><span>Equipamentos</span><x-ui.badge variant="neutral" icon="info">Sem acionamento nesta tela</x-ui.badge></div>
         <div><span>Ambiente</span><x-ui.badge variant="info">Demonstração</x-ui.badge></div>

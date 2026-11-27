@@ -98,19 +98,47 @@ class TurnosOperacionais
         return $turno;
     }
 
+    /** Nome do posto em que o operador está agora, para cabeçalhos e registros. */
+    public function nomeDoPosto(?User $operador): ?string
+    {
+        return $operador ? $this->turnoAtivo($operador)?->posto?->nome : null;
+    }
+
+    /**
+     * Postos que o operador pode escolher ao abrir o caixa: o dele e os livres.
+     *
+     * @return Collection<int, Posto>
+     */
+    public function postosParaAbrirCaixa(User $operador): Collection
+    {
+        $ocupacoes = $this->ocupacoes();
+
+        return $this->postosAtivos()
+            ->filter(fn (Posto $posto): bool => ($ocupacoes->get($posto->id)?->user_id ?? $operador->id) === $operador->id)
+            ->values();
+    }
+
     /**
      * Abre o caixa do operador no posto do turno (um caixa por posto,
      * SDV-OPE-018 §14). Sem posto, recusa; com o caixa já aberto, devolve o aberto.
+     *
+     * Regra do PO (26/11/2026): a abertura sempre pergunta o posto. Se o
+     * operador escolher outro posto livre, o turno passa para ele antes de
+     * abrir (com o caixa fechado a troca é permitida e auditada).
      */
-    public function abrirCaixa(User $operador, float $saldoInicial): CaixaTurno
+    public function abrirCaixa(User $operador, float $saldoInicial, ?string $postoId = null): CaixaTurno
     {
-        $posto = $this->turnoAtivo($operador)?->posto
-            ?? throw new RegraIntegracaoViolada('sem_posto', 'Assuma o posto em que você está trabalhando para abrir o caixa dele.');
-
         $aberto = $this->caixaAberto($operador);
         if ($aberto !== null) {
             return $aberto;
         }
+
+        if ($postoId !== null && $postoId !== '' && $this->turnoAtivo($operador)?->posto_id !== $postoId) {
+            $this->assumir($operador, $postoId);
+        }
+
+        $posto = $this->turnoAtivo($operador)?->posto
+            ?? throw new RegraIntegracaoViolada('sem_posto', 'Escolha o posto em que você está trabalhando para abrir o caixa dele.');
 
         try {
             return CaixaTurno::query()->create([

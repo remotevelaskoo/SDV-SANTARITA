@@ -13,8 +13,8 @@ use Livewire\Component;
 /**
  * Aviso no topo do atendimento (regra do PO, 26/11/2026): liberar exige o
  * caixa aberto (PO 14/11), então quem opera caixa fica sabendo logo ao entrar,
- * e não só no último passo, e já abre o caixa ali mesmo. Sem abrir, a tela
- * continua servindo para consultar e "Salvar sem liberar".
+ * e não só no último passo, e já abre o caixa ali mesmo, confirmando o posto.
+ * Sem abrir, a tela continua servindo para consultar e "Salvar sem liberar".
  */
 class AvisoCaixaAtendimento extends Component
 {
@@ -22,38 +22,45 @@ class AvisoCaixaAtendimento extends Component
 
     public string $saldoInicial = '';
 
+    public string $postoAbertura = '';
+
     public bool $dispensado = false;
 
-    public bool $acabouDeAbrir = false;
+    public ?string $abertoNoPosto = null;
 
-    public function mount(): void
+    public function mount(TurnosOperacionais $turnos): void
     {
         $sugerido = Configuracao::obter('caixa.saldo_sugerido_abertura');
         $this->saldoInicial = $sugerido !== null ? number_format((float) $sugerido, 2, ',', '') : '200,00';
+
+        $usuario = Auth::user();
+        $this->postoAbertura = $usuario instanceof User ? (string) $turnos->turnoAtivo($usuario)?->posto_id : '';
     }
 
     public function abrir(TurnosOperacionais $turnos): void
     {
-        $operador = $this->operador();
-        abort_unless($operador->hasPermission('caixa.proprio.gerenciar'), 403);
+        $operador = Auth::user();
+        abort_unless($operador instanceof User && $operador->hasPermission('caixa.proprio.gerenciar'), 403);
 
         $this->validate([
+            'postoAbertura' => ['required', 'string'],
             'saldoInicial' => ['required', 'regex:'.self::MONEY_REGEX],
         ], [
-            'required' => 'Informe o saldo inicial para abrir o caixa.',
-            'regex' => 'Informe um valor numérico válido, ex.: 200,00.',
+            'postoAbertura.required' => 'Escolha o posto em que você está trabalhando.',
+            'saldoInicial.required' => 'Informe o saldo inicial para abrir o caixa.',
+            'saldoInicial.regex' => 'Informe um valor numérico válido, ex.: 200,00.',
         ]);
 
         try {
-            $turnos->abrirCaixa($operador, (float) str_replace(',', '.', $this->saldoInicial));
+            $caixa = $turnos->abrirCaixa($operador, (float) str_replace(',', '.', $this->saldoInicial), $this->postoAbertura);
         } catch (RegraIntegracaoViolada $e) {
-            $this->addError('saldoInicial', $e->getMessage());
+            $this->addError('postoAbertura', $e->getMessage());
 
             return;
         }
 
-        $this->acabouDeAbrir = true;
-        // O atendimento recalcula o botão "Liberar entrada".
+        $this->abertoNoPosto = $caixa->terminal;
+        // O atendimento recalcula o botão "Liberar entrada"; o layout arma o aviso de fechar o navegador.
         $this->dispatch('caixa-aberto');
         $this->js("document.getElementById('sdv-caixa-proprio')?.setAttribute('data-aberto', '1')");
     }
@@ -70,16 +77,9 @@ class AvisoCaixaAtendimento extends Component
         $operaCaixa = $operador instanceof User && $operador->hasPermission('caixa.proprio.gerenciar');
 
         return view('livewire.aviso-caixa-atendimento', [
-            'mostrar' => $operaCaixa && ($this->acabouDeAbrir || (! $this->dispensado && $turnos->caixaAberto($operador) === null)),
-            'posto' => $operaCaixa ? $turnos->turnoAtivo($operador)?->posto : null,
+            'mostrar' => $operaCaixa && ($this->abertoNoPosto !== null || (! $this->dispensado && $turnos->caixaAberto($operador) === null)),
+            'postos' => $operaCaixa ? $turnos->postosParaAbrirCaixa($operador) : collect(),
+            'postoAtual' => $operaCaixa ? $turnos->turnoAtivo($operador)?->posto_id : null,
         ]);
-    }
-
-    private function operador(): User
-    {
-        $usuario = Auth::user();
-        abort_unless($usuario instanceof User, 403);
-
-        return $usuario;
     }
 }

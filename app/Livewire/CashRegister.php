@@ -3,11 +3,12 @@
 namespace App\Livewire;
 
 use App\Integracoes\Aplicacao\TurnosOperacionais;
+use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Models\CaixaMovimentacao;
 use App\Models\CaixaTurno;
 use App\Models\Configuracao;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -28,6 +29,9 @@ class CashRegister extends Component
 
     // Formulário de abertura
     public string $openingBalanceInput = '';
+
+    /** Posto escolhido na abertura (PO 26/11/2026): começa no posto do turno. */
+    public string $postoAbertura = '';
 
     /** Regra reutilizada pelos três campos de valor (aceita vírgula decimal, ex.: 25,00). */
     private const MONEY_REGEX = '/^\d+([.,]\d{1,2})?$/';
@@ -56,6 +60,8 @@ class CashRegister extends Component
     {
         $sugerido = Configuracao::obter('caixa.saldo_sugerido_abertura');
         $this->openingBalanceInput = $sugerido !== null ? number_format((float) $sugerido, 2, ',', '') : '200,00';
+        $usuario = Auth::user();
+        $this->postoAbertura = $usuario instanceof User ? (string) app(TurnosOperacionais::class)->turnoAtivo($usuario)?->posto_id : '';
 
         $this->syncCurrentTurno();
     }
@@ -71,43 +77,28 @@ class CashRegister extends Component
 
         $openingBalance = (float) str_replace(',', '.', $this->openingBalanceInput);
 
-        // Cada posto tem o seu caixa (SDV-OPE-018 §14): abre no posto do turno.
+        // Cada posto tem o seu caixa (SDV-OPE-018 §14). A abertura sempre pergunta
+        // o posto (PO 26/11/2026): escolhendo outro posto livre, o turno passa para ele.
         $operador = Auth::user();
-        $turnos = app(TurnosOperacionais::class);
-        $posto = $operador ? $turnos->turnoAtivo($operador)?->posto : null;
-        if ($posto === null) {
-            $this->feedback = ['variant' => 'danger', 'title' => 'Escolha o posto', 'message' => 'Assuma o posto em que você está trabalhando para abrir o caixa dele.'];
-
-            return;
-        }
-        if ($turnos->caixaAberto($operador) !== null) {
-            $this->syncCurrentTurno();
-
-            return;
-        }
+        abort_unless($operador instanceof User, 403);
+        $this->validate(['postoAbertura' => ['required', 'string']], ['postoAbertura.required' => 'Escolha o posto em que você está trabalhando.']);
 
         try {
-            CaixaTurno::query()->create([
-                'terminal' => $posto->nome,
-                'posto_id' => $posto->id,
-                'operator_id' => $operador->id,
-                'opened_at' => now(),
-                'opening_balance' => $openingBalance,
-                'status' => 'aberto',
-            ]);
-        } catch (UniqueConstraintViolationException) {
-            $this->feedback = ['variant' => 'danger', 'title' => 'Caixa já aberto', 'message' => "O posto {$posto->nome} já tem um caixa aberto."];
+            $caixa = app(TurnosOperacionais::class)->abrirCaixa($operador, $openingBalance, $this->postoAbertura);
+        } catch (RegraIntegracaoViolada $e) {
+            $this->feedback = ['variant' => 'danger', 'title' => 'Não foi possível abrir o caixa', 'message' => $e->getMessage()];
 
             return;
         }
 
         $this->syncCurrentTurno();
+        $postoNome = $caixa->terminal;
         // Aviso de fechar o navegador com o caixa aberto (layout app).
         $this->js("document.getElementById('sdv-caixa-proprio')?.setAttribute('data-aberto', '1')");
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Caixa aberto',
-            'message' => "Saldo inicial de R$ {$this->formatMoney($openingBalance)} registrado. Movimentações liberadas.",
+            'message' => "Saldo inicial de R$ {$this->formatMoney($openingBalance)} registrado no posto {$postoNome}. Movimentações liberadas.",
         ];
     }
 
@@ -291,6 +282,7 @@ class CashRegister extends Component
 
         return view('livewire.cash-register', [
             'postoAtivo' => $usuario ? app(TurnosOperacionais::class)->turnoAtivo($usuario)?->posto?->nome : null,
+            'postosAbertura' => $usuario instanceof User ? app(TurnosOperacionais::class)->postosParaAbrirCaixa($usuario) : collect(),
             'movements' => $movements,
             'closedSessions' => $closedSessions,
             'podeVerRelatorio' => Auth::user()?->hasPermission('validacao.registrar') ?? false,
