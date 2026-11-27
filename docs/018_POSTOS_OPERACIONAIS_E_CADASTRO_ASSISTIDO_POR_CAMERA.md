@@ -207,4 +207,13 @@ A recusa central fica em `EnvioFacial::enviar` e é auditada como `facial_envio_
 
 **Tela Postos.** A antiga "Postos e operadores" virou "Postos": mostra quem está em cada posto agora, permite editar nome e tipo, desativar e reativar (posto ocupado não é desativado), os pontos de acesso de cada posto num bloco recolhido e o botão "Liberar posto". Cadastro e pontos continuam com `integracoes.gerenciar`.
 
-Testes em `tests/Feature/PostosCaixaPorPostoTest.php` e `tests/Feature/Integracoes/LiberacaoManualTest.php`.
+**Posto pedido logo ao entrar (decisão do PO, 26/11/2026).** Quem opera posto (`caixa.proprio.gerenciar` ou libera relés) vai, logo depois do login, para a tela "Posto de trabalho", e não só ao abrir o Modo Portaria. Quem não opera posto segue direto para a área inicial.
+- **Caiu ou desligou com o caixa aberto:** nada se perde. O posto e o caixa ficam mantidos. Ao entrar de novo, a tela mostra "Você estava no posto *X*", com a hora em que o caixa foi aberto, e o botão "Continuar no posto *X*". Enquanto o caixa estiver aberto, não dá para trocar de posto.
+- **Turno de um login anterior com o caixa já fechado:** por exemplo, quando o computador desligou sem clicar em Sair. Esse turno é encerrado no novo login (`sessao_anterior_sem_caixa`, auditado em `posto_operacional_encerrado`), o posto fica livre e o operador escolhe o posto de novo.
+- **Supervisão:** Gestor e Administrador continuam podendo "Continuar sem assumir posto".
+
+**Fechar o navegador com o caixa aberto (26/11/2026).** O botão Sair já é recusado com o caixa aberto. Fechar a aba ou o navegador mostra a confirmação do navegador. O navegador não deixa impedir de fato: se fecharem mesmo assim, vale a regra acima. Cliques, formulários e redirecionamentos dentro do sistema não mostram o aviso.
+
+**Caixa fechado avisado na entrada do atendimento (decisão do PO, 26/11/2026).** Ao abrir a tela de atendimento (`/validacao`) com o caixa fechado, quem opera caixa vê no topo o aviso "Seu caixa está fechado". O aviso traz o saldo inicial (sugerido pela configuração `caixa.saldo_sugerido_abertura`) e o botão "Abrir caixa" ali mesmo, no posto do turno. Sem posto, o botão leva a "Escolher o posto". "Só consultar" esconde o aviso, e a tela segue servindo para consultar e "Salvar sem liberar". Depois de abrir, o botão "Liberar entrada" passa a valer na hora.
+
+Testes em `tests/Feature/PostosCaixaPorPostoTest.php`, `tests/Feature/PostoAoEntrarECaixaNoAtendimentoTest.php` e `tests/Feature/Integracoes/LiberacaoManualTest.php`.

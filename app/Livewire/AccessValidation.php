@@ -40,6 +40,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -803,6 +804,14 @@ class AccessValidation extends Component
             'quando' => $existente->registrada_em->format('d/m/Y H:i'),
             'protocolo' => $existente->historicoAcesso?->protocol,
         ] : null;
+    }
+
+    /** Caixa aberto pelo aviso do topo: o botão "Liberar entrada" volta a valer na hora. */
+    #[On('caixa-aberto')]
+    public function caixaFoiAberto(): void
+    {
+        unset($this->caixaAberto);
+        $this->resetErrorBag('liberarEntrada');
     }
 
     #[Computed]

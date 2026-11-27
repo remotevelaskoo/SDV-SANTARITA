@@ -5,6 +5,9 @@
     $ultimoPasso = $passo === 'concluir';
 @endphp
 <div class="validation-page sdv-one-validation">
+    {{-- Regra do PO (26/11/2026): caixa fechado é avisado logo ao entrar, com abertura ali mesmo. --}}
+    <livewire:aviso-caixa-atendimento />
+
     @if ($feedback)
         {{-- Com protocolo, a decisão final já mostra o resultado onde o porteiro está: sem aviso flutuante. --}}
         <section class="validation-feedback" aria-label="Resultado do atendimento" @if ($protocol) data-sem-rolagem @endif>

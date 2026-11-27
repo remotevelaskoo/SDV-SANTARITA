@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\CaixaTurno;
 use App\Models\HistoricoAcesso;
@@ -45,8 +44,7 @@ class Portaria extends Component
             return null;
         }
 
-        $operaPosto = $usuario->hasPermission('caixa.proprio.gerenciar')
-            || $usuario->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL);
+        $operaPosto = SelecaoPosto::operaPosto($usuario);
         $seguiuSemPosto = $usuario->hasPermission('caixa.consolidado.consultar') && session(SelecaoPosto::SESSAO_SEM_POSTO) === true;
 
         if ($operaPosto && ! $seguiuSemPosto) {

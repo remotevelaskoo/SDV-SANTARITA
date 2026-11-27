@@ -203,6 +203,35 @@
 
         <div class="navigation-tooltip" role="tooltip" id="navegacao-dica" hidden data-nav-tooltip></div>
 
+        {{--
+            Regra do PO (26/11/2026): com o caixa próprio aberto, fechar a aba ou o
+            navegador pede confirmação. O navegador não deixa impedir de fato; se
+            fecharem mesmo assim, posto e caixa ficam mantidos e o próximo login
+            só confirma o posto. Navegação dentro do sistema (clique, formulário,
+            redirecionamento do Livewire logo após um clique) não dispara o aviso.
+        --}}
+        @auth
+            <span id="sdv-caixa-proprio" hidden data-aberto="{{ app(\App\Integracoes\Aplicacao\TurnosOperacionais::class)->caixaAberto(auth()->user()) !== null ? '1' : '0' }}"></span>
+        @endauth
+        <script>
+            (function () {
+                if (window.__sdvAvisoCaixa) { return; }
+                window.__sdvAvisoCaixa = true;
+                var ultimaAcao = 0;
+                var marcar = function () { ultimaAcao = Date.now(); };
+                document.addEventListener('click', marcar, true);
+                document.addEventListener('submit', marcar, true);
+                document.addEventListener('keydown', function (e) { if (e.key === 'Enter') { marcar(); } }, true);
+                window.addEventListener('beforeunload', function (e) {
+                    var el = document.getElementById('sdv-caixa-proprio');
+                    if (!el || el.getAttribute('data-aberto') !== '1' || Date.now() - ultimaAcao < 10000) { return; }
+                    e.preventDefault();
+                    e.returnValue = 'Seu caixa está aberto. Feche o caixa antes de sair.';
+                    return e.returnValue;
+                });
+            })();
+        </script>
+
         @livewireScripts
     </body>
 </html>

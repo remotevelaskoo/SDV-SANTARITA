@@ -33,6 +33,9 @@ class TurnosOperacionais
 
     public const MOTIVO_LIBERADO = 'liberado_pelo_gestor';
 
+    /** Turno de um login anterior, com o caixa já fechado, encerrado no novo login (PO 26/11/2026). */
+    public const MOTIVO_SESSAO_ANTERIOR = 'sessao_anterior_sem_caixa';
+
     public const PERMISSAO_LIBERAR = 'postos.liberar';
 
     public const CAIXA_AGUARDANDO_CONFERENCIA = 'aguardando_conferencia';
@@ -74,6 +77,53 @@ class TurnosOperacionais
     public function caixaAberto(User $operador): ?CaixaTurno
     {
         return CaixaTurno::query()->where('operator_id', $operador->id)->where('status', 'aberto')->latest('opened_at')->first();
+    }
+
+    /**
+     * Novo login de quem opera posto (regra do PO, 26/11/2026). Se o sistema
+     * caiu ou o computador desligou, nada se perde: com o caixa ainda aberto,
+     * o turno continua e o operador só confirma o posto. Com o caixa já
+     * fechado, o turno do login anterior é encerrado (auditado) e o operador
+     * escolhe o posto de novo.
+     */
+    public function retomarAoEntrar(User $operador): ?OperadorTurno
+    {
+        $turno = $this->turnoAtivo($operador);
+        if ($turno !== null && $this->caixaAberto($operador) === null) {
+            $this->fecharTurno($turno, self::MOTIVO_SESSAO_ANTERIOR);
+
+            return null;
+        }
+
+        return $turno;
+    }
+
+    /**
+     * Abre o caixa do operador no posto do turno (um caixa por posto,
+     * SDV-OPE-018 §14). Sem posto, recusa; com o caixa já aberto, devolve o aberto.
+     */
+    public function abrirCaixa(User $operador, float $saldoInicial): CaixaTurno
+    {
+        $posto = $this->turnoAtivo($operador)?->posto
+            ?? throw new RegraIntegracaoViolada('sem_posto', 'Assuma o posto em que você está trabalhando para abrir o caixa dele.');
+
+        $aberto = $this->caixaAberto($operador);
+        if ($aberto !== null) {
+            return $aberto;
+        }
+
+        try {
+            return CaixaTurno::query()->create([
+                'terminal' => $posto->nome,
+                'posto_id' => $posto->id,
+                'operator_id' => $operador->id,
+                'opened_at' => now(),
+                'opening_balance' => $saldoInicial,
+                'status' => 'aberto',
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            throw new RegraIntegracaoViolada('caixa_ja_aberto', "O posto {$posto->nome} já tem um caixa aberto.");
+        }
     }
 
     public function assumir(User $operador, string $postoId): OperadorTurno

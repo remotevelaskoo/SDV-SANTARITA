@@ -102,6 +102,8 @@ class CashRegister extends Component
         }
 
         $this->syncCurrentTurno();
+        // Aviso de fechar o navegador com o caixa aberto (layout app).
+        $this->js("document.getElementById('sdv-caixa-proprio')?.setAttribute('data-aberto', '1')");
         $this->feedback = [
             'variant' => 'success',
             'title' => 'Caixa aberto',
@@ -191,6 +193,7 @@ class CashRegister extends Component
         $this->ultimoTurnoFechadoId = $turno->id;
         $this->syncCurrentTurno();
         $this->reset(['informedAmount', 'closingNotes']);
+        $this->js("document.getElementById('sdv-caixa-proprio')?.setAttribute('data-aberto', '0')");
         $this->feedback = [
             'variant' => abs($difference) < 0.01 ? 'success' : 'warning',
             'title' => 'Caixa fechado',
