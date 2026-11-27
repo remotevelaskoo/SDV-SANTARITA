@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Integracoes\Aplicacao\ComandosAbertura;
 use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Models\CaixaTurno;
 use App\Models\HistoricoAcesso;
@@ -45,8 +44,7 @@ class Portaria extends Component
             return null;
         }
 
-        $operaPosto = $usuario->hasPermission('caixa.proprio.gerenciar')
-            || $usuario->hasPermission(ComandosAbertura::PERMISSAO_LIBERACAO_MANUAL);
+        $operaPosto = SelecaoPosto::operaPosto($usuario);
         $seguiuSemPosto = $usuario->hasPermission('caixa.consolidado.consultar') && session(SelecaoPosto::SESSAO_SEM_POSTO) === true;
 
         if ($operaPosto && ! $seguiuSemPosto) {
@@ -203,17 +201,21 @@ class Portaria extends Component
         };
     }
 
-    public function render(): View
+    public function render(TurnosOperacionais $turnos): View
     {
+        // Mostra o posto em que o operador está de fato (antes era fixo "Portaria Principal").
+        $posto = $turnos->nomeDoPosto(auth()->user());
+
         return view('livewire.portaria', [
             'alerts' => $this->alerts(),
             'cashRegister' => $this->cashRegister(),
             'recentAttendances' => $this->recentAttendances(),
             'dailySummary' => $this->dailySummary(),
+            'postoAtual' => $posto,
         ])->layout('components.layouts.app', [
             'title' => 'Modo Portaria',
             'heading' => 'Modo Portaria',
-            'headingDescription' => 'Operador de portaria · Portaria Principal',
+            'headingDescription' => 'Operador de portaria · '.($posto ?? 'sem posto assumido'),
         ]);
     }
 }

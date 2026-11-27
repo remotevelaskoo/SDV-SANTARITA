@@ -71,11 +71,12 @@ class PostosCaixaPorPostoTest extends TestCase
         $tatiane = $this->porteiro();
         $principal = $this->posto('Guarita Principal');
 
+        // Abrir o caixa sempre pergunta o posto (PO 26/11/2026): sem escolher, não abre.
         Livewire::actingAs($tatiane)->test(CashRegister::class)
-            ->assertSee('Escolher o posto')
+            ->assertSee('Posto deste caixa')
             ->call('openRegister')
-            ->assertSet('status', 'fechado')
-            ->assertSet('feedback.title', 'Escolha o posto');
+            ->assertHasErrors('postoAbertura')
+            ->assertSet('status', 'fechado');
         $this->assertSame(0, CaixaTurno::query()->count());
 
         $this->turnos()->assumir($tatiane, $principal->id);

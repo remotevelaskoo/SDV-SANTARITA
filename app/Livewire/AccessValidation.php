@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Integracoes\Aplicacao\CamerasPlaca;
+use App\Integracoes\Aplicacao\TurnosOperacionais;
 use App\Integracoes\Dominio\Excecoes\RegraIntegracaoViolada;
 use App\Livewire\Concerns\CadastroRapidoAtendimento;
 use App\Livewire\Concerns\CapturaDocumentoAssistida;
@@ -19,6 +20,7 @@ use App\Models\Pessoa;
 use App\Models\PessoaDocumento;
 use App\Models\PreRegistration;
 use App\Models\PreRegistrationArquivo;
+use App\Models\User;
 use App\Models\VeiculoVinculo;
 use App\Models\Vinculo;
 use App\Services\AuditService;
@@ -40,6 +42,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -805,6 +808,24 @@ class AccessValidation extends Component
         ] : null;
     }
 
+    /** Ponto de acesso do atendimento: o posto do operador, ou o nome padrão sem posto. */
+    #[Computed]
+    public function pontoAcesso(): string
+    {
+        $usuario = Auth::user();
+
+        return ($usuario instanceof User ? app(TurnosOperacionais::class)->nomeDoPosto($usuario) : null) ?? self::PONTO_ACESSO;
+    }
+
+    /** Caixa aberto pelo aviso do topo: o botão "Liberar entrada" volta a valer na hora. */
+    #[On('caixa-aberto')]
+    public function caixaFoiAberto(): void
+    {
+        // A abertura pode ter trocado o posto do turno.
+        unset($this->caixaAberto, $this->pontoAcesso);
+        $this->resetErrorBag('liberarEntrada');
+    }
+
     #[Computed]
     public function caixaAberto(): bool
     {
@@ -915,7 +936,8 @@ class AccessValidation extends Component
             'captura_placa_id' => $captura?->id,
             'pessoa_id' => $pessoa?->id,
             'imovel_id' => $vinculo?->imovel_id,
-            'ponto_acesso' => self::PONTO_ACESSO,
+            // Posto em que o operador está (PO 26/11/2026); sem posto, o nome padrão de antes.
+            'ponto_acesso' => $this->pontoAcesso(),
             'tipo' => 'entrada',
             'resultado' => $resultado,
             'motivo_negacao' => $motivo,

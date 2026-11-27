@@ -3,7 +3,19 @@
         <x-ui.toast variant="danger" title="Não foi possível concluir" :dismissible="false">{{ $erro }}</x-ui.toast>
     @endif
 
-    @if ($turno)
+    @if ($turno && $confirmarAoEntrar)
+        {{-- Regra do PO (26/11/2026): caiu ou desligou com o caixa aberto, nada se perde; ao entrar, só confirma o posto. --}}
+        <x-ui.alert variant="warning" title="Você estava no posto {{ $turno->posto->nome }}">
+            @if ($caixaAberto)
+                Seu caixa está aberto desde {{ $caixaAbertoEm?->format('d/m/Y H:i') }}. O posto e o caixa foram mantidos: continue de onde parou.
+            @else
+                Desde {{ $turno->iniciado_em->format('d/m/Y H:i') }}.
+            @endif
+            <x-slot:action>
+                <x-ui.button variant="primary" size="lg" wire:click="continuar">Continuar no posto {{ $turno->posto->nome }}</x-ui.button>
+            </x-slot:action>
+        </x-ui.alert>
+    @elseif ($turno)
         <x-ui.alert variant="info" title="Você está no posto {{ $turno->posto->nome }}">
             Desde {{ $turno->iniciado_em->format('d/m/Y H:i') }}.
             @if ($caixaAberto)

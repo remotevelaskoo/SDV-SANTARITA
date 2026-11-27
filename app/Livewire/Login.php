@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Integracoes\Aplicacao\TurnosOperacionais;
+use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +28,7 @@ class Login extends Component
         $this->resetErrorBag();
     }
 
-    public function login(AuditService $audit): mixed
+    public function login(AuditService $audit, TurnosOperacionais $turnos): mixed
     {
         $credentials = $this->validate([
             'identification' => ['required', 'string'],
@@ -84,6 +86,17 @@ class Login extends Component
             entityId: hash('sha256', session()->getId()),
             classification: 'restrita',
         );
+
+        // Regra do PO (26/11/2026): quem opera posto confirma ou escolhe o posto
+        // logo ao entrar. Turno com caixa aberto continua (o sistema caiu ou o
+        // computador desligou); turno antigo com caixa fechado é encerrado.
+        $usuario = Auth::user();
+        if ($usuario instanceof User && SelecaoPosto::operaPosto($usuario) && $turnos->postosAtivos()->isNotEmpty()) {
+            $turnos->retomarAoEntrar($usuario);
+            session([SelecaoPosto::SESSAO_CONFIRMAR_POSTO => true]);
+
+            return $this->redirectRoute('posto.selecionar', ['voltar' => '/inicio'], navigate: false);
+        }
 
         return $this->redirectRoute('home', navigate: true);
     }

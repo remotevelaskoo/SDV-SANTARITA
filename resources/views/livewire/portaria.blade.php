@@ -4,7 +4,7 @@
         <div class="sdv-one-hero__content">
             <span class="sdv-one-hero__eyebrow"><x-icon name="door" /> Operação de acesso</span>
             <h2 id="welcome-title">Olá, {{ auth()->user()->name }}</h2>
-            <p>Resumo do turno e atalhos operacionais da Portaria Principal.</p>
+            <p>Resumo do turno e atalhos operacionais{{ $postoAtual ? ' do posto '.$postoAtual : '' }}.</p>
         </div>
         <div class="sdv-one-hero__architecture" aria-hidden="true">
             <span class="sdv-one-hero__roof"></span>
