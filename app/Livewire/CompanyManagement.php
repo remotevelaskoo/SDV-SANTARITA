@@ -7,6 +7,7 @@ use App\Models\EmpresaDocumento;
 use App\Models\EmpresaPrestador;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -66,15 +67,19 @@ class CompanyManagement extends Component
 
     public function createCompany(): void
     {
+        abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
+
         $this->resetForm();
         $this->mode = 'form';
     }
 
     public function editCompany(string $id): void
     {
+        abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
+
         $empresa = Empresa::query()->find($id);
 
-        if (! $empresa) {
+        if ($empresa === null) {
             return;
         }
 
@@ -93,6 +98,8 @@ class CompanyManagement extends Component
 
     public function saveDraft(): void
     {
+        abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
+
         $this->validate([
             'name' => ['required', 'string', 'max:160'],
             'cnpj' => ['required', 'string'],
@@ -107,6 +114,8 @@ class CompanyManagement extends Component
 
     public function saveCompany(): void
     {
+        abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
+
         $this->validateCompany();
 
         $duplicate = Empresa::query()
@@ -148,13 +157,15 @@ class CompanyManagement extends Component
 
     public function toggleCompanyStatus(): void
     {
-        if (! $this->selectedCompanyId) {
+        abort_unless(Auth::user()?->hasPermission('empresas.gerenciar'), 403);
+
+        if ($this->selectedCompanyId === null) {
             return;
         }
 
         $empresa = Empresa::query()->find($this->selectedCompanyId);
 
-        if (! $empresa) {
+        if ($empresa === null) {
             return;
         }
 

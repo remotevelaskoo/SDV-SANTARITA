@@ -68,6 +68,8 @@ class CashRegister extends Component
 
     public function openRegister(): void
     {
+        abort_unless(Auth::user()?->hasPermission('caixa.proprio.gerenciar'), 403);
+
         $this->validate([
             'openingBalanceInput' => ['required', 'regex:'.self::MONEY_REGEX],
         ], [
@@ -104,6 +106,8 @@ class CashRegister extends Component
 
     public function registerMovement(): void
     {
+        abort_unless(Auth::user()?->hasPermission('caixa.proprio.gerenciar'), 403);
+
         $turno = $this->currentTurno();
 
         if (! $turno) {
@@ -154,6 +158,8 @@ class CashRegister extends Component
 
     public function closeRegister(): void
     {
+        abort_unless(Auth::user()?->hasPermission('caixa.proprio.gerenciar'), 403);
+
         $turno = $this->currentTurno();
 
         if (! $turno) {
@@ -221,7 +227,13 @@ class CashRegister extends Component
 
     private function currentTurno(): ?CaixaTurno
     {
-        return $this->currentTurnoId ? CaixaTurno::query()->find($this->currentTurnoId) : null;
+        return $this->currentTurnoId
+            ? CaixaTurno::query()
+                ->whereKey($this->currentTurnoId)
+                ->where('operator_id', Auth::id())
+                ->where('status', 'aberto')
+                ->first()
+            : null;
     }
 
     private function syncCurrentTurno(): void
@@ -265,7 +277,7 @@ class CashRegister extends Component
                 ])->values()->all()
             : [];
 
-        $closedSessions = CaixaTurno::query()->where('status', 'fechado')->with('operator')->orderBy('closed_at')->get()
+        $closedSessions = CaixaTurno::query()->where('status', 'fechado')->where('operator_id', Auth::id())->with('operator')->orderBy('closed_at')->get()
             ->map(fn (CaixaTurno $sessao) => [
                 'id' => $sessao->id,
                 'terminal' => $sessao->terminal,
